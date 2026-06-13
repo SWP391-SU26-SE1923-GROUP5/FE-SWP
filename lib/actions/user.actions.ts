@@ -183,5 +183,5 @@ export const signOutUser = async () => {
     const cookieStore = await cookies();
     cookieStore.delete("user-session");
 
-    await signOut({ redirectTo: "/sign-in" });
+    await signOut({ redirectTo: "/" });
 }
