@@ -30,6 +30,12 @@ export interface File_ extends Models.Document {
     users: string[];
 }
 
+export type ActionType = {
+    value: string;
+    label: string;
+    icon?: string;
+};
+
 export interface UploadFileProps { file: File; ownerId: string; accountId: string; path: string; }
 export interface GetFilesProps { types: FileType[]; searchText?: string; sort?: string; limit?: number; }
 export interface RenameFileProps { fileId: string; name: string; extension: string; path: string; }
