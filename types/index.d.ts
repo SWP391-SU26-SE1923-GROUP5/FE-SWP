@@ -1,8 +1,10 @@
-/* eslint-disable no-unused-vars */
-import { Models } from "node-appwrite";
-
-export interface User extends Models.Document {
+export interface BaseDocument {
     $id: string;
+    $createdAt?: string;
+    $updatedAt?: string;
+}
+
+export interface User extends BaseDocument {
     email: string;
     accountId: string;
     fullName: string;
@@ -12,8 +14,11 @@ export interface User extends Models.Document {
     files?: any;
 }
 
-interface File_ extends Models.Document {
-    $id: string;
+export type FileType = "document" | "image" | "video" | "audio" | "other";
+
+import { Models } from "node-appwrite";
+
+export interface File_ extends Models.Document {
     name: string;
     url: string;
     type: FileType;
@@ -22,80 +27,45 @@ interface File_ extends Models.Document {
     owner?: string;
     extension: string;
     size: number;
-    users: string[]
+    users: string[];
 }
 
-declare type FileType = "document" | "image" | "video" | "audio" | "other";
+export interface UploadFileProps { file: File; ownerId: string; accountId: string; path: string; }
+export interface GetFilesProps { types: FileType[]; searchText?: string; sort?: string; limit?: number; }
+export interface RenameFileProps { fileId: string; name: string; extension: string; path: string; }
+export interface UpdateFileUsersProps { fileId: string; emails: string[]; path: string; }
+export interface DeleteFileProps { fileId: string; bucketFileId: string; path: string; }
+export interface UpdateEditedFileProps { fileId: string; oldBucketFileId: string; file: File; path: string; }
 
-declare interface ActionType {
-    label: string;
-    icon: string;
-    value: string;
-}
-
-declare interface SearchParamProps {
-    params?: Promise<SegmentParams>;
-    searchParams?: Promise<{ [key: string]: string | string[] | undefined }>;
-}
-
-declare interface UploadFileProps {
-    file: File;
-    ownerId: string;
-    accountId: string;
-    path: string;
-}
-declare interface GetFilesProps {
-    types: FileType[];
-    searchText?: string;
-    sort?: string;
-    limit?: number;
-}
-declare interface RenameFileProps {
-    fileId: string;
-    name: string;
-    extension: string;
-    path: string;
-}
-declare interface UpdateFileUsersProps {
-    fileId: string;
-    emails: string[];
-    path: string;
-}
-declare interface DeleteFileProps {
-    fileId: string;
-    bucketFileId: string;
-    path: string;
+export interface IFileStorage {
+    uploadFile(props: UploadFileProps): Promise<File_ | undefined>;
+    getFiles(props: GetFilesProps): Promise<any>;
+    renameFile(props: RenameFileProps): Promise<File_ | undefined>;
+    updateFileUsers(props: UpdateFileUsersProps): Promise<File_ | undefined>;
+    updateEditedFile(props: UpdateEditedFileProps): Promise<File_ | undefined>;
+    deleteFile(props: DeleteFileProps): Promise<{ status: string } | undefined>;
+    getTotalSpaceUsed(): Promise<any>;
+    getFileBuffer(bucketFileId: string): Promise<Buffer>;
 }
 
-declare interface FileUploaderProps {
-    ownerId: string;
-    accountId: string;
-    className?: string;
+export interface CreateAccountProps { fullName: string; username: string; email: string; password?: string; }
+export interface SignInProps { email: string; password?: string; }
+
+export interface IAuthService {
+    getUserById(id: string | undefined): Promise<User | null>;
+    getUserFullName(id: string | undefined): Promise<string | null>;
+    getUserByEmail(email: string): Promise<User | null>;
+    createAccount(props: CreateAccountProps): Promise<{ accountId: string | null }>;
+    signInUser(props: SignInProps): Promise<{ accountId: string | null }>;
+    getCurrentUser(): Promise<User | null>;
+    signOutUser(): Promise<void>;
 }
 
-declare interface MobileNavigationProps {
-    ownerId: string;
-    accountId: string;
-    fullName: string;
-    avatar: string;
-    email: string;
-}
-declare interface SidebarProps {
-    fullName: string;
-    avatar: string;
-    email: string;
-}
+export interface ProcessFileAIProps { file: File; endpoint: string; extraParams?: Record<string, string>; }
+export interface DeepResearchProps { files: File[]; topic: string; }
 
-declare interface ThumbnailProps {
-    type: string;
-    extension: string;
-    url: string;
-    className?: string;
-    imageClassName?: string;
-}
-
-declare interface ShareInputProps {
-    file: Models.Document;
-    onInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-    onRemove: (email: string) => void;
+export interface IAIService {
+    executeAIFeature(props: ProcessFileAIProps): Promise<any>;
+    executeDeepResearch(props: DeepResearchProps): Promise<any>;
+    generateEmbeddings(texts: string[]): Promise<number[][]>;
 }

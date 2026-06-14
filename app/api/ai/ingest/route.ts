@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenerativeAIEmbeddings } from "@langchain/google-genai";
 import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
-import { pinecone, PINECONE_INDEX_NAME } from "@/lib/pinecone-client";
 import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
+import { qdrant, QDRANT_COLLECTION_NAME } from "@/lib/qdrant-client";
 import { extractText } from "unpdf";
 import mammoth from "mammoth";
 import * as xlsx from "xlsx";
@@ -45,20 +45,30 @@ export async function POST(req: NextRequest) {
 
         const vectors = await embeddings.embedDocuments(docs.map(d => d.pageContent));
 
-        const records = docs.map((doc, i) => ({
-            id: `${fileId}-${i}`,
-            values: vectors[i],
-            metadata: {
+        const points = docs.map((doc, i) => ({
+            id: crypto.randomUUID(),
+            vector: {
+                "dense-text": vectors[i]
+            },
+            payload: {
+                chunkId: `${fileId}-${i}`,
                 text: doc.pageContent,
                 fileId: fileId,
-                extension: mimeType.split('/').pop() || 'file'
+                extension: mimeType.split('/').pop() || 'file',
+                accountId: accountId
             }
         }));
 
-        const index = pinecone.index(PINECONE_INDEX_NAME).namespace(accountId);
-        await index.upsert({ records });
+        const BATCH_SIZE = 100;
+        for (let i = 0; i < points.length; i += BATCH_SIZE) {
+            const batch = points.slice(i, i + BATCH_SIZE);
+            await qdrant.upsert(QDRANT_COLLECTION_NAME, {
+                wait: true,
+                points: batch
+            });
+        }
 
-        console.log(`Successfully indexed ${records.length} chunks to Pinecone.`);
+        console.log(`Successfully indexed ${points.length} chunks to Qdrant.`);
         return NextResponse.json({ success: true });
 
     } catch (error: any) {

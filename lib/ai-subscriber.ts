@@ -1,8 +1,8 @@
 import eventBus, { EVENTS } from './event-bus';
-import { pinecone, PINECONE_INDEX_NAME } from './pinecone-client';
+import { qdrant, QDRANT_COLLECTION_NAME } from '@/lib/qdrant-client';
 
 eventBus.on(EVENTS.FILE_CREATED, async ({ fileId, accountId, bucketFileId, mimeType }) => {
-    console.log(`[AI Sync] Indexing file: ${fileId} into namespace: ${accountId}`);
+    console.log(`[AI Sync] Ingesting file: ${fileId} for account: ${accountId}`);
 
     try {
         const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
@@ -26,12 +26,23 @@ eventBus.on(EVENTS.FILE_CREATED, async ({ fileId, accountId, bucketFileId, mimeT
 });
 
 eventBus.on(EVENTS.FILE_DELETED, async ({ fileId, accountId }) => {
-    console.log(`[AI Sync] Purging vectors for file: ${fileId} from namespace: ${accountId}`);
+    console.log(`[AI Sync] Purging vectors for file: ${fileId} belonging to account: ${accountId}`);
     try {
-        const index = pinecone.index(PINECONE_INDEX_NAME);
-        await index.namespace(accountId).deleteMany({
-            filter: { fileId: fileId }
+        await qdrant.delete(QDRANT_COLLECTION_NAME, {
+            filter: {
+                must: [
+                    {
+                        key: "accountId",
+                        match: { value: accountId }
+                    },
+                    {
+                        key: "fileId",
+                        match: { value: fileId }
+                    }
+                ]
+            }
         });
+
         console.log(`[AI Sync] Successfully purged vectors for: ${fileId}`);
     } catch (error) {
         console.error(`[AI Sync] Purge failed for ${fileId}:`, error);

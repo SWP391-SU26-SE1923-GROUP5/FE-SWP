@@ -1,0 +1,77 @@
+-------------------------------------------------------------------------------
+1. ESSENTIAL LIFE CYCLE & MANAGEMENT COMMANDS
+-------------------------------------------------------------------------------
+  docker --version             # Check installed Docker version
+  docker info                  # Display system-wide Docker configuration info
+
+  docker ps                    # List running containers
+  docker ps -a                 # List all containers (including stopped ones)
+
+  docker stop <container_id>   # Gracefully stop a running container
+  docker start <container_id>  # Start an existing, stopped container
+  docker restart <container_id># Restart a running container
+  docker rm <container_id>     # Delete a stopped container
+  docker rm -f <container_id>  # Force delete a running container
+
+-------------------------------------------------------------------------------
+2. CONTAINER INTERACTION, LOGGING & DIAGNOSTICS
+-------------------------------------------------------------------------------
+  docker logs <container_id>   # Fetch and view logs of a container
+  docker logs -f <container_id># Tail/stream container logs live
+
+  docker exec -it <name> sh    # Open an interactive shell inside a running
+  docker exec -it <name> bash  # container (use 'sh' if 'bash' is unavailable)
+
+  docker inspect <object_id>   # Return low-level JSON info on any Docker object
+  docker stats                 # Display a live streaming metrics feed of
+                               # container CPU, memory, and network usage.
+
+-------------------------------------------------------------------------------
+3. IMAGE & VOLUME MANAGEMENT COMMANDS
+-------------------------------------------------------------------------------
+  docker images                # List all locally downloaded/built images
+  docker rmi <image_id>        # Remove a local image
+
+  docker volume ls             # List all managed local volumes
+  docker volume rm <name>      # Delete a volume (must not be attached to running container)
+
+-------------------------------------------------------------------------------
+4. DOCKER COMPOSE MULTI-CONTAINER ORCHESTRATION
+-------------------------------------------------------------------------------
+  docker compose up -d         # Start stack in detached mode (background execution)
+  docker compose down          # Stop and remove containers and internal networks
+  docker compose down -v       # CRITICAL: Stop stack AND wipe persistent named volumes
+
+  docker compose ps            # List status of containers linked to this stack
+  docker compose logs -f       # Stream aggregated logs across all stacked services
+
+-------------------------------------------------------------------------------
+5. SYSTEM CLEANUP (PRUNING RECLAIMABLE SPACE)
+-------------------------------------------------------------------------------
+  docker system prune          # Remove all unused containers, networks, and images
+  docker system prune -a --volumes # CRITICAL WIPEOUT: Deletes all stopped containers,
+                                   # unused networks, unused images, and ALL volumes.
+                                   # Frees maximum possible disk storage space.
+
+===============================================================================
+6. MULTI-SERVICE CONFIGURATION REFERENCE
+===============================================================================
+[ VECTOR DATABASE: QDRANT ]
+- Dashboard Gateway : http://localhost:6333
+- Internal Network  : smartstore_network
+
+[ OBJECT STORAGE: MINIO ]
+- Web UI Gateway    : http://localhost:9001
+- Credentials       : Admin User: admin  |  Password: smartstorepassword123
+
+[ RELATIONAL DATABASE: POSTGRESQL ]
+- Connection String : postgresql://postgres:smartdbpassword123@localhost:5432/smartstore
+- Direct Terminal   : docker exec -it smartstore_db psql -U postgres -d smartstore
+
+[ AI ENGINE: OLLAMA ]
+1. Download LLM:
+   docker exec -it smartstore_ai ollama run llama3
+
+2. Download Embeddings:
+   docker exec -it smartstore_ai ollama run mxbai-embed-large
+===============================================================================
