@@ -17,7 +17,7 @@ const SignIn = () => {
             });
 
             if (result?.accountId) {
-                router.push("/");
+                router.push("/home");
                 return { success: true };
             }
 

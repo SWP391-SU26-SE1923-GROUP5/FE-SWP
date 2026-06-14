@@ -9,6 +9,48 @@ const getAuthProvider = (): IAuthService => {
     return new LocalAuth();
 };
 
+export const getCurrentUser = async (): Promise<User | null> => {
+    try {
+        const nextAuthSession = await auth();
+
+        if (nextAuthSession?.user?.email) {
+            const existingUser = await getUserByEmail(nextAuthSession.user.email);
+            if (existingUser) {
+                return parseStringify(existingUser);
+            }
+        }
+
+        const cookieStore = await cookies();
+        const sessionCookie = cookieStore.get("user-session");
+
+        if (sessionCookie && sessionCookie.value) {
+            const accountId = sessionCookie.value;
+            const { databases } = await createAdminClient();
+
+            const user = await databases.listDocuments(
+                appwriteConfig.databaseId,
+                appwriteConfig.usersCollectionId,
+                [Query.equal("accountId", accountId)]
+            );
+
+            if (user.total > 0) {
+                return parseStringify(user.documents[0]);
+            }
+        }
+
+        return null;
+    } catch (error) {
+        console.error("Failed to get current user:", error);
+        return null;
+    }
+}
+
+export const signOutUser = async () => {
+    const cookieStore = await cookies();
+    cookieStore.delete("user-session");
+
+    await signOut({ redirectTo: "/" });
+}
 export const getUserById = async (id: string | undefined) => getAuthProvider().getUserById(id);
 export const getUserFullName = async (id: string | undefined) => getAuthProvider().getUserFullName(id);
 export const getUserByEmail = async (email: string) => getAuthProvider().getUserByEmail(email);
