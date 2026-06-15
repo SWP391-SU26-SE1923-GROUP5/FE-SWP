@@ -37,7 +37,6 @@ export default function LandingFeaturesSection() {
   return (
     <section id="features" className="py-16 px-4 sm:px-6 lg:px-8 bg-white">
       <div className="max-w-7xl mx-auto">
-        {/* Section Header */}
         <div className="text-center mb-16">
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 mb-4">
             Các tính năng nổi bật
@@ -56,14 +55,12 @@ export default function LandingFeaturesSection() {
                 key={feature.id}
                 className="group rounded-xl bg-white border border-gray-200 p-6 hover:shadow-lg hover:border-emerald-200 transition-all duration-300 cursor-pointer"
               >
-                {/* Icon Container */}
                 <div
                   className={`inline-flex items-center justify-center w-12 h-12 rounded-lg bg-gradient-to-br ${feature.gradient} mb-4 group-hover:scale-110 transition-transform`}
                 >
                   <Icon className="w-6 h-6 text-white" />
                 </div>
 
-                {/* Content */}
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">
                   {feature.title}
                 </h3>
@@ -71,14 +68,12 @@ export default function LandingFeaturesSection() {
                   {feature.description}
                 </p>
 
-                {/* Bottom Border Accent */}
                 <div className={`mt-4 h-1 w-0 bg-gradient-to-r ${feature.gradient} group-hover:w-8 transition-all duration-300`} />
               </div>
             );
           })}
         </div>
 
-        {/* Additional Benefits */}
         <div className="mt-16 grid grid-cols-1 md:grid-cols-3 gap-8 bg-gradient-to-r from-emerald-50 to-blue-50 rounded-2xl p-8">
           <div className="text-center">
             <div className="text-4xl font-bold text-emerald-600 mb-2">500+</div>
