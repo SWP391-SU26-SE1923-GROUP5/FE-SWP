@@ -1,3 +1,25 @@
+import NextAuth, { type DefaultSession } from "next-auth";
+
+declare module "next-auth" {
+    interface Session {
+        user: {
+            id: string;
+            role: string;
+        } & DefaultSession["user"];
+    }
+
+    interface User {
+        role: string;
+    }
+}
+
+declare module "next-auth/jwt" {
+    interface JWT {
+        id: string;
+        role: string;
+    }
+}
+
 export interface BaseDocument {
     $id: string;
     $createdAt?: string;
@@ -12,6 +34,7 @@ export interface User extends BaseDocument {
     avatar?: string;
     password_hash?: string;
     files?: any;
+    role: string;
 }
 
 export type FileType = "document" | "image" | "video" | "audio" | "other";
