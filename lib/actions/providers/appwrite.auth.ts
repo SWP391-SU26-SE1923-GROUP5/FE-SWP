@@ -3,7 +3,6 @@ import { createAdminClient } from "@/lib/appwrite";
 import { appwriteConfig } from "@/lib/appwrite/config";
 import { Query, ID } from "node-appwrite";
 import { parseStringify } from "@/lib/utils";
-import { cookies } from "next/headers";
 import { avatarPlaceholderUrl } from "@/constants/avatar";
 import { auth, signOut } from "@/auth";
 import bcrypt from "bcrypt";
@@ -37,12 +36,23 @@ export class AppwriteAuth implements IAuthService {
         const existingUser = await this.getUserByEmail(email);
         const accountId = ID.unique();
 
-        if (!existingUser && password) {
+        if (!existingUser) {
             const { databases } = await createAdminClient();
-            const hashedPassword = await bcrypt.hash(password, 12);
+
+            const hashedPassword = password ? await bcrypt.hash(password, 12) : null;
+
             await databases.createDocument(
-                appwriteConfig.databaseId, appwriteConfig.usersCollectionId, ID.unique(),
-                { email, avatar: avatarPlaceholderUrl, accountId, password_hash: hashedPassword, fullName, username }
+                appwriteConfig.databaseId,
+                appwriteConfig.usersCollectionId,
+                accountId,
+                {
+                    email,
+                    avatar: avatarPlaceholderUrl,
+                    accountId,
+                    password_hash: hashedPassword,
+                    fullName,
+                    username
+                }
             );
         }
         return parseStringify({ accountId });
@@ -55,40 +65,23 @@ export class AppwriteAuth implements IAuthService {
         const passwordsMatch = await bcrypt.compare(password, existingUser.password_hash);
         if (!passwordsMatch) return { accountId: null };
 
-        const cookieStore = await cookies();
-        cookieStore.set("user-session", existingUser.accountId, {
-            path: "/", httpOnly: true, sameSite: "strict",
-            secure: process.env.NODE_ENV === "production", maxAge: 60 * 60 * 24 * 7
-        });
-
         return parseStringify({ accountId: existingUser.accountId });
     }
 
     async getCurrentUser(): Promise<User | null> {
         try {
             const nextAuthSession = await auth();
+
             if (nextAuthSession?.user?.email) {
                 const existingUser = await this.getUserByEmail(nextAuthSession.user.email);
                 if (existingUser) return parseStringify(existingUser);
             }
 
-            const cookieStore = await cookies();
-            const sessionCookie = cookieStore.get("user-session");
-
-            if (sessionCookie?.value) {
-                const { databases } = await createAdminClient();
-                const user = await databases.listDocuments(
-                    appwriteConfig.databaseId, appwriteConfig.usersCollectionId, [Query.equal("accountId", sessionCookie.value)]
-                );
-                if (user.total > 0) return parseStringify(user.documents[0]);
-            }
             return null;
         } catch { return null; }
     }
 
     async signOutUser() {
-        const cookieStore = await cookies();
-        cookieStore.delete("user-session");
         await signOut({ redirectTo: "/sign-in" });
     }
 }

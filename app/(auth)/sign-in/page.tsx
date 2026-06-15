@@ -1,36 +1,49 @@
 "use client";
 
 import AuthForm from "@/components/forms/AuthForm";
-import {SignInSchema, SignUpSchema} from "@/lib/validations";
-import { signInUser } from "@/lib/actions/user.actions";
+import {SignInSchema} from "@/lib/validations";
 import {useRouter} from "next/navigation";
-import { z } from "zod";
+import {z} from "zod";
+import {signIn} from "next-auth/react";
+import ROUTES from "@/constants/routes";
 
 const SignIn = () => {
     const router = useRouter();
 
     const handleSignIn = async (data: z.infer<typeof SignInSchema>) => {
         try {
-            const result = await signInUser({
+            const result = await signIn("credentials", {
+                redirect: false,
                 email: data.email,
                 password: data.password,
+                callbackUrl: ROUTES.HOME
             });
 
-            if (result?.accountId) {
-                router.push("/home");
-                return { success: true };
+            console.log("NEXT_AUTH_RESULT:", result);
+
+            if (result?.error) {
+                return {
+                    success: false,
+                    error: "Invalid email or password.",
+                };
+            }
+
+            if (result?.ok) {
+                router.push(ROUTES.HOME);
+                router.refresh();
+                return {success: true};
             }
 
             return {
                 success: false,
-                error: "Invalid email or password.",
+                error: "An unexpected response was received."
             };
 
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error("Sign in error:", error);
             return {
                 success: false,
-                error: error?.message || "An error occurred during sign in."
+                error: "An unexpected error occurred during sign in."
             };
         }
     };
@@ -47,4 +60,5 @@ const SignIn = () => {
         />
     )
 }
-export default SignIn
+
+export default SignIn;
