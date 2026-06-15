@@ -2,9 +2,12 @@ import NextAuth from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import GitHub from "next-auth/providers/github";
 import Google from "next-auth/providers/google";
-import { AppwriteAuth } from "@/lib/actions/providers/appwrite.auth";
+import {AppwriteAuth} from "@/lib/actions/providers/appwrite.auth";
 
-export const { handlers, signIn, signOut, auth } = NextAuth({
+export const {handlers, signIn, signOut, auth} = NextAuth({
+    pages: {
+        signIn: "/sign-in",
+    },
     providers: [
         GitHub({
             clientId: process.env.AUTH_GITHUB_ID,
@@ -17,10 +20,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         CredentialsProvider({
             name: "credentials",
             credentials: {
-                email: { label: "Email", type: "email"},
-                password: { label: "Password", type: "password"},
+                email: {label: "Email", type: "email"},
+                password: {label: "Password", type: "password"},
             },
-            async authorize(credentials){
+            async authorize(credentials) {
                 if (!credentials?.email || !credentials?.password) {
                     throw new Error("Email and password is required");
                 }
@@ -52,8 +55,11 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         })
     ],
     callbacks: {
-        async signIn({ user, account }) {
+        async signIn({user, account}) {
             if (!user.email) return false;
+            if (account?.provider === "credentials") {
+                return true;
+            }
 
             try {
                 const authService = new AppwriteAuth();
@@ -74,7 +80,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             }
         },
 
-        async jwt({ token, user }) {
+        async jwt({token, user}) {
             if (user) {
                 token.id = user.id;
                 token.role = user.role;
@@ -82,7 +88,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             return token;
         },
 
-        async session({ session, token }) {
+        async session({session, token}) {
             if (token && session.user) {
                 session.user.id = token.id as string;
                 session.user.role = token.role as string;
