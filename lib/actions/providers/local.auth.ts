@@ -5,6 +5,7 @@ import bcrypt from "bcrypt";
 import { cookies } from "next/headers";
 import { avatarPlaceholderUrl } from "@/constants/avatar";
 import { auth, signOut } from "@/auth";
+import { isAdminEmail } from "@/lib/admin/roles";
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
@@ -32,12 +33,13 @@ export class LocalAuth implements IAuthService {
     async createAccount({ fullName, username, email, password }: CreateAccountProps) {
         const existingUser = await this.getUserByEmail(email);
         const accountId = uuidv4();
+        const isAdmin = isAdminEmail(email);
 
         if (!existingUser) {
             const hashedPassword = password ? await bcrypt.hash(password, 12) : null;
             await pool.query(
-                "INSERT INTO users (account_id, email, full_name, username, avatar, password_hash) VALUES ($1, $2, $3, $4, $5, $6)",
-                [accountId, email, fullName, username, avatarPlaceholderUrl, hashedPassword]
+                "INSERT INTO users (id, account_id, email, full_name, username, avatar, password_hash, role) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
+                [uuidv4(), accountId, email, fullName, username, avatarPlaceholderUrl, hashedPassword, isAdmin ? "admin" : "user"]
             );
         }
         return JSON.parse(JSON.stringify({ accountId: existingUser ? existingUser.accountId : accountId }));
@@ -94,7 +96,10 @@ export class LocalAuth implements IAuthService {
             fullName: row.full_name,
             username: row.username,
             avatar: row.avatar,
-            password_hash: row.password_hash
+            password_hash: row.password_hash,
+            role: row.role ?? "user",
+            $createdAt: row.created_at ? new Date(row.created_at).toISOString() : undefined,
+            $updatedAt: row.updated_at ? new Date(row.updated_at).toISOString() : undefined,
         } as User;
     }
 }
