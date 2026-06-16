@@ -31,7 +31,6 @@ export default function LandingNavbar() {
             <span className="font-bold text-xl text-gray-900">AIStudyHub</span>
           </div>
 
-          {/* Desktop Menu */}
           <div className="hidden md:flex items-center gap-8">
             {navItems.map((item) => (
               <Link
@@ -44,7 +43,6 @@ export default function LandingNavbar() {
             ))}
           </div>
 
-          {/* Auth Buttons */}
           <div className="hidden md:flex items-center gap-3">
             <Button
               variant="outline"
@@ -61,7 +59,6 @@ export default function LandingNavbar() {
             </Button>
           </div>
 
-          {/* Mobile Menu Button */}
           <button
             onClick={toggleMenu}
             className="md:hidden p-2 rounded-lg hover:bg-gray-100 transition-colors"
@@ -74,7 +71,6 @@ export default function LandingNavbar() {
           </button>
         </div>
 
-        {/* Mobile Menu */}
         {isOpen && (
           <div className="md:hidden py-4 border-t border-gray-200">
             <div className="flex flex-col gap-3">
