@@ -407,3 +407,64 @@
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.627 0.146 160);
 }
+
+/* ==========================================
+   ADMIN LAYOUT & COMPONENTS
+   ========================================== */
+@utility admin-shell { @apply flex h-screen bg-light-300; }
+@utility admin-sidebar { @apply no-scrollbar hidden h-screen w-[260px] flex-col overflow-y-auto border-r border-light-300 bg-white px-4 py-6 sm:flex; }
+@utility admin-sidebar-brand { @apply mb-8 flex items-center gap-2 px-2; }
+@utility admin-sidebar-section { @apply mb-2 px-3 text-[10px] font-bold uppercase tracking-widest text-light-400; }
+@utility admin-sidebar-link { @apply flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-light-100 transition-colors hover:bg-brand/10 hover:text-brand; }
+@utility admin-sidebar-link-active { @apply bg-brand text-white shadow-drop-2 hover:bg-brand hover:text-white; }
+@utility admin-sidebar-icon { @apply size-5 shrink-0; }
+
+@utility admin-main { @apply flex h-full flex-1 flex-col overflow-hidden; }
+@utility admin-header { @apply flex items-center justify-between border-b border-light-300 bg-white px-5 py-4 sm:px-8; }
+@utility admin-header-title { @apply text-xl font-semibold text-dark-100; }
+@utility admin-header-subtitle { @apply text-xs text-light-400 mt-0.5; }
+@utility admin-content { @apply no-scrollbar flex-1 overflow-y-auto bg-light-300 px-5 py-7 sm:px-8; }
+
+@utility admin-stats-grid { @apply grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4; }
+@utility admin-stats-card { @apply flex items-center gap-4 rounded-2xl bg-white p-5 shadow-light-100; }
+@utility admin-stats-icon { @apply flex size-12 items-center justify-center rounded-xl bg-brand/10 text-brand; }
+@utility admin-stats-value { @apply text-2xl font-bold text-dark-100; }
+@utility admin-stats-label { @apply text-xs font-medium uppercase tracking-wider text-light-400; }
+
+@utility admin-card { @apply rounded-2xl bg-white p-5 shadow-light-100; }
+@utility admin-card-header { @apply mb-4 flex items-center justify-between gap-3; }
+@utility admin-card-title { @apply text-base font-semibold text-dark-100; }
+@utility admin-card-subtitle { @apply text-xs text-light-400 mt-0.5; }
+
+@utility admin-table-wrapper { @apply overflow-x-auto rounded-2xl bg-white shadow-light-100; }
+@utility admin-table { @apply w-full text-left text-sm; }
+@utility admin-table thead { @apply border-b border-light-300 bg-light-300/50 text-xs uppercase tracking-wider text-light-400; }
+@utility admin-table th { @apply px-5 py-3 font-semibold; }
+@utility admin-table tbody tr { @apply border-b border-light-300/60 last:border-0 transition-colors hover:bg-light-300/30; }
+@utility admin-table td { @apply px-5 py-4 align-middle; }
+
+@utility admin-badge { @apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold; }
+@utility admin-badge-admin { @apply bg-brand/10 text-brand; }
+@utility admin-badge-user { @apply bg-light-400/20 text-light-100; }
+@utility admin-badge-success { @apply bg-emerald-50 text-emerald-700; }
+@utility admin-badge-warning { @apply bg-amber-50 text-amber-700; }
+@utility admin-badge-danger { @apply bg-red/10 text-red; }
+
+@utility admin-empty { @apply flex flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-light-300 bg-white py-14 text-center; }
+@utility admin-empty-icon { @apply flex size-14 items-center justify-center rounded-full bg-light-300 text-light-200; }
+@utility admin-empty-title { @apply text-base font-semibold text-dark-100; }
+@utility admin-empty-text { @apply text-sm text-light-400 max-w-sm; }
+
+@utility admin-search { @apply relative w-full md:max-w-md; }
+@utility admin-search-input { @apply h-11 w-full rounded-xl border border-light-300 bg-white pl-10 pr-4 text-sm shadow-sm outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/20; }
+@utility admin-search-icon { @apply pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-light-400; }
+
+@utility admin-pagination { @apply flex items-center justify-between gap-3 rounded-2xl bg-white px-5 py-3 shadow-light-100; }
+@utility admin-pagination-button { @apply inline-flex items-center gap-1 rounded-lg border border-light-300 bg-white px-3 py-1.5 text-sm font-medium text-light-100 transition hover:bg-light-300 disabled:cursor-not-allowed disabled:opacity-50; }
+@utility admin-pagination-info { @apply text-xs text-light-400; }
+
+@utility admin-form-field { @apply flex flex-col gap-1.5; }
+@utility admin-form-label { @apply text-xs font-medium uppercase tracking-wider text-light-400; }
+@utility admin-form-error { @apply text-xs font-medium text-red; }
+@utility admin-form-hint { @apply text-xs text-light-400; }
+@utility admin-form-actions { @apply mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end; }

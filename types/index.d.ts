@@ -33,6 +33,7 @@ export interface User extends BaseDocument {
     username: string;
     avatar?: string;
     password_hash?: string;
+    role?: "user" | "admin";
     files?: any;
     role: string;
 }

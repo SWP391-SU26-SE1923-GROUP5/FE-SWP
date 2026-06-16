@@ -6,6 +6,7 @@ import { parseStringify } from "@/lib/utils";
 import { avatarPlaceholderUrl } from "@/constants/avatar";
 import { auth, signOut } from "@/auth";
 import bcrypt from "bcrypt";
+import { isAdminEmail } from "@/lib/admin/roles";
 
 export class AppwriteAuth implements IAuthService {
     async getUserById(id: string | undefined): Promise<User | null> {
@@ -35,6 +36,7 @@ export class AppwriteAuth implements IAuthService {
     async createAccount({ fullName, username, email, password }: CreateAccountProps) {
         const existingUser = await this.getUserByEmail(email);
         const accountId = ID.unique();
+        const role = isAdminEmail(email) ? "admin" : "user";
 
         if (!existingUser) {
             const { databases } = await createAdminClient();
