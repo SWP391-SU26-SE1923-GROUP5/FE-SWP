@@ -77,7 +77,7 @@ export default function ApryseViewer({ file, path, closeModals }: { file: File_,
             const core = instanceRef.current;
             const doc = core.Core.documentViewer.getDocument();
 
-            const ext = file.fileExtension?.toLowerCase() || '';
+            const ext = file.fileExtension?.toLowerCase().replace('.', '') || '';
             const isOfficeFile = ["docx", "doc", "xlsx", "xls", "pptx", "ppt"].includes(ext);
 
             const xfdfString = await core.Core.annotationManager.exportAnnotations();

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import Image from "next/image";
 import { Input } from "@/components/ui/input";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
@@ -10,7 +10,7 @@ import FormattedDateTime from "@/components/FormattedDateTime";
 import { useDebounce } from "use-debounce";
 import { File_ } from "@/types";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Sparkles, Loader2, SearchIcon } from "lucide-react";
+import { Sparkles, Loader2 } from "lucide-react";
 
 const Search = () => {
     const [query, setQuery] = useState("");
@@ -27,8 +27,12 @@ const Search = () => {
     const router = useRouter();
     const path = usePathname();
     const [debouncedQuery] = useDebounce(query, 300);
+    const prevQueryRef = useRef(debouncedQuery);
 
     useEffect(() => {
+        const isNewTyping = prevQueryRef.current !== debouncedQuery;
+        prevQueryRef.current = debouncedQuery;
+
         const fetchFiles = async () => {
             if (debouncedQuery.length === 0) {
                 setResults([]);
@@ -51,12 +55,14 @@ const Search = () => {
 
             if (files) {
                 setResults(files.documents);
-                setDropdownOpen(true);
+                if (isNewTyping && !isModalOpen) {
+                    setDropdownOpen(true);
+                }
             }
         };
 
         fetchFiles();
-    }, [debouncedQuery, path, router, searchParams]);
+    }, [debouncedQuery, path, router, searchParams, isModalOpen]);
 
     useEffect(() => {
         if (!searchQuery) {
@@ -94,11 +100,21 @@ const Search = () => {
     const handleClickItem = (file: File_) => {
         setDropdownOpen(false);
         setResults([]);
-        setQuery("");
 
-        router.push(
-            `/${file.fileType === "video" || file.fileType === "audio" ? "media" : file.fileType+ "s"}?query=${query}`,
-        );
+        let routeName = "documents";
+        const type = file.fileType?.toLowerCase() || "";
+
+        if (type === "video" || type === "audio" || type.includes("video/") || type.includes("audio/")) {
+            routeName = "home/media";
+        } else if (type === "image" || type.includes("image/")) {
+            routeName = "home/images";
+        } else if (type === "document" || type.includes("application/")) {
+            routeName = "home/documents";
+        } else {
+            routeName = `${type}s`;
+        }
+
+        router.push(`/${routeName}?query=${query}`);
     };
 
     return (
@@ -119,8 +135,6 @@ const Search = () => {
 
                 {dropdownOpen && (
                     <ul className="search-result absolute top-full left-0 w-full mt-2 bg-white rounded-xl shadow-lg border border-slate-100 z-50 overflow-hidden">
-
-                        {/* THE AI BRIDGE OPTION: Always visible at the top if there is text typed */}
                         {query.trim().length > 0 && (
                             <li
                                 onClick={() => handleAISearch(query)}
