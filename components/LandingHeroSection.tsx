@@ -13,18 +13,18 @@ export default function LandingHeroSection() {
           <div className="flex flex-col justify-center">
             <div className="inline-flex items-center gap-2 bg-emerald-100 text-emerald-700 px-4 py-2 rounded-full w-fit mb-6">
               <Sparkles className="w-4 h-4" />
-              <span className="text-sm font-semibold">Được hỗ trợ bởi AI</span>
+              <span className="text-sm font-semibold">Powered by AI</span>
             </div>
 
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-gray-900 mb-6 leading-tight">
-              Học tập thông minh với{' '}
+              Smart Learning with{' '}
               <span className="bg-gradient-to-r from-emerald-600 to-emerald-500 bg-clip-text text-transparent">
                 AI
               </span>
             </h1>
 
             <p className="text-lg text-gray-600 mb-8 leading-relaxed max-w-lg">
-              Nền tảng học tập được hỗ trợ bởi trí tuệ nhân tạo giúp bạn tối ưu hóa quá trình học tập và đạt được kết quả tốt hơn.
+              An AI-powered learning platform that helps you optimize your study process and achieve better results.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4">
@@ -34,7 +34,7 @@ export default function LandingHeroSection() {
                 asChild
               >
                 <Link href="/sign-up" className="flex items-center justify-center gap-2">
-                  Bắt đầu ngay
+                  Get Started
                   <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                 </Link>
               </Button>
@@ -44,22 +44,22 @@ export default function LandingHeroSection() {
                 className="border-2 border-gray-300 text-gray-900 hover:bg-gray-50 rounded-lg"
                 asChild
               >
-                <Link href="#features">Tìm hiểu thêm</Link>
+                <Link href="#features">Learn More</Link>
               </Button>
             </div>
 
             <div className="mt-12 flex items-center gap-6 pt-8 border-t border-gray-200">
               <div>
                 <p className="text-2xl font-bold text-gray-900">10K+</p>
-                <p className="text-sm text-gray-600">Học viên hoạt động</p>
+                <p className="text-sm text-gray-600">Active Learners</p>
               </div>
               <div>
                 <p className="text-2xl font-bold text-gray-900">4.8★</p>
-                <p className="text-sm text-gray-600">Đánh giá trung bình</p>
+                <p className="text-sm text-gray-600">Average Rating</p>
               </div>
               <div>
                 <p className="text-2xl font-bold text-gray-900">100%</p>
-                <p className="text-sm text-gray-600">Miễn phí thử nghiệm</p>
+                <p className="text-sm text-gray-600">Free Trial</p>
               </div>
             </div>
           </div>
@@ -73,7 +73,7 @@ export default function LandingHeroSection() {
                 <div className="w-full h-full bg-gradient-to-br from-emerald-50 to-emerald-100 rounded-xl flex items-center justify-center overflow-hidden shadow-lg">
                 <Image 
                     src="/assets/images/dashboard-preview-v3.png"
-                    alt="Giao diện Dashboard"
+                    alt="Dashboard interface"
                     width={800}
                     height={500}
                     className="w-full h-full object-cover"
@@ -87,7 +87,7 @@ export default function LandingHeroSection() {
                       <span className="text-emerald-600 font-bold text-sm">📊</span>
                     </div>
                     <div>
-                      <p className="text-xs text-gray-500">Tiến độ học tập</p>
+                      <p className="text-xs text-gray-500">Learning Progress</p>
                       <p className="font-semibold text-gray-900">+45%</p>
                     </div>
                   </div>
@@ -99,8 +99,8 @@ export default function LandingHeroSection() {
                       <span className="text-blue-600 font-bold text-sm">🎯</span>
                     </div>
                     <div>
-                      <p className="text-xs text-gray-500">Mục tiêu hôm nay</p>
-                      <p className="font-semibold text-gray-900">3 hoàn thành</p>
+                      <p className="text-xs text-gray-500">Today's Goal</p>
+                      <p className="font-semibold text-gray-900">3 completed</p>
                     </div>
                   </div>
                 </div>

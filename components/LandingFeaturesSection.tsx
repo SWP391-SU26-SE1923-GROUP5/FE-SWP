@@ -6,29 +6,29 @@ const features = [
   {
     id: 1,
     icon: Brain,
-    title: 'Học tập được cá nhân hóa',
-    description: 'AI phân tích cách học của bạn và điều chỉnh nội dung để phù hợp với tốc độ và phong cách học tập của riêng bạn.',
+    title: 'Personalized Learning',
+    description: 'AI analyzes your learning style and adjusts content to match your pace and learning preferences.',
     gradient: 'from-blue-500 to-cyan-500',
   },
   {
     id: 2,
     icon: MessageSquare,
-    title: 'Hỗ trợ AI 24/7',
-    description: 'Nhận câu trả lời tức thì cho bất kỳ câu hỏi nào. Trợ lý AI của chúng tôi luôn sẵn sàng giúp bạn hiểu những khái niệm khó.',
+    title: 'AI Support 24/7',
+    description: 'Get instant answers to any question. Our AI assistant is always ready to help you understand difficult concepts.',
     gradient: 'from-emerald-500 to-teal-500',
   },
   {
     id: 3,
     icon: BarChart3,
-    title: 'Theo dõi tiến độ chi tiết',
-    description: 'Theo dõi tiến độ học tập của bạn một cách chi tiết với các bảng thống kê trực quan và các khuyến nghị được cá nhân hóa.',
+    title: 'Detailed Progress Tracking',
+    description: 'Track your learning progress in detail with visual charts and personalized recommendations.',
     gradient: 'from-purple-500 to-pink-500',
   },
   {
     id: 4,
     icon: Zap,
-    title: 'Học tập hiệu quả hơn',
-    description: 'Tiết kiệm thời gian với các bài học được tối ưu hóa, flashcard thông minh và câu đố được tạo ra bởi AI.',
+    title: 'More Effective Learning',
+    description: 'Save time with optimized lessons, smart flashcards, and AI-generated quizzes.',
     gradient: 'from-amber-500 to-orange-500',
   },
 ];
@@ -39,10 +39,10 @@ export default function LandingFeaturesSection() {
       <div className="max-w-7xl mx-auto">
         <div className="text-center mb-16">
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 mb-4">
-            Các tính năng nổi bật
+            Highlighted Features
           </h2>
           <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            Khám phá những tính năng mạnh mẽ được thiết kế để giúp bạn học tập hiệu quả hơn và đạt được mục tiêu của mình.
+            Discover powerful features designed to help you learn more effectively and achieve your goals.
           </p>
         </div>
 
@@ -76,15 +76,15 @@ export default function LandingFeaturesSection() {
         <div className="mt-16 grid grid-cols-1 md:grid-cols-3 gap-8 bg-gradient-to-r from-emerald-50 to-blue-50 rounded-2xl p-8">
           <div className="text-center">
             <div className="text-4xl font-bold text-emerald-600 mb-2">500+</div>
-            <p className="text-gray-600">Khóa học có sẵn</p>
+            <p className="text-gray-600">Available Courses</p>
           </div>
           <div className="text-center border-l border-r border-gray-200">
             <div className="text-4xl font-bold text-emerald-600 mb-2">50+</div>
-            <p className="text-gray-600">Chuyên đề được hỗ trợ</p>
+            <p className="text-gray-600">Supported Topics</p>
           </div>
           <div className="text-center">
             <div className="text-4xl font-bold text-emerald-600 mb-2">AI</div>
-            <p className="text-gray-600">Công nghệ tiên tiến</p>
+            <p className="text-gray-600">Cutting-Edge Technology</p>
           </div>
         </div>
       </div>

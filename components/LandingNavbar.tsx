@@ -13,10 +13,10 @@ export default function LandingNavbar() {
   };
 
   const navItems = [
-    { label: 'Trang chủ', href: '#home' },
-    { label: 'Tính năng', href: '#features' },
-    { label: 'Bảng giá', href: '#pricing' },
-    { label: 'Liên hệ', href: '#contact' },
+    { label: 'Home', href: '#home' },
+    { label: 'Features', href: '#features' },
+    { label: 'Pricing', href: '#pricing' },
+    { label: 'Contact', href: '#contact' },
   ];
 
   return (
@@ -49,13 +49,13 @@ export default function LandingNavbar() {
               className="border-gray-300 text-gray-700 hover:bg-gray-50"
               asChild
             >
-              <Link href="/sign-in">Đăng nhập</Link>
+              <Link href="/sign-in">Sign In</Link>
             </Button>
             <Button
               className="bg-emerald-600 hover:bg-emerald-700 text-white"
               asChild
             >
-              <Link href="/sign-up">Đăng ký</Link>
+              <Link href="/sign-up">Sign Up</Link>
             </Button>
           </div>
 
@@ -90,13 +90,13 @@ export default function LandingNavbar() {
                   className="w-full border-gray-300 text-gray-700"
                   asChild
                 >
-                  <Link href="/sign-in">Đăng nhập</Link>
+                  <Link href="/sign-in">Sign In</Link>
                 </Button>
                 <Button
                   className="w-full bg-emerald-600 hover:bg-emerald-700 text-white"
                   asChild
                 >
-                  <Link href="/sign-up">Đăng ký</Link>
+                  <Link href="/sign-up">Sign Up</Link>
                 </Button>
               </div>
             </div>

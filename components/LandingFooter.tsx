@@ -8,22 +8,22 @@ export default function LandingFooter() {
 
   const footerLinks = {
     Product: [
-      { label: 'Tính năng', href: '#features' },
-      { label: 'Bảng giá', href: '#pricing' },
-      { label: 'Bảo mật', href: '#' },
+      { label: 'Features', href: '#features' },
+      { label: 'Pricing', href: '#pricing' },
+      { label: 'Security', href: '#' },
       { label: 'Blog', href: '#' },
     ],
     Company: [
-      { label: 'Về chúng tôi', href: '#' },
-      { label: 'Liên hệ', href: '#contact' },
-      { label: 'Sự nghiệp', href: '#' },
-      { label: 'Báo chí', href: '#' },
+      { label: 'About Us', href: '#' },
+      { label: 'Contact', href: '#contact' },
+      { label: 'Careers', href: '#' },
+      { label: 'Press', href: '#' },
     ],
     Legal: [
-      { label: 'Điều khoản dịch vụ', href: '#' },
-      { label: 'Chính sách bảo mật', href: '#' },
-      { label: 'Chính sách cookie', href: '#' },
-      { label: 'Quản lý tùy chọn', href: '#' },
+      { label: 'Terms of Service', href: '#' },
+      { label: 'Privacy Policy', href: '#' },
+      { label: 'Cookie Policy', href: '#' },
+      { label: 'Manage Preferences', href: '#' },
     ],
   };
 
@@ -45,7 +45,7 @@ export default function LandingFooter() {
               <span className="font-bold text-lg text-white">AIStudyHub</span>
             </div>
             <p className="text-sm text-gray-400">
-              Nền tảng học tập thông minh, được hỗ trợ bởi AI để giúp bạn học hiệu quả hơn.
+              A smart learning platform powered by AI to help you learn more effectively.
             </p>
             <div className="flex gap-4 mt-6">
               {socialLinks.map((social) => {
@@ -86,10 +86,10 @@ export default function LandingFooter() {
         <div className="border-t border-gray-800 pt-8">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
             <p className="text-sm text-gray-400">
-              © {currentYear} AIStudyHub. Bản quyền được bảo vệ.
+              © {currentYear} AIStudyHub. All rights reserved.
             </p>
             <p className="text-sm text-gray-400">
-              Thiết kế với ❤️ cho những người yêu học tập.
+              Designed with love for learning enthusiasts.
             </p>
           </div>
         </div>
