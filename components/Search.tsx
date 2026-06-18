@@ -97,7 +97,7 @@ const Search = () => {
         setQuery("");
 
         router.push(
-            `/${file.type === "video" || file.type === "audio" ? "media" : file.type + "s"}?query=${query}`,
+            `/${file.fileType === "video" || file.fileType === "audio" ? "media" : file.fileType+ "s"}?query=${query}`,
         );
     };
 
@@ -135,23 +135,23 @@ const Search = () => {
                             results.map((file) => (
                                 <li
                                     className="flex items-center justify-between p-3 hover:bg-slate-50 cursor-pointer transition-colors"
-                                    key={file.$id}
+                                    key={file.id}
                                     onClick={() => handleClickItem(file)}
                                 >
                                     <div className="flex items-center gap-4">
                                         <Thumbnail
-                                            type={file.type}
-                                            extension={file.extension}
-                                            url={file.url}
+                                            type={file.fileType}
+                                            extension={file.fileExtension}
+                                            url={file.fileLink}
                                             className="size-9 min-w-9"
                                         />
                                         <p className="subtitle-2 line-clamp-1 text-light-100">
-                                            {file.name}
+                                            {file.fileName}
                                         </p>
                                     </div>
 
                                     <FormattedDateTime
-                                        date={file.$createdAt}
+                                        date={file.createdAt}
                                         className="caption line-clamp-1 text-light-200"
                                     />
                                 </li>

@@ -11,12 +11,7 @@ import { toast } from "sonner"
 import {uploadFile} from "@/lib/actions/file.actions";
 import {usePathname} from "next/navigation";
 
-interface Props {
-    ownerId: string;
-    accountId: string;
-}
-
-const FileUploader = ({ ownerId, accountId }: Props) => {
+const FileUploader = () => {
     const [files, setFiles] = useState<File[]>([]);
     const path = usePathname()
 
@@ -31,7 +26,7 @@ const FileUploader = ({ ownerId, accountId }: Props) => {
                 return toast.error(`${file.name} is too large. Max file size is 50MB.`);
             }
 
-            return uploadFile({ file, ownerId, accountId, path }).then((uploadedFile) => {
+            return uploadFile({ file, path }).then((uploadedFile) => {
                 if(uploadedFile) {
                     setFiles((prevFiles) =>
                         prevFiles.filter((f) => f.name !== file.name)
@@ -41,7 +36,7 @@ const FileUploader = ({ ownerId, accountId }: Props) => {
         })
 
         await Promise.all(uploadPromises)
-    }, [ownerId, accountId, path])
+    }, [path])
 
     const {getRootProps, getInputProps} = useDropzone({onDrop})
 
@@ -71,7 +66,6 @@ const FileUploader = ({ ownerId, accountId }: Props) => {
 
                     {files.map((file: File, index) => {
                         const { type, extension } = getFileType(file.name)
-
                         return (
                             <li key={`${file.name}-${index}`} className="uploader-preview-item">
                                 <div className="flex items-center gap-3">

@@ -18,21 +18,17 @@ const SignUp = () => {
                 password: data.password,
             });
 
-            if (result?.accountId) {
-                router.push("/sign-in");
+            if (result?.email) {
+                router.push(`/verify-otp?email=${encodeURIComponent(data.email)}`);
                 return { success: true };
             }
 
-            return {
-                success: false,
-                error: "Failed to create account."
-            };
-
-        } catch (error: any) {
+            return { success: false, error: "Failed to create account." };
+        } catch (error: unknown) {
             console.error("Sign up error:", error);
             return {
                 success: false,
-                error: error?.message || "An error occurred during sign up."
+                error: "An unexpected error occurred during sign up."
             };
         }
     };

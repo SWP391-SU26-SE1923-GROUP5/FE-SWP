@@ -2,7 +2,6 @@
 
 import {useState} from "react";
 import Image from "next/image";
-import Link from "next/link";
 import {usePathname} from "next/navigation";
 import {
     BrainCircuit,
@@ -41,22 +40,53 @@ import {Button} from "@/components/ui/button";
 
 import {ActionType, AiResultState, File_, Flashcard, QuizQuestion} from "@/types";
 import {actionsDropdownItems} from "@/constants/actionsDropdownItems";
-import {constructDownloadUrl} from "@/lib/utils";
+import {triggerDownload} from "@/lib/utils";
 import {deleteFile, renameFile, updateFileUsers} from "@/lib/actions/file.actions";
 import {executeAIFeature} from "@/lib/actions/ai.actions";
 
 import {FileDetails, ShareInput} from "@/components/ActionsModalContent";
 import ApryseViewer from "./ApryseViewer";
+import {toast} from "sonner";
 
-const SUPPORTED_EDIT_EXTENSIONS = ["pdf", "docx", "doc", "xlsx", "xls", "pptx", "ppt"];
-const SUPPORTED_AI_DOC_EXTENSIONS = ["pdf", "txt", "csv", "docx", "md", "html", "json"];
-const SUPPORTED_AI_VIDEO_EXTENSIONS = ["mp4", "webm", "mov"];
-const SUPPORTED_AI_CODE_EXTENSIONS = ["go", "py", "js", "ts", "lua", "java"];
+const SUPPORTED_EDIT_EXTENSIONS = [
+    ".pdf", "pdf",
+    ".docx", "docx",
+    ".doc", "doc",
+    ".xlsx", "xlsx",
+    ".xls", "xls",
+    ".pptx", "pptx",
+    ".ppt", "ppt"
+];
+
+const SUPPORTED_AI_DOC_EXTENSIONS = [
+    ".pdf", "pdf",
+    ".txt", "txt",
+    ".csv", "csv",
+    ".docx", "docx",
+    ".md", "md",
+    ".html", "html",
+    ".json", "json"
+];
+
+const SUPPORTED_AI_VIDEO_EXTENSIONS = [
+    ".mp4", "mp4",
+    ".webm", "webm",
+    ".mov", "mov"
+];
+
+const SUPPORTED_AI_CODE_EXTENSIONS = [
+    ".go", "go",
+    ".py", "py",
+    ".js", "js",
+    ".ts", "ts",
+    ".lua", "lua",
+    ".java", "java"
+];
 const AI_ACTIONS = ["quiz", "flashcards", "ask-ai", "video-indexer", "code-sandbox"];
 
 export default function ActionDropdown({file}: { file: File_ }) {
     const path = usePathname();
-    const fileExt = file.extension?.toLowerCase() || "";
+    const fileExt = file.fileExtension?.toLowerCase() || "";
 
     const isAiDocSupported = SUPPORTED_AI_DOC_EXTENSIONS.includes(fileExt);
     const isVideoSupported = SUPPORTED_AI_VIDEO_EXTENSIONS.includes(fileExt);
@@ -67,8 +97,13 @@ export default function ActionDropdown({file}: { file: File_ }) {
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [action, setAction] = useState<ActionType | null>(null);
-    const [name, setName] = useState(file.name);
-    const [emails, setEmails] = useState<string[]>([]);
+    const [name, setName] = useState(file.fileName);
+
+    const [emails, setEmails] = useState<string[]>(
+        file.sharedUsers && file.sharedUsers.trim() !== ""
+            ? file.sharedUsers.split(",")
+            : []
+    );
 
     const [aiResult, setAiResult] = useState<AiResultState | null>(null);
     const [isChatting, setIsChatting] = useState(false);
@@ -81,7 +116,12 @@ export default function ActionDropdown({file}: { file: File_ }) {
         setIsModalOpen(false);
         setIsDropdownOpen(false);
         setAction(null);
-        setName(file.name);
+        setName(file.fileName);
+        setEmails(
+            file.sharedUsers && file.sharedUsers.trim() !== ""
+                ? file.sharedUsers.split(",")
+                : []
+        )
         setAiResult(null);
         setChatHistory([]);
         setChatInput("");
@@ -93,25 +133,49 @@ export default function ActionDropdown({file}: { file: File_ }) {
         if (!action) return null;
         setIsLoading(true);
 
-        const actions = {
-            rename: () => renameFile({fileId: file.$id, name, extension: file.extension, path}),
-            share: () => updateFileUsers({fileId: file.$id, emails: file.users, path}),
-            delete: () => deleteFile({fileId: file.$id, bucketFileId: file.bucketFileId, path}),
-            edit: () => Promise.resolve(true),
-        };
+        const toastId = toast.loading(`Processing ${action.label}...`);
 
-        const actionKey = action.value as keyof typeof actions;
-        const success = await actions[actionKey]();
+        try {
+            const actions = {
+                rename: () => renameFile({fileId: file.id, name, extension: file.fileExtension.replace('.', ''), path}),
+                share: () => updateFileUsers({fileId: file.id, emails, path}),
+                delete: () => deleteFile({fileId: file.id, path}),
+                edit: () => Promise.resolve(true),
+            };
 
-        if (success) closeAllModals();
-        setIsLoading(false);
+            const actionKey = action.value as keyof typeof actions;
+            const success = await actions[actionKey]();
+
+            toast.success(`${action.label} completed successfully!`, { id: toastId });
+            if (success) closeAllModals();
+        } catch (error: unknown) {
+            if (error instanceof Error) {
+                toast.error(error.message, { id: toastId });
+            } else {
+                toast.error(`Failed to execute ${action.label}.`, { id: toastId });
+            }
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     const handleRemoveUser = async (email: string) => {
         const updatedEmails = emails.filter((e) => e !== email);
-        const success = await updateFileUsers({fileId: file.$id, emails: file.users, path});
-        if (success) setEmails(updatedEmails);
-        closeAllModals();
+        const toastId = toast.loading(`Removing ${email}...`);
+
+        try {
+            const success = await updateFileUsers({fileId: file.id, emails: updatedEmails, path});
+            if (success) {
+                setEmails(updatedEmails);
+                toast.success(`User removed successfully!`, { id: toastId });
+            }
+        } catch (error: unknown) {
+            if (error instanceof Error) {
+                toast.error(error.message, { id: toastId });
+            } else {
+                toast.error("Failed to remove user.", { id: toastId });
+            }
+        }
     };
 
     const triggerAIFeature = async (
@@ -122,11 +186,19 @@ export default function ActionDropdown({file}: { file: File_ }) {
         setAction({value: endpoint, label, icon: ""} as ActionType);
         setIsModalOpen(true);
         setIsLoading(true);
+        const toastId = toast.loading(`Initializing ${label}...`);
+
         try {
             const data = await executeAIFeature(file, endpoint, extraParams);
             setAiResult({type: endpoint, data});
-        } catch (error) {
+            toast.success(`${label} ready!`, { id: toastId });
+        } catch (error: unknown) {
             console.error(error);
+            if (error instanceof Error) {
+                toast.error(error.message, { id: toastId });
+            } else {
+                toast.error(`Failed to load ${label}.`, { id: toastId });
+            }
         } finally {
             setIsLoading(false);
         }
@@ -135,11 +207,11 @@ export default function ActionDropdown({file}: { file: File_ }) {
     const handleStartAskAI = () => {
         setAction({value: "ask-ai", label: "Ask AI", icon: ""} as ActionType);
         setIsModalOpen(true);
-        setAiResult({type: "ask-ai", data: {fileUrl: file.url}});
+        setAiResult({type: "ask-ai", data: {fileUrl: file.fileLink}});
         setChatHistory([
             {
                 sender: "ai",
-                text: `I have active context for ${file.name}. What would you like to know? You can select a quick action or ask a specific question.`,
+                text: `I have active context for ${file.fileName}. What would you like to know? You can select a quick action or ask a specific question.`,
             },
         ]);
     };
@@ -164,16 +236,16 @@ export default function ActionDropdown({file}: { file: File_ }) {
                 method: "POST",
                 headers: {"Content-Type": "application/json"},
                 body: JSON.stringify({
-                    fileUrl: file.url,
+                    fileUrl: file.fileLink,
                     mimeType: mappedMimeType,
                     userQuestion: query,
                 }),
             });
             const data = await res.json();
-            if (!res.ok) throw new Error(data.error);
+            if (!res.ok) throw new Error(data.error || "Failed to analyze document");
 
             setChatHistory((prev) => [...prev, {sender: "ai", text: data.answer}]);
-        } catch (error) {
+        } catch (error: unknown) {
             setChatHistory((prev) => [
                 ...prev,
                 {
@@ -181,6 +253,9 @@ export default function ActionDropdown({file}: { file: File_ }) {
                     text: "Sorry, I encountered an error analyzing the document context.",
                 },
             ]);
+            if (error instanceof Error) {
+                toast.error(error.message);
+            }
         } finally {
             setIsChatting(false);
         }
@@ -195,7 +270,7 @@ export default function ActionDropdown({file}: { file: File_ }) {
             <DialogContent
                 className={`p-8 ${
                     value === "edit" || isAiAction
-                        ? "max-w-5xl w-full max-h-[90vh] overflow-y-auto custom-scrollbar"
+                        ? "max-w-5xl! w-full max-h-[90vh] overflow-y-auto custom-scrollbar"
                         : "shad-dialog"
                 }`}
                 aria-describedby={undefined}
@@ -222,7 +297,7 @@ export default function ActionDropdown({file}: { file: File_ }) {
                     {value === "delete" && (
                         <p className="delete-confirmation">
                             Are you sure you want to delete{" "}
-                            <span className="delete-file-name">{file.name}</span>?
+                            <span className="delete-file-name">{file.fileName}</span>?
                         </p>
                     )}
 
@@ -492,7 +567,7 @@ export default function ActionDropdown({file}: { file: File_ }) {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent>
                     <DropdownMenuLabel className="max-w-[200px] truncate">
-                        {file.name}
+                        {file.fileName}
                     </DropdownMenuLabel>
                     <DropdownMenuSeparator/>
 
@@ -515,14 +590,14 @@ export default function ActionDropdown({file}: { file: File_ }) {
                                 }}
                             >
                                 {item.value === "download" ? (
-                                    <Link
-                                        href={constructDownloadUrl(file.bucketFileId)}
-                                        download={file.name}
-                                        className="flex items-center gap-2"
+                                    <button
+                                        type="button"
+                                        onClick={() => triggerDownload(file.id, file.fileName)}
+                                        className="flex items-center gap-2 cursor-pointer w-full text-left"
                                     >
-                                        <Image src={item.icon} alt={item.label} width={30} height={30}/>{" "}
+                                        <Image src={item.icon} alt={item.label} width={30} height={30}/>
                                         {item.label}
-                                    </Link>
+                                    </button>
                                 ) : (
                                     <div className="flex items-center gap-2">
                                         <Image src={item.icon} alt={item.label} width={30} height={30}/>{" "}

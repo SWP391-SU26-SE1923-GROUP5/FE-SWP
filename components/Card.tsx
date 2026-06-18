@@ -7,15 +7,15 @@ import {getUserById} from "@/lib/actions/user.actions";
 import ActionDropdown from "@/components/ActionDropdown";
 
 const Card = async ({ file }: { file: File_ }) => {
-    const owner = await getUserById(file.owner)
+    const owner = await getUserById(file.userId)
 
     return (
-        <Link href={file.url} target="_blank" className="file-card">
+        <Link href={file.fileLink} target="_blank" className="file-card">
             <div className="flex justify-between">
                 <Thumbnail
-                    type={file.type}
-                    extension={file.extension}
-                    url={file.url}
+                    type={file.fileType}
+                    extension={file.fileExtension.replace('.', '')}
+                    url={file.fileLink}
                     className="!size-20"
                     imageClassName="!size-11"
                 />
@@ -23,15 +23,15 @@ const Card = async ({ file }: { file: File_ }) => {
                 <div className="flex flex-col items-end justify-between">
                     <ActionDropdown file={file} />
 
-                    <p className="body-1">{convertFileSize(file.size)}</p>
+                    <p className="body-1">{convertFileSize(file.size || 0)}</p>
                 </div>
             </div>
 
             <div className="file-card-details">
-                <p className="subtitle-2 line-clamp-1">{file.name}</p>
+                <p className="subtitle-2 line-clamp-1">{file.fileName}</p>
 
                 <FormattedDateTime
-                    date={file.$createdAt}
+                    date={file.createdAt}
                     className="body-2 text-light-100"
                 />
 

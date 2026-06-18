@@ -5,7 +5,7 @@ import FileUploader from "@/components/FileUploader";
 import { signOutUser } from "@/lib/actions/user.actions";
 import GlobalAIFeatures from "@/components/GlobalAIFeatures";
 
-const Header = ({ userId, accountId }: { userId: string, accountId: string }) => {
+const Header = () => {
     return (
         <header className="header">
             <Search />
@@ -13,7 +13,7 @@ const Header = ({ userId, accountId }: { userId: string, accountId: string }) =>
             <div className="header-wrapper">
                 <GlobalAIFeatures />
 
-                <FileUploader ownerId={userId} accountId={accountId} />
+                <FileUploader />
 
                 <form action={async () => {
                     "use server"
