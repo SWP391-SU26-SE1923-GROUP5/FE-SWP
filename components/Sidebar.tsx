@@ -2,6 +2,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import {navItems} from "@/constants/nav";
+import ROUTES from "@/constants/routes";
 import {usePathname} from "next/navigation";
 import {cn} from "@/lib/utils";
 import {avatarPlaceholderUrl} from "@/constants/avatar";
@@ -12,12 +13,12 @@ interface Props {
     email: string;
 }
 
-const Sidebar = ({fullName, avatar, email}: Props) => {
+const Sidebar = ({ fullName, avatar, email }: Props) => {
     const pathname = usePathname();
 
     return (
         <aside className="sidebar">
-            <Link href="/home" className="shrink-0">
+            <Link href={ROUTES.HOME} className="shrink-0">
                 <Image
                     src="/assets/icons/logo-full-brand.svg"
                     alt="logo"
@@ -36,7 +37,7 @@ const Sidebar = ({fullName, avatar, email}: Props) => {
             </Link>
 
             <nav className="sidebar-nav shrink-0">
-                {navItems.map(({url, name, icon}) => (
+                {navItems.map(({ url, name, icon }) => (
                     <Link key={name} href={url} className="lg:w-full">
                         <li
                             className={cn(

@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings } from "@langchain/google-genai";
+import { PineconeStore } from "@langchain/pinecone";
 import { ChatPromptTemplate } from "@langchain/core/prompts";
-import { createStuffDocumentsChain } from "@langchain/classic/chains/combine_documents";
-import { Document } from "@langchain/core/documents";
+import { pinecone, PINECONE_INDEX_NAME } from "@/lib/pinecone-client";
 
-import { qdrant, QDRANT_COLLECTION_NAME } from "@/lib/qdrant-client";
 import { getCurrentUser } from "@/lib/actions/user.actions";
+import {createStuffDocumentsChain} from "@langchain/classic/chains/combine_documents";
+import {createRetrievalChain} from "@langchain/classic/chains/retrieval";
 
 export async function POST(req: NextRequest) {
     try {
@@ -22,32 +23,16 @@ export async function POST(req: NextRequest) {
             modelName: "gemini-embedding-001"
         });
 
-        const queryVector = await embeddings.embedQuery(userQuestion);
-
-        const searchResponse = await qdrant.search(QDRANT_COLLECTION_NAME, {
-            vector: {
-                name: "dense-text",
-                vector: queryVector
-            },
-            filter: {
-                must: [
-                    {
-                        key: "accountId",
-                        match: { value: user.accountId }
-                    }
-                ]
-            },
-            limit: 10
+        const pineconeIndex = pinecone.index(PINECONE_INDEX_NAME);
+        const vectorStore = await PineconeStore.fromExistingIndex(embeddings, {
+            pineconeIndex,
+            namespace: user.accountId
         });
 
-        const retrievedDocs = searchResponse.map(point => new Document({
-            pageContent: point.payload?.text as string || "",
-            metadata: {
-                fileId: point.payload?.fileId,
-                extension: point.payload?.extension,
-                chunkId: point.payload?.chunkId
-            }
-        }));
+        const retriever = vectorStore.asRetriever({
+            searchType: "mmr",
+            searchKwargs: { fetchK: 10, lambda: 0.5 }
+        });
 
         const llm = new ChatGoogleGenerativeAI({
             apiKey: process.env.GEMINI_API_KEY,
@@ -65,15 +50,12 @@ export async function POST(req: NextRequest) {
         `);
 
         const combineDocsChain = await createStuffDocumentsChain({ llm, prompt });
-        const answer = await combineDocsChain.invoke({
-            input: userQuestion,
-            context: retrievedDocs
-        });
+        const retrievalChain = await createRetrievalChain({ retriever, combineDocsChain });
+        const result = await retrievalChain.invoke({ input: userQuestion });
 
-        return NextResponse.json({ answer });
-
+        return NextResponse.json({ answer: result.answer });
     } catch (error: any) {
-        console.error("[Qdrant Retrieval Error]:", error);
+        console.error("[Namespaced Retrieval Error]:", error);
         return NextResponse.json({ error: "Search engine encountered an issue." }, { status: 500 });
     }
 }

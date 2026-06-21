@@ -15,6 +15,7 @@ export async function GET(request: NextRequest) {
         const query = AdminFileQuerySchema.parse({
             search: url.searchParams.get("search") ?? "",
             type: url.searchParams.get("type") ?? "all",
+            status: url.searchParams.get("status") ?? "all",
             sort: url.searchParams.get("sort") ?? "$createdAt-desc",
             page: url.searchParams.get("page") ?? 1,
             limit: url.searchParams.get("limit") ?? 20,

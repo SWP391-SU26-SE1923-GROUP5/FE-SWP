@@ -25,7 +25,7 @@ export const SignUpSchema = z.object({
         .string()
         .min(1, { message: 'Name is required.' })
         .max(50, { message: 'Name cannot exceed 50 characters.' })
-        .regex(/^[\p{L}\s]+$/u, {
+        .regex(/^[a-zA-Z\s]+$/, {
             message: 'Name can only contain letters and spaces.',
         }),
 

@@ -19,9 +19,16 @@ export const isAdminEmail = (email: string | null | undefined): boolean => {
     return getAdminEmails().includes(email.trim().toLowerCase());
 };
 
+const ADMIN_ROLE_VALUES = new Set<string>(["admin", "Admin", "ADMIN"]);
+
+export const isAdminRoleValue = (role: string | null | undefined): boolean => {
+    if (!role) return false;
+    return ADMIN_ROLE_VALUES.has(role);
+};
+
 export const getUserRole = (user: User | null | undefined): UserRole => {
     if (!user) return "user";
-    if (user.role === "admin") return "admin";
+    if (isAdminRoleValue(user.role)) return "admin";
     if (isAdminEmail(user.email)) return "admin";
     return "user";
 };

@@ -1,12 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import {
-    AdminPermissionError,
-    AdminValidationError,
-    createAdminUser,
-    getAdminUsers,
-} from "@/lib/actions/admin.actions";
-import { CreateUserSchema, AdminUserQuerySchema } from "@/lib/admin/validations";
+import {AdminPermissionError, AdminValidationError, getAdminUsers} from "@/lib/actions/admin.actions";
+import {AdminUserQuerySchema} from "@/lib/admin/validations";
 
 const QuerySchema = AdminUserQuerySchema;
 
@@ -21,18 +16,7 @@ export async function GET(request: NextRequest) {
             limit: url.searchParams.get("limit") ?? 20,
         });
         const data = await getAdminUsers(query);
-        return NextResponse.json({ success: true, data });
-    } catch (error) {
-        return handleError(error);
-    }
-}
-
-export async function POST(request: NextRequest) {
-    try {
-        const json = await request.json();
-        const parsed = CreateUserSchema.parse(json);
-        const data = await createAdminUser(parsed);
-        return NextResponse.json({ success: true, data }, { status: 201 });
+        return NextResponse.json({success: true, data});
     } catch (error) {
         return handleError(error);
     }
@@ -40,21 +24,21 @@ export async function POST(request: NextRequest) {
 
 function handleError(error: unknown) {
     if (error instanceof AdminPermissionError) {
-        return NextResponse.json({ success: false, error: error.message }, { status: 403 });
+        return NextResponse.json({success: false, error: error.message}, {status: 403});
     }
     if (error instanceof AdminValidationError) {
-        return NextResponse.json({ success: false, error: error.message }, { status: 400 });
+        return NextResponse.json({success: false, error: error.message}, {status: 400});
     }
     if (error instanceof z.ZodError) {
         return NextResponse.json(
             {
                 success: false,
                 error: "Validation failed.",
-                details: error.issues.map((i) => ({ path: i.path.join("."), message: i.message })),
+                details: error.issues.map((i) => ({path: i.path.join("."), message: i.message})),
             },
-            { status: 400 }
+            {status: 400}
         );
     }
     console.error("[admin/users] error:", error);
-    return NextResponse.json({ success: false, error: "Internal server error." }, { status: 500 });
+    return NextResponse.json({success: false, error: "Internal server error."}, {status: 500});
 }

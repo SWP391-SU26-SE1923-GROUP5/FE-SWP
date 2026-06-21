@@ -1,21 +1,19 @@
 import {NextRequest, NextResponse} from "next/server";
 import {z} from "zod";
-import {AdminPermissionError, AdminValidationError, banAdminDocument, unbanAdminDocument,} from "@/lib/actions/admin.actions";
+import {AdminPermissionError, AdminValidationError, getAdminReports} from "@/lib/actions/admin.actions";
+import {AdminReportQuerySchema} from "@/lib/admin/validations";
 
-const ActionSchema = z.object({
-    action: z.enum(["ban", "unban"]),
-});
-
-interface RouteContext {
-    params: Promise<{id: string}>;
-}
-
-export async function PATCH(request: NextRequest, context: RouteContext) {
+export async function GET(request: NextRequest) {
     try {
-        const {id} = await context.params;
-        const json = await request.json();
-        const parsed = ActionSchema.parse(json);
-        const data = parsed.action === "ban" ? await banAdminDocument(id) : await unbanAdminDocument(id);
+        const url = new URL(request.url);
+        const query = AdminReportQuerySchema.parse({
+            search: url.searchParams.get("search") ?? "",
+            status: url.searchParams.get("status") ?? "all",
+            sort: url.searchParams.get("sort") ?? "$createdAt-desc",
+            page: url.searchParams.get("page") ?? 1,
+            limit: url.searchParams.get("limit") ?? 20,
+        });
+        const data = await getAdminReports(query);
         return NextResponse.json({success: true, data});
     } catch (error) {
         return handleError(error);
@@ -39,6 +37,6 @@ function handleError(error: unknown) {
             {status: 400}
         );
     }
-    console.error("[admin/files/[id]] error:", error);
+    console.error("[admin/reports] error:", error);
     return NextResponse.json({success: false, error: "Internal server error."}, {status: 500});
 }

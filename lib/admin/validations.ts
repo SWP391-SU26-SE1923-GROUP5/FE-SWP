@@ -53,9 +53,31 @@ export type AdminUserQuery = z.infer<typeof AdminUserQuerySchema>;
 export const AdminFileQuerySchema = z.object({
     search: z.string().trim().max(100).optional().default(""),
     type: z.enum(["all", "document", "image", "video", "audio", "other"]).optional().default("all"),
+    status: z.enum(["all", "active", "removed"]).optional().default("all"),
     sort: z.string().optional().default("$createdAt-desc"),
     page: z.coerce.number().int().positive().optional().default(1),
     limit: z.coerce.number().int().positive().max(200).optional().default(20),
 });
 
 export type AdminFileQuery = z.infer<typeof AdminFileQuerySchema>;
+
+export const TIER_VALUES = ["Free", "Premium"] as const;
+
+export const TierUpdateSchema = z.object({
+    tier: z.enum(TIER_VALUES, {message: "Tier must be either 'Free' or 'Premium'."}),
+});
+
+export type TierUpdateInput = z.infer<typeof TierUpdateSchema>;
+
+export const AdminReportQuerySchema = z.object({
+    search: z.string().trim().max(100).optional().default(""),
+    status: z
+        .enum(["all", "pending", "reviewed", "resolved", "rejected"])
+        .optional()
+        .default("all"),
+    sort: z.string().optional().default("$createdAt-desc"),
+    page: z.coerce.number().int().positive().optional().default(1),
+    limit: z.coerce.number().int().positive().max(200).optional().default(20),
+});
+
+export type AdminReportQuery = z.infer<typeof AdminReportQuerySchema>;

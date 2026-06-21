@@ -1,7 +1,6 @@
 import { CheckCircle2, Database, HardDrive, KeyRound, Server, Shield } from "lucide-react";
 import { getAdminEmails } from "@/lib/admin/roles";
 import { getSystemStats } from "@/lib/actions/admin.actions";
-import { convertFileSize } from "@/lib/utils";
 import { getCurrentUser } from "@/lib/actions/user.actions";
 import { getUserRole } from "@/lib/admin/roles";
 
@@ -80,10 +79,10 @@ export default async function AdminSettingsPage() {
                 </div>
                 {stats ? (
                     <dl className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                        <DetailRow label="Total users" value={String(stats.totalUsers)} />
-                        <DetailRow label="Admins" value={String(stats.totalAdmins)} />
-                        <DetailRow label="Total files" value={String(stats.totalFiles)} />
-                        <DetailRow label="Storage used" value={convertFileSize(stats.totalStorage)} />
+                <DetailRow label="Total users" value={String(stats.totalUsers)} />
+                <DetailRow label="Total documents" value={String(stats.totalDocuments)} />
+                <DetailRow label="Total reports" value={String(stats.totalReports)} />
+                <DetailRow label="Payments" value={`${stats.completedPayments}/${stats.totalPayments} completed`} />
                     </dl>
                 ) : (
                     <p className="text-sm text-light-400">Database is unreachable.</p>

@@ -76,7 +76,7 @@ export class AppwriteStorage implements IFileStorage {
             if (!currentUser) throw new Error("Current user does not exist");
 
             const queries = createQueries(currentUser, types as string[], searchText, sort, limit);
-            const files = await databases.listDocuments<File_>(
+            const files = await databases.listDocuments(
                 appwriteConfig.databaseId, appwriteConfig.filesCollectionId, queries
             );
             return parseStringify(files);

@@ -1,4 +1,4 @@
-import type {NextConfig} from "next";
+import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
     async headers() {
@@ -20,24 +20,23 @@ const nextConfig: NextConfig = {
     },
 
     experimental: {
-        serverActions: {
-            bodySizeLimit: "100MB"
-        },
-        proxyClientMaxBodySize: "100MB"
-    },
+      serverActions: {
+          bodySizeLimit: "100MB"
+      }
+  },
 
-    images: {
-        remotePatterns: [
-            {
-                protocol: "https",
-                hostname: "static.vecteezy.com"
-            },
-            {
-                protocol: "https",
-                hostname: "cloud.appwrite.io",
-            }
-        ]
-    }
+  images: {
+      remotePatterns: [
+          {
+              protocol: "https",
+              hostname: "static.vecteezy.com"
+          },
+          {
+              protocol: "https",
+              hostname: "cloud.appwrite.io",
+          }
+      ]
+  }
 };
 
 export default nextConfig;
