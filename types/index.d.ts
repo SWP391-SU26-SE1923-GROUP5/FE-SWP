@@ -7,6 +7,7 @@ import { type DefaultJWT } from "next-auth/jwt";
 declare module "next-auth" {
     interface Session {
         accessToken?: string;
+        accessTokenExpiresAt?: number;
         error?: string;
         user: {
             id: string;
@@ -37,36 +38,34 @@ declare module "next-auth/jwt" {
 // ==========================================
 // 2. COMMON & BASE TYPES
 // ==========================================
-export type ActionType = {
-    value: string;
-    label: string;
-    icon?: string;
-};
-
 export interface BaseDocument {
     id: string;
     createdAt?: string;
     updatedAt?: string;
 }
 
+export type ActionType = {
+    value: string;
+    label: string;
+    icon?: string;
+};
+
+export interface SearchParamProps {
+    params: Promise<{ [key: string]: string }>;
+    searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}
+
 // ==========================================
 // 3. AUTHENTICATION & USER TYPES
 // ==========================================
-export interface CreateAccountProps {
+export interface User extends BaseDocument {
     fullName: string;
-    username: string;
     email: string;
-    password?: string;
-}
-
-export interface IAuthService {
-    createAccount(props: CreateAccountProps): Promise<{ email: string | null }>;
-    signInUser(props: SignInProps): Promise<LoginResponse | null>;
-    getCurrentUser(): Promise<User | null>;
-    getUserById(id: string): Promise<User>;
-    signOutUser(): Promise<void>;
-    verifyOtp(props: VerifyOtpProps): Promise<string>;
-    resendOtp(props: { email: string }): Promise<string>;
+    role: string;
+    dateOfBirth?: string;
+    currentStorageCapacity?: number;
+    currentAiTokenUsage?: number;
+    status?: string;
 }
 
 export interface LoginResponse {
@@ -82,17 +81,9 @@ export interface SignInProps {
     password?: string;
 }
 
-export interface User {
-    id: string;
+export interface CreateAccountProps extends SignInProps {
     fullName: string;
-    email: string;
-    role: string;
-    dateOfBirth?: string;
-    currentStorageCapacity?: number;
-    currentAiTokenUsage?: number;
-    status?: string;
-    createdAt?: string;
-    updatedAt?: string;
+    username: string;
 }
 
 export interface VerifyOtpProps {
@@ -100,18 +91,22 @@ export interface VerifyOtpProps {
     otp: string;
 }
 
+export interface IAuthService {
+    createAccount(props: CreateAccountProps): Promise<{ email: string | null }>;
+    signInUser(props: SignInProps): Promise<LoginResponse | null>;
+    getCurrentUser(): Promise<User | null>;
+    getUserById(id: string): Promise<User>;
+    signOutUser(): Promise<void>;
+    verifyOtp(props: VerifyOtpProps): Promise<string>;
+    resendOtp(props: { email: string }): Promise<string>;
+}
+
 // ==========================================
 // 4. FILE & STORAGE TYPES
 // ==========================================
 export type FileType = "document" | "image" | "video" | "audio" | "other";
 
-export interface DeleteFileProps {
-    fileId: string;
-    path: string;
-}
-
-export interface File_ {
-    id: string;
+export interface File_ extends BaseDocument {
     userId: string;
     subjectId: string;
     title: string;
@@ -122,8 +117,6 @@ export interface File_ {
     sharedUsers: string;
     shareStatus: string;
     status: number;
-    createdAt: string;
-    updatedAt: string;
     size?: number;
 }
 
@@ -134,23 +127,16 @@ export interface GetFilesProps {
     limit?: number;
 }
 
-export interface IFileStorage {
-    uploadFile(props: UploadFileProps): Promise<UploadFileResponse | undefined>;
-    getFiles(props: GetFilesProps): Promise<{ documents: File_[]; total: number }>;
-    renameFile(props: RenameFileProps): Promise<File_ | undefined>;
-    updateFileUsers(props: UpdateFileUsersProps): Promise<File_ | undefined>;
-    updateEditedFile(props: UpdateEditedFileProps): Promise<UploadFileResponse | undefined>;
-    deleteFile(props: DeleteFileProps): Promise<{ status: string } | undefined>;
-    getTotalSpaceUsed(): Promise<{
-        image: { size: number; latestDate: string };
-        document: { size: number; latestDate: string };
-        video: { size: number; latestDate: string };
-        audio: { size: number; latestDate: string };
-        other: { size: number; latestDate: string };
-        used: number;
-        all: number;
-    }>;
-    downloadFile(props: DownloadFileProps): Promise<{ data: string }>;
+export interface UploadFileProps {
+    file: File;
+    path: string;
+}
+
+export interface UploadFileResponse {
+    documentId: string;
+    status: string;
+    chunkCount: number;
+    message: string;
 }
 
 export interface RenameFileProps {
@@ -172,29 +158,78 @@ export interface UpdateFileUsersProps {
     path: string;
 }
 
-export interface UploadFileProps {
-    file: File;
+export interface DeleteFileProps {
+    fileId: string;
     path: string;
 }
 
-export interface UploadFileResponse {
-    documentId: string;
-    status: string;
-    chunkCount: number;
-    message: string;
+export interface DownloadFileProps {
+    fileId: string;
+    path?: string;
+}
+
+export interface StorageCategoryStats {
+    size: number;
+    latestDate: string;
+}
+
+export interface IFileStorage {
+    uploadFile(props: UploadFileProps): Promise<UploadFileResponse | undefined>;
+    getFiles(props: GetFilesProps): Promise<{ documents: File_[]; total: number }>;
+    renameFile(props: RenameFileProps): Promise<File_ | undefined>;
+    updateFileUsers(props: UpdateFileUsersProps): Promise<File_ | undefined>;
+    updateEditedFile(props: UpdateEditedFileProps): Promise<UploadFileResponse | undefined>;
+    deleteFile(props: DeleteFileProps): Promise<{ status: string } | undefined>;
+    downloadFile(props: DownloadFileProps): Promise<{ data: string }>;
+    getTotalSpaceUsed(): Promise<{
+        image: StorageCategoryStats;
+        document: StorageCategoryStats;
+        video: StorageCategoryStats;
+        audio: StorageCategoryStats;
+        other: StorageCategoryStats;
+        used: number;
+        all: number;
+    }>;
 }
 
 // ==========================================
 // 5. AI INTEGRATION TYPES
 // ==========================================
+export interface Flashcard {
+    front: string;
+    back: string;
+}
+
+export interface QuizAnswer {
+    selectedOption: string;
+    isCorrect: boolean;
+}
+
+export interface QuizQuestion {
+    questionTitle: string;
+    questionType: number;
+    position: number;
+    answers: QuizAnswer[];
+}
+
+export interface QuizResponse {
+    quizTitle: string;
+    questions: QuizQuestion[];
+}
+
+export interface SummaryResponse {
+    summary: string;
+}
+
 export interface AiResultState {
     type: string;
     data?: {
         fileUrl?: string;
-        quiz_title?: string;
+        quizTitle?: string;
         questions?: QuizQuestion[];
-        deck_title?: string;
+        deckTitle?: string;
         cards?: Flashcard[];
+        summary?: string;
     };
 }
 
@@ -203,32 +238,14 @@ export interface DeepResearchProps {
     topic: string;
 }
 
-export interface Flashcard {
-    front: string;
-    back: string;
-}
-
-export interface IAIService {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    executeAIFeature(props: ProcessFileAIProps): Promise<any>;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    executeDeepResearch(props: DeepResearchProps): Promise<any>;
-    generateEmbeddings(texts: string[]): Promise<number[][]>;
-}
-
 export interface ProcessFileAIProps {
     file: File_;
     endpoint: string;
-    extraParams?: Record<string, string>;
+    extraParams?: Record<string, string | number | boolean>;
 }
 
-export interface QuizQuestion {
-    question_text: string;
-    correct_answer: string;
-    options: string[];
-}
-
-export interface SearchParamProps {
-    params: Promise<{ [key: string]: string }>;
-    searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+export interface IAIService {
+    executeAIFeature<T = unknown>(props: ProcessFileAIProps): Promise<T>;
+    executeDeepResearch<T = unknown>(props: DeepResearchProps): Promise<T>;
+    generateEmbeddings(texts: string[]): Promise<number[][]>;
 }

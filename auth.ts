@@ -2,7 +2,7 @@ import NextAuth from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import GitHub from "next-auth/providers/github";
 import Google from "next-auth/providers/google";
-import {LocalAuth} from "@/lib/actions/providers/local.auth";
+import { LocalAuth } from "@/lib/actions/providers/local.auth";
 import { JWT } from "next-auth/jwt";
 
 async function refreshAccessToken(token: JWT) {
@@ -18,6 +18,7 @@ async function refreshAccessToken(token: JWT) {
             accessToken: refreshedTokens.accessToken,
             accessTokenExpiresAt: Date.parse(refreshedTokens.accessTokenExpiresAt),
             refreshToken: refreshedTokens.refreshToken ?? token.refreshToken,
+            error: undefined,
         };
     } catch (error) {
         console.error("RefreshAccessTokenError", error);
@@ -28,7 +29,7 @@ async function refreshAccessToken(token: JWT) {
     }
 }
 
-export const {handlers, signIn, signOut, auth} = NextAuth({
+export const { handlers, signIn, signOut, auth } = NextAuth({
     pages: {
         signIn: "/sign-in",
     },
@@ -44,8 +45,8 @@ export const {handlers, signIn, signOut, auth} = NextAuth({
         CredentialsProvider({
             name: "credentials",
             credentials: {
-                email: {label: "Email", type: "email"},
-                password: {label: "Password", type: "password"},
+                email: { label: "Email", type: "email" },
+                password: { label: "Password", type: "password" },
             },
             async authorize(credentials) {
                 if (!credentials?.email || !credentials?.password) {
@@ -58,13 +59,6 @@ export const {handlers, signIn, signOut, auth} = NextAuth({
                     email: credentials.email as string,
                     password: credentials.password as string
                 });
-
-                if (result) {
-                    console.log("--- LOGIN DEBUG ---");
-                    console.log("Access Token:", result.accessToken);
-                    console.log("Refresh Token:", result.refreshToken);
-                    console.log("-------------------");
-                }
 
                 if (!result || !result.user) {
                     throw new Error("Invalid email or password");
@@ -83,17 +77,17 @@ export const {handlers, signIn, signOut, auth} = NextAuth({
         })
     ],
     callbacks: {
-        async signIn({account}) {
-            return true
+        async signIn({ account }) {
+            return true;
         },
 
-        async jwt({ token, user, account }): Promise<JWT> {
+        async jwt({ token, user, account, trigger }): Promise<JWT> {
             if (user) {
                 token.id = user.id as string;
                 token.role = user.role as string;
-                token.provider = account?.provider;
+                token.provider = account?.provider ?? "credentials";
 
-                if (account?.provider === "credentials") {
+                if (token.provider === "credentials") {
                     token.accessToken = user.accessToken;
                     token.refreshToken = user.refreshToken;
                     token.accessTokenExpiresAt = user.accessTokenExpiresAt;
@@ -104,11 +98,15 @@ export const {handlers, signIn, signOut, auth} = NextAuth({
                 return token;
             }
 
-            if (token.accessTokenExpiresAt && Date.now() < (token.accessTokenExpiresAt as number) - 60000) {
-                return token;
+            if (trigger === "update") {
+                const rotatedTokens = await refreshAccessToken(token);
+                return {
+                    ...token,
+                    ...rotatedTokens,
+                };
             }
 
-            return await refreshAccessToken(token);
+            return token;
         },
 
         async session({ session, token }) {
@@ -116,9 +114,11 @@ export const {handlers, signIn, signOut, auth} = NextAuth({
                 session.user.id = token.id as string;
                 session.user.role = token.role as string;
 
+                const provider = token.provider || "credentials";
                 if (token.provider === "credentials") {
-                    session.accessToken = token.accessToken;
-                    session.error = token.error;
+                    session.accessToken = token.accessToken as string;
+                    session.error = token.error as string | undefined;
+                    session.accessTokenExpiresAt = token.accessTokenExpiresAt as number;
                 }
             }
             return session;

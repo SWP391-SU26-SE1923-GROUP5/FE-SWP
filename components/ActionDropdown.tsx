@@ -42,7 +42,12 @@ import {ActionType, AiResultState, File_, Flashcard, QuizQuestion} from "@/types
 import {actionsDropdownItems} from "@/constants/actionsDropdownItems";
 import {triggerDownload} from "@/lib/utils";
 import {deleteFile, renameFile, updateFileUsers} from "@/lib/actions/file.actions";
-import {executeAIFeature} from "@/lib/actions/ai.actions";
+import {
+    createChatSession,
+    sendChatMessage,
+    generateQuiz,
+    generateFlashcards
+} from "@/lib/actions/ai.actions";
 
 import {FileDetails, ShareInput} from "@/components/ActionsModalContent";
 import ApryseViewer from "./ApryseViewer";
@@ -108,6 +113,7 @@ export default function ActionDropdown({file}: { file: File_ }) {
     const [aiResult, setAiResult] = useState<AiResultState | null>(null);
     const [isChatting, setIsChatting] = useState(false);
     const [chatInput, setChatInput] = useState("");
+    const [chatSessionId, setChatSessionId] = useState<string | null>(null);
     const [chatHistory, setChatHistory] = useState<{ sender: "user" | "ai"; text: string }[]>([]);
     const [userAnswers, setUserAnswers] = useState<Record<number, string>>({});
     const [flippedCards, setFlippedCards] = useState<Record<number, boolean>>({});
@@ -125,6 +131,7 @@ export default function ActionDropdown({file}: { file: File_ }) {
         setAiResult(null);
         setChatHistory([]);
         setChatInput("");
+        setChatSessionId(null);
         setUserAnswers({});
         setFlippedCards({});
     };
@@ -146,8 +153,10 @@ export default function ActionDropdown({file}: { file: File_ }) {
             const actionKey = action.value as keyof typeof actions;
             const success = await actions[actionKey]();
 
-            toast.success(`${action.label} completed successfully!`, { id: toastId });
-            if (success) closeAllModals();
+            if (success) {
+                toast.success(`${action.label} completed successfully!`, { id: toastId });
+                closeAllModals()
+            }
         } catch (error: unknown) {
             if (error instanceof Error) {
                 toast.error(error.message, { id: toastId });
@@ -189,7 +198,18 @@ export default function ActionDropdown({file}: { file: File_ }) {
         const toastId = toast.loading(`Initializing ${label}...`);
 
         try {
-            const data = await executeAIFeature(file, endpoint, extraParams);
+            let data: Record<string, unknown> = {};
+
+            if (endpoint === "quiz") {
+                const amount = Number(extraParams?.amount) || 10;
+                const res = await generateQuiz(file.id, amount);
+                data = { quizTitle: res.quizTitle, questions: res.questions };
+            } else if (endpoint === "flashcards") {
+                const amount = Number(extraParams?.amount) || 10;
+                const res = await generateFlashcards(file.id, amount);
+                data = { deckTitle: `${file.fileName} Flashcards`, cards: res };
+            }
+
             setAiResult({type: endpoint, data});
             toast.success(`${label} ready!`, { id: toastId });
         } catch (error: unknown) {
@@ -204,47 +224,43 @@ export default function ActionDropdown({file}: { file: File_ }) {
         }
     };
 
-    const handleStartAskAI = () => {
+    const handleStartAskAI = async () => {
         setAction({value: "ask-ai", label: "Ask AI", icon: ""} as ActionType);
         setIsModalOpen(true);
-        setAiResult({type: "ask-ai", data: {fileUrl: file.fileLink}});
-        setChatHistory([
-            {
-                sender: "ai",
-                text: `I have active context for ${file.fileName}. What would you like to know? You can select a quick action or ask a specific question.`,
-            },
-        ]);
+        setIsLoading(true);
+
+        try {
+            const sessionTitle = `Document Chat: ${file.fileName}`;
+            const session = await createChatSession(file.id, sessionTitle);
+
+            setChatSessionId(session.id);
+            setAiResult({type: "ask-ai", data: {fileUrl: file.fileLink}});
+            setChatHistory([
+                {
+                    sender: "ai",
+                    text: `I have active context for ${file.fileName}. What would you like to know? You can select a quick action or ask a specific question.`,
+                },
+            ]);
+        } catch (error: unknown) {
+            if (error instanceof Error) {
+                toast.error(error.message);
+            }
+            closeAllModals();
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     const submitChatQuery = async (query: string) => {
-        if (!query.trim()) return;
+        if (!query.trim() || !chatSessionId) return;
 
         setChatHistory((prev) => [...prev, {sender: "user", text: query}]);
         setChatInput("");
         setIsChatting(true);
 
-        const mimeTypes: Record<string, string> = {
-            pdf: "application/pdf",
-            txt: "text/plain",
-            csv: "text/csv",
-            docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        };
-        const mappedMimeType = mimeTypes[fileExt] || "application/pdf";
-
         try {
-            const res = await fetch("/api/ai/context-caching", {
-                method: "POST",
-                headers: {"Content-Type": "application/json"},
-                body: JSON.stringify({
-                    fileUrl: file.fileLink,
-                    mimeType: mappedMimeType,
-                    userQuestion: query,
-                }),
-            });
-            const data = await res.json();
-            if (!res.ok) throw new Error(data.error || "Failed to analyze document");
-
-            setChatHistory((prev) => [...prev, {sender: "ai", text: data.answer}]);
+            const res = await sendChatMessage(query, chatSessionId, [file.id], true);
+            setChatHistory((prev) => [...prev, {sender: "ai", text: res.answer}]);
         } catch (error: unknown) {
             setChatHistory((prev) => [
                 ...prev,
@@ -309,11 +325,11 @@ export default function ActionDropdown({file}: { file: File_ }) {
                                 <div className="flex flex-col h-[55vh]">
                                     <div className="flex justify-between items-center mb-4 pb-2 border-b light-border">
                                         <span className="caption text-light-400 flex items-center gap-2">
-                                            <Sparkles className="h-3 w-3 text-brand"/> Powered by Gemini 3.5 Flash
+                                            <Sparkles className="h-3 w-3 text-brand"/> Powered by RAG Context Engine
                                         </span>
 
                                         <span className="caption text-brand bg-brand-100 px-2 py-1 rounded-md">
-                                            Native Caching Active
+                                            Document Linked
                                         </span>
                                     </div>
 
@@ -389,10 +405,12 @@ export default function ActionDropdown({file}: { file: File_ }) {
 
                             {value === "quiz" && aiResult.data?.questions && (
                                 <div className="space-y-6">
-                                    <h3 className="h3-bold text-brand">{aiResult.data.quiz_title}</h3>
+                                    <h3 className="h3-bold text-brand">{aiResult.data.quizTitle}</h3>
                                     {aiResult.data.questions.map((q: QuizQuestion, idx: number) => {
                                         const hasAnswered = userAnswers[idx] !== undefined;
-                                        const isCorrect = userAnswers[idx] === q.correct_answer;
+                                        const selectedIndex = Number(userAnswers[idx]);
+                                        const isCorrect = hasAnswered ? q.answers[selectedIndex]?.isCorrect : false;
+                                        const correctText = q.answers.find((a) => a.isCorrect)?.selectedOption;
 
                                         return (
                                             <div
@@ -400,10 +418,10 @@ export default function ActionDropdown({file}: { file: File_ }) {
                                                 className="p-4 border light-border rounded-xl bg-light-800 space-y-2"
                                             >
                                                 <p className="font-semibold text-dark-200">
-                                                    {idx + 1}. {q.question_text}
+                                                    {idx + 1}. {q.questionTitle}
                                                 </p>
                                                 <div className="grid gap-2 mt-3">
-                                                    {q.options.map((opt: string, i: number) => {
+                                                    {q.answers.map((ans, i: number) => {
                                                         let optionClass =
                                                             "text-sm p-3 bg-white rounded-lg border light-border flex items-center gap-2 transition-all duration-200";
                                                         let circleClass =
@@ -412,12 +430,12 @@ export default function ActionDropdown({file}: { file: File_ }) {
                                                         if (!hasAnswered) {
                                                             optionClass += " cursor-pointer hover:bg-brand/10 hover:border-brand";
                                                         } else {
-                                                            if (opt === q.correct_answer) {
+                                                            if (ans.isCorrect) {
                                                                 optionClass +=
                                                                     " bg-emerald-50 border-emerald-500 text-emerald-800 font-medium";
                                                                 circleClass =
                                                                     "h-4 w-4 rounded-full border-emerald-500 bg-emerald-500 shrink-0";
-                                                            } else if (opt === userAnswers[idx]) {
+                                                            } else if (i === selectedIndex) {
                                                                 optionClass += " bg-red/10 border-red text-red font-medium";
                                                                 circleClass =
                                                                     "h-4 w-4 rounded-full border-red bg-red shrink-0";
@@ -433,12 +451,12 @@ export default function ActionDropdown({file}: { file: File_ }) {
                                                                     if (!hasAnswered)
                                                                         setUserAnswers((prev) => ({
                                                                             ...prev,
-                                                                            [idx]: opt
+                                                                            [idx]: i.toString()
                                                                         }));
                                                                 }}
                                                             >
                                                                 <div className={circleClass}/>
-                                                                <p>{opt}</p>
+                                                                <p>{ans.selectedOption}</p>
                                                             </div>
                                                         );
                                                     })}
@@ -451,7 +469,7 @@ export default function ActionDropdown({file}: { file: File_ }) {
                                                     >
                                                         {isCorrect
                                                             ? "✨ Correct!"
-                                                            : `❌ Incorrect. The right answer is: ${q.correct_answer}`}
+                                                            : `❌ Incorrect. The right answer is: ${correctText}`}
                                                     </div>
                                                 )}
                                             </div>
@@ -463,7 +481,7 @@ export default function ActionDropdown({file}: { file: File_ }) {
                             {value === "flashcards" && aiResult.data?.cards && (
                                 <div className="space-y-6">
                                     <div className="flex items-center justify-between">
-                                        <h3 className="h3-bold text-brand">{aiResult.data.deck_title}</h3>
+                                        <h3 className="h3-bold text-brand">{aiResult.data.deckTitle}</h3>
                                         <span className="caption text-light-400">Click a card to flip</span>
                                     </div>
 

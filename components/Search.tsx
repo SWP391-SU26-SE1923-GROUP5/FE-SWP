@@ -5,12 +5,34 @@ import Image from "next/image";
 import { Input } from "@/components/ui/input";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { getFiles } from "@/lib/actions/file.actions";
+import { createChatSession, sendChatMessage } from "@/lib/actions/ai.actions";
 import Thumbnail from "@/components/Thumbnail";
 import FormattedDateTime from "@/components/FormattedDateTime";
 import { useDebounce } from "use-debounce";
 import { File_ } from "@/types";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Sparkles, Loader2 } from "lucide-react";
+import { Sparkles, Loader2, FileText } from "lucide-react";
+
+interface RAGReference {
+    index: number;
+    documentId: string;
+    documentTitle: string;
+    pageInfo: string;
+    chunkExcerpt: string;
+}
+
+interface RAGCitation {
+    index: number;
+    documentTitle: string;
+    chunkPreview: string;
+}
+
+interface RAGResponse {
+    answer: string;
+    citations?: RAGCitation[];
+    references?: RAGReference[];
+    neighbors?: any[];
+}
 
 const Search = () => {
     const [query, setQuery] = useState("");
@@ -22,7 +44,9 @@ const Search = () => {
 
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isLoadingAI, setIsLoadingAI] = useState(false);
-    const [aiResult, setAiResult] = useState<string | null>(null);
+
+    // 2. Update state to handle the structured object or an error string
+    const [aiResult, setAiResult] = useState<RAGResponse | string | null>(null);
 
     const router = useRouter();
     const path = usePathname();
@@ -79,19 +103,26 @@ const Search = () => {
         setAiResult(null);
 
         try {
-            const response = await fetch('/api/ai/retrieval', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ userQuestion: searchQueryText })
-            });
+            const sessionTitle = `Search: ${searchQueryText.substring(0, 30)}${searchQueryText.length > 30 ? '...' : ''}`;
+            const session = await createChatSession(null, sessionTitle);
 
-            const data = await response.json();
-            if (!response.ok) throw new Error(data.error || "Failed to query vector store.");
+            if (!session || !session.id) {
+                throw new Error("Failed to initialize chat session.");
+            }
 
-            setAiResult(data.answer);
+            const response: RAGResponse = await sendChatMessage(
+                searchQueryText,
+                session.id,
+                [],
+                true
+            );
+
+            // Directly set the full response object
+            setAiResult(response);
+
         } catch (error: any) {
             console.error("AI Search Error:", error);
-            setAiResult("Sorry, I encountered an error searching inside your documents.");
+            setAiResult(error.message || "Sorry, I encountered an error searching inside your documents.");
         } finally {
             setIsLoadingAI(false);
         }
@@ -178,7 +209,7 @@ const Search = () => {
             </form>
 
             <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-                <DialogContent className="sm:max-w-[600px] p-6 shad-dialog outline-none border-none">
+                <DialogContent className="sm:max-w-[700px] p-6 shad-dialog outline-none border-none">
                     <DialogHeader className="mb-4 pb-4 border-b border-light-200 flex flex-row items-center gap-2">
                         <Sparkles className="h-5 w-5 text-brand" />
                         <DialogTitle className="h2-bold text-dark-100">
@@ -186,20 +217,46 @@ const Search = () => {
                         </DialogTitle>
                     </DialogHeader>
 
-                    <div className="min-h-[200px] flex flex-col justify-center">
+                    <div className="min-h-[200px] flex flex-col">
                         {isLoadingAI ? (
-                            <div className="flex flex-col items-center justify-center gap-3 py-8 text-light-200">
+                            <div className="flex flex-col items-center justify-center gap-3 py-12 text-light-200 flex-1">
                                 <Loader2 className="h-10 w-10 animate-spin text-brand" />
                                 <p className="subtitle-2">Scanning multi-tenant vector namespaces...</p>
                             </div>
                         ) : (
-                            <div className="space-y-4">
+                            <div className="space-y-6">
                                 <div className="bg-light-400/10 p-4 rounded-xl border border-light-200 text-sm font-medium text-dark-200">
                                     <span className="text-light-200 mr-2 font-bold">Query:</span>
                                     {query}
                                 </div>
-                                <div className="text-dark-100 body-2 leading-relaxed whitespace-pre-wrap px-1 max-h-[50vh] overflow-y-auto custom-scrollbar">
-                                    {aiResult}
+
+                                <div className="max-h-[55vh] overflow-y-auto custom-scrollbar pr-2 space-y-6">
+                                    <div className="text-dark-100 body-2 leading-relaxed whitespace-pre-wrap px-1">
+                                        {typeof aiResult === 'string' ? aiResult : aiResult?.answer}
+                                    </div>
+
+                                    {typeof aiResult !== 'string' && aiResult?.references && aiResult.references.length > 0 && (
+                                        <div className="border-t border-slate-100 pt-5 mt-4">
+                                            <h4 className="text-sm font-semibold text-slate-500 mb-3 flex items-center gap-2">
+                                                <FileText className="h-4 w-4" />
+                                                Sources
+                                            </h4>
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                                {aiResult.references.map((ref, idx) => (
+                                                    <div key={idx} className="bg-slate-50 border border-slate-100 rounded-lg p-3 hover:bg-slate-100 transition-colors cursor-default">
+                                                        <p className="text-sm font-medium text-brand line-clamp-1" title={ref.documentTitle}>
+                                                            {ref.documentTitle}
+                                                        </p>
+                                                        {ref.pageInfo && (
+                                                            <p className="text-xs text-slate-400 mt-1">
+                                                                Page: {ref.pageInfo}
+                                                            </p>
+                                                        )}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         )}

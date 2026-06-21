@@ -11,6 +11,7 @@ import {
 import { auth } from "@/auth";
 import { revalidatePath } from "next/cache";
 import { parseStringify } from "@/lib/utils";
+import {redirect} from "next/navigation";
 
 const connection_url = process.env.NEXT_PUBLIC_API_URL;
 
@@ -48,7 +49,7 @@ export class LocalStorage implements IFileStorage {
     private async getHeaders(isFormData = false) {
         const session = await auth();
         if (!session?.accessToken) {
-            throw new Error("Unauthorized: No access token found.");
+            redirect("/sign-in");
         }
 
         const headers: Record<string, string> = {
@@ -132,8 +133,8 @@ export class LocalStorage implements IFileStorage {
                     let valB: string | number;
 
                     if (sortBy === '$createdAt' || sortBy === 'createdAt') {
-                        valA = new Date(a.createdAt).getTime();
-                        valB = new Date(b.createdAt).getTime();
+                        valA = new Date(a.createdAt || "").getTime();
+                        valB = new Date(b.createdAt || "").getTime();
                     } else if (sortBy === 'name' || sortBy === 'fileName') {
                         valA = a.fileName.toLowerCase();
                         valB = b.fileName.toLowerCase();
@@ -331,13 +332,13 @@ export class LocalStorage implements IFileStorage {
                     totalSpace[type].size += file.size || 0;
                     totalSpace.used += file.size || 0;
 
-                    const fileDate = new Date(file.createdAt).getTime();
+                    const fileDate = new Date(file.createdAt || "").getTime();
                     const latestDate = totalSpace[type].latestDate
                         ? new Date(totalSpace[type].latestDate).getTime()
                         : 0;
 
                     if (fileDate > latestDate) {
-                        totalSpace[type].latestDate = file.createdAt;
+                        totalSpace[type].latestDate = file.createdAt || "";
                     }
                 }
             });

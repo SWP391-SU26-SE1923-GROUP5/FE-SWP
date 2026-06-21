@@ -14,7 +14,7 @@ const ImageThumbnail = ({ file }: { file: File_ }) => (
         <Thumbnail type={file.fileType} extension={file.fileExtension.replace('.', '')} url={file.fileLink} />
         <div className="flex flex-col">
             <p className="subtitle-2 mb-1">{file.fileName}</p>
-            <FormattedDateTime date={file.createdAt} className="caption" />
+            <FormattedDateTime date={file.createdAt || ""} className="caption" />
         </div>
     </div>
 )

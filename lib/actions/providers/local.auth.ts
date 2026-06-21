@@ -145,6 +145,8 @@ export class LocalAuth implements IAuthService {
             body: JSON.stringify({ refreshToken })
         });
 
+        console.log(refreshToken);
+
         if (!res.ok) {
             throw new Error("Failed to refresh token");
         }
