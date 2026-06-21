@@ -1,10 +1,8 @@
-export default function RootLayout({
-                                       children,
-                                   }: Readonly<{
-    children: React.ReactNode;
-}>) {
+import React from "react";
+
+export default function Layout({ children }: { children: React.ReactNode }) {
     return (
-        <div className="flex flex-col flex-1 max-w-96 w-full m-auto h-screen gap-6">
+        <div className="flex flex-col flex-1 max-w-3xl w-full m-auto h-screen p-6">
             {children}
         </div>
     );

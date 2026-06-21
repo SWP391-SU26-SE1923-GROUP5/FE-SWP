@@ -45,6 +45,7 @@
     "react-dom": "19.2.4",
     "react-dropzone": "^15.0.0",
     "react-hook-form": "^7.77.0",
+    "react-rewards": "^2.1.0",
     "react-spreadsheet": "^0.10.1",
     "recharts": "^3.8.0",
     "shadcn": "^4.8.0",

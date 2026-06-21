@@ -217,6 +217,14 @@ export interface QuizResponse {
     questions: QuizQuestion[];
 }
 
+export interface QuizRecord {
+    id: string;
+    documentId: string;
+    title: string;
+    createdAt: string;
+    updatedAt: string;
+}
+
 export interface SummaryResponse {
     summary: string;
 }

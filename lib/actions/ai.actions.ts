@@ -4,7 +4,7 @@ import { auth } from "@/auth";
 import {
     SummaryResponse,
     Flashcard,
-    QuizResponse
+    QuizResponse, QuizRecord
 } from "@/types"; // Adjust path if your types file is located elsewhere
 
 const connection_url = process.env.NEXT_PUBLIC_API_URL;
@@ -233,6 +233,27 @@ export const generateQuiz = async (docId: string, numberOfQuestions: number = 5)
         const errorText = await response.text();
         console.error(`[POST Generate Quiz Error for Doc ${docId}]:`, response.status, errorText);
         throw new Error("Failed to generate quiz.");
+    }
+
+    return await response.json();
+};
+
+export const getCreatedQuizzes = async (): Promise<QuizRecord[]> => {
+    const session = await auth();
+    if (!session?.accessToken) throw new Error("Unauthorized. Please log in.");
+
+    const response = await fetch(`${connection_url}/api/Quiz`, {
+        method: 'GET',
+        headers: {
+            'Authorization': `Bearer ${session.accessToken}`,
+            'Content-Type': 'application/json',
+        },
+    });
+
+    if (!response.ok) {
+        const errorText = await response.text();
+        console.error("[GET Quizzes Error]:", response.status, errorText);
+        throw new Error("Failed to fetch quizzes.");
     }
 
     return await response.json();
