@@ -1,26 +1,26 @@
 export const sortTypes = [
     {
         label: "Date created (newest)",
-        value: "$createdAt-desc",
+        value: "CreatedAt-desc",
     },
     {
         label: "Created Date (oldest)",
-        value: "$createdAt-asc",
+        value: "CreatedAt-asc",
     },
     {
         label: "Name (A-Z)",
-        value: "name-asc",
+        value: "FileName-asc",
     },
     {
         label: "Name (Z-A)",
-        value: "name-desc",
+        value: "FileName-desc",
     },
     {
         label: "Size (Highest)",
-        value: "size-desc",
+        value: "FileSizeBytes-desc",
     },
     {
         label: "Size (Lowest)",
-        value: "size-asc",
+        value: "FileSizeBytes-asc",
     },
 ];

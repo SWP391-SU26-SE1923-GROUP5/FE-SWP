@@ -7,26 +7,31 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
-import { usePathname, useRouter } from "next/navigation";
-import {sortTypes} from "@/constants/sortTypes";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { sortTypes } from "@/constants/sortTypes";
 
 const Sort = () => {
     const path = usePathname();
     const router = useRouter();
+    const searchParams = useSearchParams();
 
     const handleSort = (value: string) => {
-        router.push(`${path}?sort=${value}`);
+        const params = new URLSearchParams(searchParams.toString());
+
+        params.set("sort", value);
+
+        router.push(`${path}?${params.toString()}`);
     };
 
     return (
         <Select onValueChange={handleSort} defaultValue={sortTypes[0].value}>
             <SelectTrigger className="sort-select">
-                <SelectValue placeholder={sortTypes[0].value} />
+                <SelectValue placeholder={sortTypes[0].label} />
             </SelectTrigger>
             <SelectContent className="sort-select-content">
                 {sortTypes.map((sort) => (
                     <SelectItem
-                        key={sort.label}
+                        key={sort.value}
                         className="shad-select-item"
                         value={sort.value}
                     >

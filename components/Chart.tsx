@@ -31,7 +31,7 @@ const chartConfig = {
 export const Chart = ({ used = 0 }: { used: number }) => {
     const percentage = Number(calculatePercentage(used)) || 0;
 
-    const chartData = [{ name: "Used", storage: percentage, fill: "white" }];
+    const chartData = [{ name: "Used", storage: percentage, fill: "#064e3b" }];
 
     return (
         <Card className="chart flex flex-row items-center justify-between p-6 bg-emerald-500 text-white border-none shadow-md">
@@ -75,7 +75,7 @@ export const Chart = ({ used = 0 }: { used: number }) => {
                                                     className="text-3xl font-bold fill-white"
                                                 >
                                                     {percentage
-                                                        ? percentage.toString().replace(/^0+/, "")
+                                                        ? percentage
                                                         : "0"}
                                                     %
                                                 </tspan>

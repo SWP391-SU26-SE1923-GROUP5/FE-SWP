@@ -18,7 +18,7 @@ export function TokenRefresher() {
         const timeRemaining = session.accessTokenExpiresAt - Date.now();
         const bufferTime = 5 * 60 * 1000;
 
-        if (timeRemaining < bufferTime && timeRemaining > 0) {
+        if (timeRemaining <= bufferTime) {
             isRefreshing.current = true;
 
             update({ forceRefresh: true }).finally(() => {

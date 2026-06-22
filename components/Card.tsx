@@ -23,7 +23,7 @@ const Card = async ({ file }: { file: File_ }) => {
                 <div className="flex flex-col items-end justify-between">
                     <ActionDropdown file={file} />
 
-                    <p className="body-1">{convertFileSize(file.size || 0)}</p>
+                    <p className="body-1">{convertFileSize(file.fileSizeBytes || 0)}</p>
                 </div>
             </div>
 
@@ -31,7 +31,7 @@ const Card = async ({ file }: { file: File_ }) => {
                 <p className="subtitle-2 line-clamp-1">{file.fileName}</p>
 
                 <FormattedDateTime
-                    date={file.createdAt}
+                    date={file.createdAt || ""}
                     className="body-2 text-light-100"
                 />
 

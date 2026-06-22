@@ -96,65 +96,43 @@ export class LocalStorage implements IFileStorage {
         }
     }
 
-    async getFiles({ types = [], searchText = "", sort = "$createdAt-desc", limit }: GetFilesProps) {
+    async getFiles({ types = [], searchText = "", sort = "CreatedAt-desc", limit = 10, page = 1 }: GetFilesProps & { page?: number }) {
         try {
             const headers = await this.getHeaders();
-            const res = await fetch(`${connection_url}/api/Document`, {
+            const [sortBy, orderBy] = sort.split('-');
+            const isDescending = orderBy === 'desc';
+            const offset = (page - 1) * limit;
+
+            const queryParams = new URLSearchParams({
+                Offset: offset.toString(),
+                Limit: limit.toString(),
+                SortBy: sortBy,
+                IsDescending: isDescending.toString()
+            });
+
+            if (searchText) {
+                queryParams.append("SearchTerm", searchText);
+            }
+
+            const res = await fetch(`${connection_url}/api/Document?${queryParams.toString()}`, {
                 method: 'GET',
                 headers,
             });
 
             if (!res.ok) throw new Error(`Failed to fetch documents: ${res.statusText}`);
 
-            let documents: File_[] = await res.json();
+            const responseData = await res.json();
 
-            if (types && types.length > 0) {
-                documents = documents.filter(doc => {
-                    const category = getFileCategory(doc.fileType);
-                    return types.includes(category);
+            let documents: File_[] = responseData?.items || responseData?.Items || [];
+            let total = responseData?.totalCount || responseData?.TotalCount || 0;
+
+            if (types.length > 0) {
+                documents = documents.filter((file) => {
+                    const fileCategory = getFileCategory(file.fileType);
+                    return types.includes(fileCategory as FileType);
                 });
-            }
 
-            console.log("Step 2:", documents);
-
-            if (searchText) {
-                const lowerQuery = searchText.toLowerCase();
-                documents = documents.filter(doc =>
-                    doc.fileName.toLowerCase().includes(lowerQuery)
-                );
-            }
-
-            if (sort) {
-                const [sortBy, orderBy] = sort.split('-');
-                const isDesc = orderBy === 'desc';
-
-                documents.sort((a, b) => {
-                    let valA: string | number;
-                    let valB: string | number;
-
-                    if (sortBy === '$createdAt' || sortBy === 'createdAt') {
-                        valA = new Date(a.createdAt || "").getTime();
-                        valB = new Date(b.createdAt || "").getTime();
-                    } else if (sortBy === 'name' || sortBy === 'fileName') {
-                        valA = a.fileName.toLowerCase();
-                        valB = b.fileName.toLowerCase();
-                    } else {
-                        const key = sortBy as keyof File_;
-
-                        valA = (a[key] ?? "") as string | number;
-                        valB = (b[key] ?? "") as string | number;
-                    }
-
-                    if (valA < valB) return isDesc ? 1 : -1;
-                    if (valA > valB) return isDesc ? -1 : 1;
-                    return 0;
-                });
-            }
-
-            const total = documents.length;
-
-            if (limit && limit > 0) {
-                documents = documents.slice(0, limit);
+                total = documents.length;
             }
 
             return parseStringify({ documents, total });
@@ -211,29 +189,26 @@ export class LocalStorage implements IFileStorage {
         try {
             const headers = await this.getHeaders();
 
-            const getRes = await fetch(`${connection_url}/api/Document/${fileId}`, {
-                method: 'GET',
-                headers,
-            });
-
-            if (!getRes.ok) throw new Error("Failed to fetch file for user update");
-            const currentFile = await getRes.json();
-
             const payload = {
-                ...currentFile,
-                sharedUsers: emails?.join(","),
+                sharedUserIds: emails || [],
             };
 
-            const putRes = await fetch(`${connection_url}/api/Document/${fileId}`, {
-                method: 'PUT',
+            const shareRes = await fetch(`${connection_url}/api/Document/${fileId}/share`, {
+                method: 'POST',
                 headers,
                 body: JSON.stringify(payload)
             });
 
-            if (!putRes.ok) throw new Error(`Update users failed: ${putRes.statusText}`);
+            if (!shareRes.ok) {
+                const errorText = await shareRes.text().catch(() => "Unknown error");
+                throw new Error(`Update users failed: ${shareRes.status} - ${errorText}`);
+            }
 
-            const data = await putRes.json();
-            revalidatePath(path);
+            const data = await shareRes.json();
+
+            if (path) {
+                revalidatePath(path);
+            }
 
             return parseStringify(data);
 
@@ -313,7 +288,11 @@ export class LocalStorage implements IFileStorage {
 
             if (!res.ok) throw new Error(`Failed to fetch documents for space calculation: ${res.statusText}`);
 
-            const documents: File_[] = await res.json();
+            const responseData = await res.json();
+
+            const documents: File_[] = Array.isArray(responseData)
+                ? responseData
+                : (responseData?.items || responseData?.Items || []);
 
             const totalSpace = {
                 image: { size: 0, latestDate: "" },
@@ -322,15 +301,17 @@ export class LocalStorage implements IFileStorage {
                 audio: { size: 0, latestDate: "" },
                 other: { size: 0, latestDate: "" },
                 used: 0,
-                all: 2 * 1024 * 1024 * 1024 // 2GB limit
+                all: 2 * 1024 * 1024 * 1024
             };
 
             documents.forEach((file) => {
-                const type = file.fileType as FileType;
+                const type = getFileCategory(file.fileType) as FileType;
 
                 if (totalSpace[type]) {
-                    totalSpace[type].size += file.size || 0;
-                    totalSpace.used += file.size || 0;
+                    const fileSize = file.fileSizeBytes || 0;
+
+                    totalSpace[type].size += fileSize;
+                    totalSpace.used += fileSize;
 
                     const fileDate = new Date(file.createdAt || "").getTime();
                     const latestDate = totalSpace[type].latestDate

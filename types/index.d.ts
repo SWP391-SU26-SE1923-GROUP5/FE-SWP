@@ -117,7 +117,7 @@ export interface File_ extends BaseDocument {
     sharedUsers: string;
     shareStatus: string;
     status: number;
-    size?: number;
+    fileSizeBytes: number;
 }
 
 export interface GetFilesProps {
