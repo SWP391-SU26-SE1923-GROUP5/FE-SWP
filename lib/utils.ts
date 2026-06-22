@@ -173,32 +173,32 @@ export const getFileIcon = (
   }
 };
 
-export const constructFileUrl = (bucketFileId: string) => {
-  return `${process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT}/storage/buckets/${process.env.NEXT_PUBLIC_APPWRITE_BUCKET}/files/${bucketFileId}/view?project=${process.env.NEXT_PUBLIC_APPWRITE_PROJECT}`;
-};
-
-
 export const triggerDownload = async (fileId: string, fileName: string) => {
   try {
     const result = await downloadFile({ fileId });
 
-    const binaryString = window.atob(result.data);
-    const bytes = new Uint8Array(binaryString.length);
-    for (let i = 0; i < binaryString.length; i++) {
-      bytes[i] = binaryString.charCodeAt(i);
+    if (!result?.data) {
+      throw new Error("Invalid response: No file data received from the server.");
     }
+
+    const binaryString = window.atob(result.data);
+    const bytes = Uint8Array.from(binaryString, (char) => char.charCodeAt(0));
 
     const blob = new Blob([bytes], { type: 'application/octet-stream' });
     const url = window.URL.createObjectURL(blob);
+
     const link = document.createElement('a');
     link.href = url;
     link.download = fileName;
+
     document.body.appendChild(link);
     link.click();
-    document.body.removeChild(link);
+
+    link.remove();
     window.URL.revokeObjectURL(url);
+
   } catch (error) {
-    console.error("Download failed:", error);
+    throw error;
   }
 };
 

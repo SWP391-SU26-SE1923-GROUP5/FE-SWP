@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { File_ } from "@/types";
 import { downloadFile, updateEditedFile } from "@/lib/actions/file.actions";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 
 export default function ApryseViewer({ file, path, closeModals }: { file: File_, path: string, closeModals: () => void }) {
     const viewer = useRef<HTMLDivElement>(null);
@@ -55,6 +56,7 @@ export default function ApryseViewer({ file, path, closeModals }: { file: File_,
                 });
             } catch (error) {
                 console.error("Failed to load document:", error);
+                toast.error("Failed to load document for editing.");
             }
         };
 
@@ -71,7 +73,9 @@ export default function ApryseViewer({ file, path, closeModals }: { file: File_,
 
     const handleSave = async () => {
         if (!instanceRef.current || instanceRef.current === "initializing") return;
+
         setIsSaving(true);
+        const toastId = toast.loading("Saving document changes...");
 
         try {
             const core = instanceRef.current;
@@ -101,9 +105,11 @@ export default function ApryseViewer({ file, path, closeModals }: { file: File_,
                 path
             });
 
+            toast.success("Document saved successfully!", { id: toastId });
             closeModals();
         } catch (error) {
             console.error("Failed to save document:", error);
+            toast.error("Failed to save document changes.", { id: toastId });
         } finally {
             setIsSaving(false);
         }

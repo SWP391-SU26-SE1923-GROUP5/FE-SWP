@@ -277,6 +277,17 @@ export default function ActionDropdown({file}: { file: File_ }) {
         }
     };
 
+    const handleDownload = async () => {
+        const toastId = toast.loading(`Downloading ${file.fileName}...`);
+        try {
+            await triggerDownload(file.id, file.fileName);
+            toast.success("Download complete!", { id: toastId });
+        } catch (error) {
+            console.error(error);
+            toast.error("Failed to download file.", { id: toastId });
+        }
+    };
+
     const renderDialogContent = () => {
         if (!action) return null;
         const {value, label} = action;
@@ -610,7 +621,7 @@ export default function ActionDropdown({file}: { file: File_ }) {
                                 {item.value === "download" ? (
                                     <button
                                         type="button"
-                                        onClick={() => triggerDownload(file.id, file.fileName)}
+                                        onClick={handleDownload}
                                         className="flex items-center gap-2 cursor-pointer w-full text-left"
                                     >
                                         <Image src={item.icon} alt={item.label} width={30} height={30}/>
