@@ -5,13 +5,9 @@ import {
     SummaryResponse,
     Flashcard,
     QuizResponse, QuizRecord
-} from "@/types"; // Adjust path if your types file is located elsewhere
+} from "@/types";
 
 const connection_url = process.env.NEXT_PUBLIC_API_URL;
-
-// ==========================================
-// 1. CHAT-SPECIFIC TYPES
-// ==========================================
 
 export interface ChatSession {
     id: string;
@@ -52,10 +48,6 @@ export interface RAGResponse {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     neighbors?: any[];
 }
-
-// ==========================================
-// 2. CHAT & RAG ACTIONS
-// ==========================================
 
 export const getUserSessions = async (): Promise<ChatSession[]> => {
     const session = await auth();
@@ -161,10 +153,6 @@ export const sendChatMessage = async (
 
     return await response.json();
 };
-
-// ==========================================
-// 3. DOCUMENT AI ACTIONS
-// ==========================================
 
 export const summarizeDocument = async (documentId: string): Promise<SummaryResponse> => {
     const session = await auth();

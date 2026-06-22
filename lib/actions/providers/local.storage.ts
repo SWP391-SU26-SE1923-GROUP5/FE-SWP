@@ -11,7 +11,7 @@ import {
 import { auth } from "@/auth";
 import { revalidatePath } from "next/cache";
 import { parseStringify } from "@/lib/utils";
-import {redirect} from "next/navigation";
+import { redirect } from "next/navigation";
 
 const connection_url = process.env.NEXT_PUBLIC_API_URL;
 
@@ -43,7 +43,6 @@ const getFileCategory = (mimeType: string): FileType => {
 
     return "other";
 };
-
 
 export class LocalStorage implements IFileStorage {
     private async getHeaders(isFormData = false) {
@@ -79,8 +78,8 @@ export class LocalStorage implements IFileStorage {
             });
 
             if (!res.ok) {
-                const errorData = await res.json().catch(() => null);
-                throw new Error(`Upload failed: ${errorData?.message || errorData?.title || res.statusText}`);
+                const errorData = await res.json().catch(() => ({}));
+                throw new Error(`[${res.status}] ${errorData.message || errorData.title || "Upload failed"}`);
             }
 
             const uploadResponse = await res.json();
@@ -119,7 +118,10 @@ export class LocalStorage implements IFileStorage {
                 headers,
             });
 
-            if (!res.ok) throw new Error(`Failed to fetch documents: ${res.statusText}`);
+            if (!res.ok) {
+                const errorData = await res.json().catch(() => ({}));
+                throw new Error(`[${res.status}] ${errorData.message || "Failed to fetch documents"}`);
+            }
 
             const responseData = await res.json();
 
@@ -147,12 +149,17 @@ export class LocalStorage implements IFileStorage {
         try {
             const headers = await this.getHeaders();
             const newFileName = `${name}.${extension}`;
+
             const getRes = await fetch(`${connection_url}/api/Document/${fileId}`, {
                 method: 'GET',
                 headers,
             });
 
-            if (!getRes.ok) throw new Error("Failed to fetch file for renaming");
+            if (!getRes.ok) {
+                const errorData = await getRes.json().catch(() => ({}));
+                throw new Error(`[${getRes.status}] ${errorData.message || "Failed to fetch file for renaming"}`);
+            }
+
             const currentFile = await getRes.json();
 
             const payload = {
@@ -170,8 +177,8 @@ export class LocalStorage implements IFileStorage {
             });
 
             if (!putRes.ok) {
-                const errorText = await putRes.text();
-                throw new Error(`Rename failed (${putRes.status}): ${errorText}`);
+                const errorData = await putRes.json().catch(() => ({}));
+                throw new Error(`[${putRes.status}] ${errorData.message || "Rename failed"}`);
             }
 
             const data = await putRes.json();
@@ -200,8 +207,8 @@ export class LocalStorage implements IFileStorage {
             });
 
             if (!shareRes.ok) {
-                const errorText = await shareRes.text().catch(() => "Unknown error");
-                throw new Error(`Update users failed: ${shareRes.status} - ${errorText}`);
+                const errorData = await shareRes.json().catch(() => ({}));
+                throw new Error(`[${shareRes.status}] ${errorData.message || "Update users failed"}`);
             }
 
             const data = await shareRes.json();
@@ -243,7 +250,10 @@ export class LocalStorage implements IFileStorage {
                 headers,
             });
 
-            if (!res.ok) throw new Error(`Delete failed: ${res.statusText}`);
+            if (!res.ok) {
+                const errorData = await res.json().catch(() => ({}));
+                throw new Error(`[${res.status}] ${errorData.message || "Delete failed"}`);
+            }
 
             revalidatePath(path);
             return parseStringify({ status: "success" });
@@ -262,7 +272,10 @@ export class LocalStorage implements IFileStorage {
                 headers,
             });
 
-            if (!res.ok) throw new Error(`Download failed: ${res.statusText}`);
+            if (!res.ok) {
+                const errorData = await res.json().catch(() => ({}));
+                throw new Error(`[${res.status}] ${errorData.message || "Download failed"}`);
+            }
 
             const arrayBuffer = await res.arrayBuffer();
 
@@ -286,7 +299,10 @@ export class LocalStorage implements IFileStorage {
                 headers,
             });
 
-            if (!res.ok) throw new Error(`Failed to fetch documents for space calculation: ${res.statusText}`);
+            if (!res.ok) {
+                const errorData = await res.json().catch(() => ({}));
+                throw new Error(`[${res.status}] ${errorData.message || "Failed to fetch documents for space calculation"}`);
+            }
 
             const responseData = await res.json();
 

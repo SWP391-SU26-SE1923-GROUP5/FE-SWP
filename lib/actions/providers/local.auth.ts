@@ -16,10 +16,10 @@ export class LocalAuth implements IAuthService {
             })
         });
 
-        const data = await res.json();
+        const data = await res.json().catch(() => ({}));
 
         if (!res.ok) {
-            throw new Error(data.message || "Failed to register account");
+            throw new Error(`[${res.status}] ${data.message || "Failed to register account"}`);
         }
 
         return parseStringify({ email: data.email });
@@ -35,10 +35,10 @@ export class LocalAuth implements IAuthService {
             })
         });
 
-        const data = await res.json();
+        const data = await res.json().catch(() => ({}));
 
         if (!res.ok) {
-            throw new Error(data.message || "Invalid email or password");
+            throw new Error(`[${res.status}] ${data.message || "Invalid email or password"}`);
         }
 
         const sessionData = {
@@ -112,8 +112,8 @@ export class LocalAuth implements IAuthService {
             });
 
             if (!res.ok) {
-                const errorData = await res.json().catch(() => null);
-                throw new Error(errorData?.message || `Failed to fetch users with status: ${res.status}`);
+                const errorData = await res.json().catch(() => ({}));
+                throw new Error(`[${res.status}] ${errorData.message || "Failed to fetch users"}`);
             }
 
             const usersData: User[] = await res.json();
@@ -121,7 +121,7 @@ export class LocalAuth implements IAuthService {
             const targetUser = usersData.find((user) => user.id === id);
 
             if (!targetUser) {
-                throw new Error("User not found");
+                throw new Error("[404] User not found");
             }
 
             return parseStringify(targetUser);
@@ -147,11 +147,12 @@ export class LocalAuth implements IAuthService {
 
         console.log(refreshToken);
 
+        const data = await res.json().catch(() => ({}));
+
         if (!res.ok) {
-            throw new Error("Failed to refresh token");
+            throw new Error(`[${res.status}] ${data.message || "Failed to refresh token"}`);
         }
 
-        const data = await res.json();
         return parseStringify(data);
     }
 
@@ -163,18 +164,13 @@ export class LocalAuth implements IAuthService {
                 body: JSON.stringify({ email, otp })
             });
 
+            const data = await res.json().catch(() => ({}));
+
             if (!res.ok) {
-                const errorData = await res.json().catch(() => ({}));
-                throw new Error(errorData.message || `Verification failed with status: ${res.status}`);
+                throw new Error(`[${res.status}] ${data.message || "Verification failed"}`);
             }
 
-            const contentType = res.headers.get("content-type");
-            if (contentType && contentType.includes("application/json")) {
-                const data = await res.json();
-                return parseStringify(data.message || "Verification successful");
-            }
-
-            return parseStringify("Verification successful");
+            return parseStringify(data.message || "Verification successful");
         } catch (error) {
             console.error("Verify OTP Error:", error);
             throw error;
@@ -189,18 +185,13 @@ export class LocalAuth implements IAuthService {
                 body: JSON.stringify({ email })
             });
 
+            const data = await res.json().catch(() => ({}));
+
             if (!res.ok) {
-                const errorData = await res.json().catch(() => ({}));
-                throw new Error(errorData.message || `Resend OTP failed with status: ${res.status}`);
+                throw new Error(`[${res.status}] ${data.message || "Resend OTP failed"}`);
             }
 
-            const contentType = res.headers.get("content-type");
-            if (contentType && contentType.includes("application/json")) {
-                const data = await res.json();
-                return parseStringify(data.message || "OTP resent successfully.");
-            }
-
-            return parseStringify("OTP resent successfully.");
+            return parseStringify(data.message || "OTP resent successfully.");
         } catch (error) {
             console.error("Resend OTP Error:", error);
             throw error;

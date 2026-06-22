@@ -1,9 +1,6 @@
 import NextAuth, { type DefaultSession, type DefaultUser } from "next-auth";
 import { type DefaultJWT } from "next-auth/jwt";
 
-// ==========================================
-// 1. NEXT-AUTH MODULE DECLARATIONS
-// ==========================================
 declare module "next-auth" {
     interface Session {
         accessToken?: string;
@@ -35,9 +32,6 @@ declare module "next-auth/jwt" {
     }
 }
 
-// ==========================================
-// 2. COMMON & BASE TYPES
-// ==========================================
 export interface BaseDocument {
     id: string;
     createdAt?: string;
@@ -55,9 +49,6 @@ export interface SearchParamProps {
     searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }
 
-// ==========================================
-// 3. AUTHENTICATION & USER TYPES
-// ==========================================
 export interface User extends BaseDocument {
     fullName: string;
     email: string;
@@ -101,9 +92,6 @@ export interface IAuthService {
     resendOtp(props: { email: string }): Promise<string>;
 }
 
-// ==========================================
-// 4. FILE & STORAGE TYPES
-// ==========================================
 export type FileType = "document" | "image" | "video" | "audio" | "other";
 
 export interface File_ extends BaseDocument {
@@ -192,9 +180,6 @@ export interface IFileStorage {
     }>;
 }
 
-// ==========================================
-// 5. AI INTEGRATION TYPES
-// ==========================================
 export interface Flashcard {
     front: string;
     back: string;
