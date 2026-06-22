@@ -5,7 +5,7 @@ import Image from "next/image";
 import { Input } from "@/components/ui/input";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { getFiles } from "@/lib/actions/file.actions";
-import { createChatSession, sendChatMessage } from "@/lib/actions/ai.actions";
+import { semanticSearch } from "@/lib/actions/ai.actions";
 import Thumbnail from "@/components/Thumbnail";
 import FormattedDateTime from "@/components/FormattedDateTime";
 import { useDebounce } from "use-debounce";
@@ -13,25 +13,16 @@ import { File_ } from "@/types";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Sparkles, Loader2, FileText } from "lucide-react";
 
-interface RAGReference {
-    index: number;
-    documentId: string;
-    documentTitle: string;
-    pageInfo: string;
-    chunkExcerpt: string;
+interface Citation {
+    source: string;
+    content: string;
+    relevance: number;
 }
 
-interface RAGCitation {
-    index: number;
-    documentTitle: string;
-    chunkPreview: string;
-}
-
-interface RAGResponse {
+interface SemanticSearchResponse {
     answer: string;
-    citations?: RAGCitation[];
-    references?: RAGReference[];
-    neighbors?: any[];
+    citations: Citation[];
+    confidence: number;
 }
 
 const Search = () => {
@@ -45,13 +36,13 @@ const Search = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isLoadingAI, setIsLoadingAI] = useState(false);
 
-    // 2. Update state to handle the structured object or an error string
-    const [aiResult, setAiResult] = useState<RAGResponse | string | null>(null);
+    const [aiResult, setAiResult] = useState<SemanticSearchResponse | string | null>(null);
 
     const router = useRouter();
     const path = usePathname();
     const [debouncedQuery] = useDebounce(query, 300);
     const prevQueryRef = useRef(debouncedQuery);
+    const isNavigating = useRef(false);
 
     useEffect(() => {
         const isNewTyping = prevQueryRef.current !== debouncedQuery;
@@ -79,7 +70,7 @@ const Search = () => {
 
             if (files) {
                 setResults(files.documents);
-                if (isNewTyping && !isModalOpen) {
+                if (isNewTyping && !isModalOpen && !isNavigating.current) {
                     setDropdownOpen(true);
                 }
             }
@@ -103,23 +94,8 @@ const Search = () => {
         setAiResult(null);
 
         try {
-            const sessionTitle = `Search: ${searchQueryText.substring(0, 30)}${searchQueryText.length > 30 ? '...' : ''}`;
-            const session = await createChatSession(null, sessionTitle);
-
-            if (!session || !session.id) {
-                throw new Error("Failed to initialize chat session.");
-            }
-
-            const response: RAGResponse = await sendChatMessage(
-                searchQueryText,
-                session.id,
-                [],
-                true
-            );
-
-            // Directly set the full response object
+            const response: SemanticSearchResponse = await semanticSearch(searchQueryText);
             setAiResult(response);
-
         } catch (error: any) {
             console.error("AI Search Error:", error);
             setAiResult(error.message || "Sorry, I encountered an error searching inside your documents.");
@@ -128,24 +104,40 @@ const Search = () => {
         }
     };
 
-    const handleClickItem = (file: File_) => {
+    // Shared navigation logic for both standard search clicks and AI citation clicks
+    const navigateToTarget = (fileName: string, typeOrExt: string) => {
+        isNavigating.current = true;
         setDropdownOpen(false);
+        setIsModalOpen(false);
         setResults([]);
+        setQuery(fileName);
 
-        let routeName = "documents";
-        const type = file.fileType?.toLowerCase() || "";
+        let routeName = "home/documents";
+        const t = typeOrExt.toLowerCase();
 
-        if (type === "video" || type === "audio" || type.includes("video/") || type.includes("audio/")) {
+        const mediaExts = ["mp4", "webm", "mov", "mp3", "wav", "m4a"];
+        const imageExts = ["png", "jpg", "jpeg", "gif", "svg", "webp"];
+        const docExts = ["pdf", "doc", "docx", "txt", "csv", "xls", "xlsx", "ppt", "pptx", "md", "json"];
+
+        if (t === "video" || t === "audio" || t.includes("video/") || t.includes("audio/") || mediaExts.includes(t)) {
             routeName = "home/media";
-        } else if (type === "image" || type.includes("image/")) {
+        } else if (t === "image" || t.includes("image/") || imageExts.includes(t)) {
             routeName = "home/images";
-        } else if (type === "document" || type.includes("application/")) {
+        } else if (t === "document" || t.includes("application/") || t.includes("text/") || docExts.includes(t)) {
             routeName = "home/documents";
-        } else {
-            routeName = `${type}s`;
         }
 
-        router.push(`/${routeName}?query=${query}`);
+        router.push(`/${routeName}?query=${fileName}`);
+    };
+
+    const handleClickItem = (file: File_) => {
+        navigateToTarget(file.fileName, file.fileType || file.fileExtension || "");
+    };
+
+    const handleCitationClick = (source: string) => {
+        // Extract the extension from the source file name (e.g. "report.pdf" -> "pdf")
+        const ext = source.split('.').pop() || "";
+        navigateToTarget(source, ext);
     };
 
     return (
@@ -161,7 +153,10 @@ const Search = () => {
                     value={query}
                     placeholder="Search files or ask AI..."
                     className="search-input w-full"
-                    onChange={(e) => setQuery(e.target.value)}
+                    onChange={(e) => {
+                        isNavigating.current = false;
+                        setQuery(e.target.value);
+                    }}
                 />
 
                 {dropdownOpen && (
@@ -196,7 +191,7 @@ const Search = () => {
                                     </div>
 
                                     <FormattedDateTime
-                                        date={file.createdAt}
+                                        date={file.createdAt || ""}
                                         className="caption line-clamp-1 text-light-200"
                                     />
                                 </li>
@@ -235,21 +230,25 @@ const Search = () => {
                                         {typeof aiResult === 'string' ? aiResult : aiResult?.answer}
                                     </div>
 
-                                    {typeof aiResult !== 'string' && aiResult?.references && aiResult.references.length > 0 && (
+                                    {typeof aiResult !== 'string' && aiResult?.citations && aiResult.citations.length > 0 && (
                                         <div className="border-t border-slate-100 pt-5 mt-4">
                                             <h4 className="text-sm font-semibold text-slate-500 mb-3 flex items-center gap-2">
                                                 <FileText className="h-4 w-4" />
                                                 Sources
                                             </h4>
                                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                                {aiResult.references.map((ref, idx) => (
-                                                    <div key={idx} className="bg-slate-50 border border-slate-100 rounded-lg p-3 hover:bg-slate-100 transition-colors cursor-default">
-                                                        <p className="text-sm font-medium text-brand line-clamp-1" title={ref.documentTitle}>
-                                                            {ref.documentTitle}
+                                                {aiResult.citations.map((citation, idx) => (
+                                                    <div
+                                                        key={idx}
+                                                        onClick={() => handleCitationClick(citation.source)}
+                                                        className="bg-slate-50 border border-slate-100 rounded-lg p-3 hover:bg-slate-100 transition-colors cursor-pointer"
+                                                    >
+                                                        <p className="text-sm font-medium text-brand line-clamp-1" title={citation.source}>
+                                                            {citation.source}
                                                         </p>
-                                                        {ref.pageInfo && (
-                                                            <p className="text-xs text-slate-400 mt-1">
-                                                                Page: {ref.pageInfo}
+                                                        {citation.content && (
+                                                            <p className="text-xs text-slate-400 mt-1 line-clamp-2" title={citation.content}>
+                                                                {citation.content}
                                                             </p>
                                                         )}
                                                     </div>

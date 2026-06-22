@@ -4,7 +4,8 @@ import { auth } from "@/auth";
 import {
     SummaryResponse,
     Flashcard,
-    QuizResponse, QuizRecord
+    QuizResponse,
+    QuizRecord
 } from "@/types";
 
 const connection_url = process.env.NEXT_PUBLIC_API_URL;
@@ -45,8 +46,19 @@ export interface RAGResponse {
     answer: string;
     citations?: RAGCitation[];
     references?: RAGReference[];
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     neighbors?: any[];
+}
+
+export interface Citation {
+    source: string;
+    content: string;
+    relevance: number;
+}
+
+export interface SemanticSearchResponse {
+    answer: string;
+    citations: Citation[];
+    confidence: number;
 }
 
 export const getUserSessions = async (): Promise<ChatSession[]> => {
@@ -62,9 +74,8 @@ export const getUserSessions = async (): Promise<ChatSession[]> => {
     });
 
     if (!response.ok) {
-        const errorText = await response.text();
-        console.error("[GET Sessions Error]:", response.status, errorText);
-        throw new Error("Failed to fetch chat sessions.");
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(`[${response.status}] ${errorData.message || errorData.title || "Failed to fetch chat sessions."}`);
     }
 
     return await response.json();
@@ -83,9 +94,8 @@ export const getSessionMessages = async (sessionId: string): Promise<ChatMessage
     });
 
     if (!response.ok) {
-        const errorText = await response.text();
-        console.error(`[GET Messages Error for Session ${sessionId}]:`, response.status, errorText);
-        throw new Error("Failed to fetch chat messages.");
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(`[${response.status}] ${errorData.message || errorData.title || "Failed to fetch chat messages."}`);
     }
 
     return await response.json();
@@ -114,41 +124,33 @@ export const createChatSession = async (
     });
 
     if (!response.ok) {
-        const errorText = await response.text();
-        console.error("[POST Session Error]:", response.status, errorText);
-        throw new Error("Failed to create chat session.");
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(`[${response.status}] ${errorData.message || errorData.title || "Failed to create chat session."}`);
     }
 
     return await response.json();
 };
 
-export const sendChatMessage = async (
-    message: string,
-    sessionId: string,
-    documentIds: string[] = [],
-    includeDocuments: boolean = true
-): Promise<RAGResponse> => {
+export const semanticSearch = async (
+    question: string
+): Promise<SemanticSearchResponse> => {
     const session = await auth();
     if (!session?.accessToken) throw new Error("Unauthorized. Please log in.");
 
-    const response = await fetch(`${connection_url}/api/Chat/rag`, {
+    const response = await fetch(`${connection_url}/api/Rag/ask`, {
         method: 'POST',
         headers: {
             'Authorization': `Bearer ${session.accessToken}`,
             'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-            message: message,
-            sessionId: sessionId,
-            includeDocuments: includeDocuments,
-            documentIds: documentIds
+            question: question
         })
     });
 
     if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        console.error("[RAG Error]:", errorData);
-        throw new Error(errorData.error || errorData.message || `AI search failed with status: ${response.status}`);
+        throw new Error(`[${response.status}] ${errorData.message || errorData.title || "Semantic search failed."}`);
     }
 
     return await response.json();
@@ -170,9 +172,8 @@ export const summarizeDocument = async (documentId: string): Promise<SummaryResp
     });
 
     if (!response.ok) {
-        const errorText = await response.text();
-        console.error("[POST Summarize Error]:", response.status, errorText);
-        throw new Error("Failed to generate document summary.");
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(`[${response.status}] ${errorData.message || errorData.title || "Failed to generate document summary."}`);
     }
 
     return await response.json();
@@ -194,9 +195,8 @@ export const generateFlashcards = async (docId: string, numberOfFlashcards: numb
     });
 
     if (!response.ok) {
-        const errorText = await response.text();
-        console.error(`[POST Generate Flashcards Error for Doc ${docId}]:`, response.status, errorText);
-        throw new Error("Failed to generate flashcards.");
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(`[${response.status}] ${errorData.message || errorData.title || "Failed to generate flashcards."}`);
     }
 
     return await response.json();
@@ -218,9 +218,8 @@ export const generateQuiz = async (docId: string, numberOfQuestions: number = 5)
     });
 
     if (!response.ok) {
-        const errorText = await response.text();
-        console.error(`[POST Generate Quiz Error for Doc ${docId}]:`, response.status, errorText);
-        throw new Error("Failed to generate quiz.");
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(`[${response.status}] ${errorData.message || errorData.title || "Failed to generate quiz."}`);
     }
 
     return await response.json();
@@ -239,10 +238,38 @@ export const getCreatedQuizzes = async (): Promise<QuizRecord[]> => {
     });
 
     if (!response.ok) {
-        const errorText = await response.text();
-        console.error("[GET Quizzes Error]:", response.status, errorText);
-        throw new Error("Failed to fetch quizzes.");
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(`[${response.status}] ${errorData.message || errorData.title || "Failed to fetch quizzes."}`);
     }
 
-    return await response.json();
+    const data = await response.json();
+    return data?.items || [];
+};
+
+export const getQuizById = async (quizId: string): Promise<QuizResponse> => {
+    const session = await auth();
+    if (!session?.accessToken) throw new Error("Unauthorized. Please log in.");
+
+    const response = await fetch(`${connection_url}/api/Quiz/${quizId}`, {
+        method: 'GET',
+        headers: {
+            'Authorization': `Bearer ${session.accessToken}`,
+            'Content-Type': 'application/json',
+        },
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(`[${response.status}] ${errorData.message || "Failed to fetch quiz."}`);
+    }
+
+    const data = await response.json();
+
+    return {
+        quizTitle: data.title,
+        questions: data.questions?.map((q: any) => ({
+            questionTitle: q.title,
+            answers: q.answers || []
+        })) || []
+    };
 };

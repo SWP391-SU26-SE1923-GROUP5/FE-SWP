@@ -306,9 +306,7 @@ export class LocalStorage implements IFileStorage {
 
             const responseData = await res.json();
 
-            const documents: File_[] = Array.isArray(responseData)
-                ? responseData
-                : (responseData?.items || responseData?.Items || []);
+            const documents: File_[] = responseData?.items || [];
 
             const totalSpace = {
                 image: { size: 0, latestDate: "" },

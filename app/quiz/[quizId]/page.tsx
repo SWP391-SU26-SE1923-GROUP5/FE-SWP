@@ -1,28 +1,30 @@
-import { generateQuiz } from "@/lib/actions/ai.actions";
+import { getQuizById } from "@/lib/actions/ai.actions";
 import QuizQuestions from "./QuizQuestions";
 import { QuizResponse } from "@/types";
 
 type Props = {
-    params: {
-        docId: string;
-    };
+    params: Promise<{
+        quizId: string;
+    }>;
 };
 
 export default async function QuizPage({ params }: Props) {
+    const { quizId } = await params;
+
     let quizData: QuizResponse | null = null;
     let hasError = false;
 
     try {
-        quizData = await generateQuiz(params.docId, 10);
+        quizData = await getQuizById(quizId);
     } catch (error) {
-        console.error("Failed to load quiz page:", error);
+        console.error("Failed to load existing quiz:", error);
         hasError = true;
     }
 
     if (hasError) {
         return (
             <div className="flex h-screen items-center justify-center text-red">
-                An error occurred while generating the quiz.
+                An error occurred while loading the quiz.
             </div>
         );
     }
@@ -30,7 +32,7 @@ export default async function QuizPage({ params }: Props) {
     if (!quizData || !quizData.questions || quizData.questions.length === 0) {
         return (
             <div className="flex h-screen items-center justify-center text-slate-500">
-                Failed to generate quiz questions for this document.
+                This quiz has no questions available.
             </div>
         );
     }

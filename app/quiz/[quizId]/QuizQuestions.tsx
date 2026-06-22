@@ -83,7 +83,7 @@ export default function QuizQuestions({ quizData }: Props) {
                         variant="outline"
                         onClick={handlePressPrevious}
                         disabled={currentQuestionIdx === 0 || !started}
-                        className="rounded-full shrink-0"
+                        className="rounded-full shrink-0 cursor-pointer"
                     >
                         <ChevronLeft className="h-5 w-5" />
                     </Button>
@@ -96,7 +96,7 @@ export default function QuizQuestions({ quizData }: Props) {
                         size="icon"
                         variant="outline"
                         onClick={handleExit}
-                        className="rounded-full shrink-0"
+                        className="rounded-full shrink-0 cursor-pointer"
                     >
                         <X className="h-5 w-5" />
                     </Button>
@@ -124,7 +124,7 @@ export default function QuizQuestions({ quizData }: Props) {
                                 let btnClasses = "w-full p-6 text-left justify-start text-base border-2 rounded-2xl transition-all ";
 
                                 if (!hasAnswered) {
-                                    btnClasses += "bg-white hover:bg-brand/5 hover:border-brand text-dark-200 border-slate-200";
+                                    btnClasses += "cursor-pointer bg-white hover:bg-brand/5 hover:border-brand text-dark-200 border-slate-200";
                                 } else {
                                     if (answer.isCorrect) {
                                         btnClasses += "bg-emerald-50 border-emerald-500 text-emerald-800";
@@ -166,7 +166,7 @@ export default function QuizQuestions({ quizData }: Props) {
             <footer className="fixed bottom-0 left-0 w-full p-6 bg-white border-t border-slate-100 z-10 flex justify-center">
                 <div className="max-w-3xl w-full flex justify-end">
                     <Button
-                        className="w-full sm:w-auto px-12 py-6 text-lg rounded-full bg-brand text-white hover:bg-brand-100 transition-colors"
+                        className="w-full sm:w-auto px-12 py-6 text-lg rounded-full bg-brand text-white hover:bg-brand-100 transition-colors cursor-pointer"
                         onClick={handleNext}
                         disabled={started && !hasAnswered}
                     >
