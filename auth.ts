@@ -5,7 +5,15 @@ import Google from "next-auth/providers/google";
 import { LocalAuth } from "@/lib/actions/providers/local.auth";
 import { JWT } from "next-auth/jwt";
 
-const pendingRefreshRequests = new Map<string, Promise<any>>();
+declare global {
+    var _pendingRefreshRequests: Map<string, Promise<any>> | undefined;
+}
+
+const pendingRefreshRequests = globalThis._pendingRefreshRequests ?? new Map<string, Promise<any>>();
+
+if (process.env.NODE_ENV !== "production") {
+    globalThis._pendingRefreshRequests = pendingRefreshRequests;
+}
 
 async function refreshAccessToken(token: JWT) {
     const refreshToken = token.refreshToken as string;
