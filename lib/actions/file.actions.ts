@@ -16,4 +16,4 @@ export const updateFileUsers = storageProvider.updateFileUsers.bind(storageProvi
 export const updateEditedFile = storageProvider.updateEditedFile.bind(storageProvider);
 export const deleteFile = storageProvider.deleteFile.bind(storageProvider);
 export const getTotalSpaceUsed = storageProvider.getTotalSpaceUsed.bind(storageProvider);
-export const downloadFile  = storageProvider.downloadFile.bind(storageProvider);
+export const downloadFile = storageProvider.downloadFile.bind(storageProvider);

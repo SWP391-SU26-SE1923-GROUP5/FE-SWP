@@ -32,28 +32,44 @@ declare module "next-auth/jwt" {
     }
 }
 
+export interface BaseDocument {
+    id: string;
+    createdAt?: string;
+    updatedAt?: string;
+}
+
 export type ActionType = {
     value: string;
     label: string;
     icon?: string;
 };
 
-export interface AiResultState {
-    type: string;
-    data?: {
-        fileUrl?: string;
-        quizTitle?: string;
-        questions?: QuizQuestion[];
-        deckTitle?: string;
-        cards?: Flashcard[];
-        summary?: string;
-    };
+export interface SearchParamProps {
+    params: Promise<{ [key: string]: string }>;
+    searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }
 
-export interface BaseDocument {
-    id: string;
-    createdAt?: string;
-    updatedAt?: string;
+export interface User extends BaseDocument {
+    fullName: string;
+    email: string;
+    role: string;
+    dateOfBirth?: string;
+    currentStorageCapacity?: number;
+    currentAiTokenUsage?: number;
+    status?: string;
+}
+
+export interface LoginResponse {
+    user: User;
+    accessToken: string;
+    accessTokenExpiresAt: string;
+    refreshToken: string;
+    refreshTokenExpiresAt: string;
+}
+
+export interface SignInProps {
+    email: string;
+    password?: string;
 }
 
 export interface CreateAccountProps extends SignInProps {
@@ -61,20 +77,22 @@ export interface CreateAccountProps extends SignInProps {
     username: string;
 }
 
-export interface DeepResearchProps {
-    files: File[];
-    topic: string;
+export interface VerifyOtpProps {
+    email: string;
+    otp: string;
 }
 
-export interface DeleteFileProps {
-    fileId: string;
-    path: string;
+export interface IAuthService {
+    createAccount(props: CreateAccountProps): Promise<{ email: string | null }>;
+    signInUser(props: SignInProps): Promise<LoginResponse | null>;
+    getCurrentUser(): Promise<User | null>;
+    getUserById(id: string): Promise<User>;
+    signOutUser(): Promise<void>;
+    verifyOtp(props: VerifyOtpProps): Promise<string>;
+    resendOtp(props: { email: string }): Promise<string>;
 }
 
-export interface DownloadFileProps {
-    fileId: string;
-    path?: string;
-}
+export type FileType = "document" | "image" | "video" | "audio" | "other";
 
 export interface File_ extends BaseDocument {
     userId: string;
@@ -87,18 +105,7 @@ export interface File_ extends BaseDocument {
     sharedUsers: string;
     shareStatus: string;
     status: number;
-    size?: number;
-}
-
-export type FileType = "document" | "image" | "video" | "audio" | "other";
-
-export interface Flashcard {
-    id: string;
-    documentId: string;
-    front: string;
-    back: string;
-    createdAt: string;
-    updatedAt: string;
+    fileSizeBytes: number;
 }
 
 export interface GetFilesProps {
@@ -108,20 +115,50 @@ export interface GetFilesProps {
     limit?: number;
 }
 
-export interface IAIService {
-    executeAIFeature<T = unknown>(props: ProcessFileAIProps): Promise<T>;
-    executeDeepResearch<T = unknown>(props: DeepResearchProps): Promise<T>;
-    generateEmbeddings(texts: string[]): Promise<number[][]>;
+export interface UploadFileProps {
+    file: File;
+    path: string;
 }
 
-export interface IAuthService {
-    createAccount(props: CreateAccountProps): Promise<{ email: string | null }>;
-    signInUser(props: SignInProps): Promise<LoginResponse | null>;
-    getCurrentUser(): Promise<User | null>;
-    getUserById(id: string): Promise<User>;
-    signOutUser(): Promise<void>;
-    verifyOtp(props: VerifyOtpProps): Promise<string>;
-    resendOtp(props: { email: string }): Promise<string>;
+export interface UploadFileResponse {
+    documentId: string;
+    status: string;
+    chunkCount: number;
+    message: string;
+}
+
+export interface RenameFileProps {
+    fileId: string;
+    name: string;
+    extension: string;
+    path: string;
+}
+
+export interface UpdateEditedFileProps {
+    fileId: string;
+    file: File;
+    path: string;
+}
+
+export interface UpdateFileUsersProps {
+    fileId: string;
+    emails: string[];
+    path: string;
+}
+
+export interface DeleteFileProps {
+    fileId: string;
+    path: string;
+}
+
+export interface DownloadFileProps {
+    fileId: string;
+    path?: string;
+}
+
+export interface StorageCategoryStats {
+    size: number;
+    latestDate: string;
 }
 
 export interface IFileStorage {
@@ -143,18 +180,9 @@ export interface IFileStorage {
     }>;
 }
 
-export interface LoginResponse {
-    user: User;
-    accessToken: string;
-    accessTokenExpiresAt: string;
-    refreshToken: string;
-    refreshTokenExpiresAt: string;
-}
-
-export interface ProcessFileAIProps {
-    file: File_;
-    endpoint: string;
-    extraParams?: Record<string, string | number | boolean>;
+export interface Flashcard {
+    front: string;
+    back: string;
 }
 
 export interface QuizAnswer {
@@ -169,6 +197,11 @@ export interface QuizQuestion {
     answers: QuizAnswer[];
 }
 
+export interface QuizResponse {
+    quizTitle: string;
+    questions: QuizQuestion[];
+}
+
 export interface QuizRecord {
     id: string;
     documentId: string;
@@ -177,72 +210,49 @@ export interface QuizRecord {
     updatedAt: string;
 }
 
-export interface QuizResponse {
-    quizTitle: string;
-    questions: QuizQuestion[];
-}
-
-export interface RenameFileProps {
-    fileId: string;
-    name: string;
-    extension: string;
-    path: string;
-}
-
-export interface SearchParamProps {
-    params: Promise<{ [key: string]: string }>;
-    searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
-}
-
-export interface SignInProps {
-    email: string;
-    password?: string;
-}
-
-export interface StorageCategoryStats {
-    size: number;
-    latestDate: string;
-}
-
 export interface SummaryResponse {
     summary: string;
 }
 
-export interface UpdateEditedFileProps {
-    fileId: string;
-    file: File;
-    path: string;
+export interface AiResultState {
+    type: string;
+    data?: {
+        fileUrl?: string;
+        quizTitle?: string;
+        questions?: QuizQuestion[];
+        deckTitle?: string;
+        cards?: Flashcard[];
+        summary?: string;
+    };
 }
 
-export interface UpdateFileUsersProps {
-    fileId: string;
-    emails: string[];
-    path: string;
+export interface DeepResearchProps {
+    files: File[];
+    topic: string;
 }
 
-export interface UploadFileProps {
-    file: File;
-    path: string;
+export interface ProcessFileAIProps {
+    file: File_;
+    endpoint: string;
+    extraParams?: Record<string, string | number | boolean>;
 }
 
-export interface UploadFileResponse {
-    documentId: string;
-    status: string;
-    chunkCount: number;
-    message: string;
+export interface IAIService {
+    executeAIFeature<T = unknown>(props: ProcessFileAIProps): Promise<T>;
+    executeDeepResearch<T = unknown>(props: DeepResearchProps): Promise<T>;
+    generateEmbeddings(texts: string[]): Promise<number[][]>;
 }
 
-export interface User extends BaseDocument {
-    fullName: string;
-    email: string;
-    role: string;
-    dateOfBirth?: string;
-    currentStorageCapacity?: number;
-    currentAiTokenUsage?: number;
-    status?: string;
+export interface TierMembership {
+    id: string;
+    tierName: string;
+    storageLimitMb: number;
+    aiTokens: number;
+    createdAt: string;
+    updatedAt: string;
 }
 
-export interface VerifyOtpProps {
-    email: string;
-    otp: string;
+export interface IPaymentService {
+    getMembershipTiers(): Promise<TierMembership[]>;
+    createCheckoutSession(tierId: string): Promise<void>;
 }
