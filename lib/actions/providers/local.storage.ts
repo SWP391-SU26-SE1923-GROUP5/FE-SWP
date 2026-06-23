@@ -47,7 +47,8 @@ const getFileCategory = (mimeType: string): FileType => {
 export class LocalStorage implements IFileStorage {
     private async getHeaders(isFormData = false) {
         const session = await auth();
-        if (!session?.accessToken) {
+
+        if (!session?.accessToken || session.error === "RefreshAccessTokenError") {
             redirect("/sign-in");
         }
 
@@ -60,6 +61,15 @@ export class LocalStorage implements IFileStorage {
         }
 
         return headers;
+    }
+
+    private handleError(error: any, context: string): never {
+        if (error && typeof error === 'object' && error.digest?.startsWith('NEXT_REDIRECT')) {
+            throw error;
+        }
+
+        console.error(`${context} Error:`, error);
+        throw error;
     }
 
     async uploadFile({ file, path }: UploadFileProps) {
@@ -90,8 +100,7 @@ export class LocalStorage implements IFileStorage {
 
             return parseStringify(uploadResponse);
         } catch (error) {
-            console.error("Upload Error:", error);
-            throw error;
+            this.handleError(error, "UploadFile");
         }
     }
 
@@ -140,8 +149,7 @@ export class LocalStorage implements IFileStorage {
             return parseStringify({ documents, total });
 
         } catch (error) {
-            console.error("Files Processing Error:", error);
-            throw error;
+            this.handleError(error, "GetFiles");
         }
     }
 
@@ -187,8 +195,7 @@ export class LocalStorage implements IFileStorage {
             return parseStringify(data);
 
         } catch (error) {
-            console.error("Rename Error:", error);
-            throw error;
+            this.handleError(error, "RenameFile");
         }
     }
 
@@ -220,8 +227,7 @@ export class LocalStorage implements IFileStorage {
             return parseStringify(data);
 
         } catch (error) {
-            console.error("Update Users Error:", error);
-            throw error;
+            this.handleError(error, "UpdateFileUsers");
         }
     }
 
@@ -236,8 +242,7 @@ export class LocalStorage implements IFileStorage {
 
             return parseStringify(newFileResponse);
         } catch (error) {
-            console.error("Update Error:", error);
-            throw error;
+            this.handleError(error, "UpdateEditedFile");
         }
     }
 
@@ -258,8 +263,7 @@ export class LocalStorage implements IFileStorage {
             revalidatePath(path);
             return parseStringify({ status: "success" });
         } catch (error) {
-            console.error("Delete Error:", error);
-            throw error;
+            this.handleError(error, "DeleteFile");
         }
     }
 
@@ -285,8 +289,7 @@ export class LocalStorage implements IFileStorage {
             return parseStringify({ data: base64Data });
 
         } catch (error) {
-            console.error("[Local Storage] Download Error:", error);
-            throw error;
+            this.handleError(error, "DownloadFile");
         }
     }
 
@@ -341,8 +344,7 @@ export class LocalStorage implements IFileStorage {
             return parseStringify(totalSpace);
 
         } catch (error) {
-            console.error("Space Calculation Error:", error);
-            throw error;
+            this.handleError(error, "GetTotalSpaceUsed");
         }
     }
 }

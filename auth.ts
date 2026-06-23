@@ -5,28 +5,45 @@ import Google from "next-auth/providers/google";
 import { LocalAuth } from "@/lib/actions/providers/local.auth";
 import { JWT } from "next-auth/jwt";
 
-async function refreshAccessToken(token: JWT) {
-    try {
-        const authService = new LocalAuth();
-        const refreshedTokens = await authService.refreshSessionToken(
-            token.refreshToken as string,
-            token.accessToken as string
-        );
+const pendingRefreshRequests = new Map<string, Promise<any>>();
 
-        return {
-            ...token,
-            accessToken: refreshedTokens.accessToken,
-            accessTokenExpiresAt: Date.parse(refreshedTokens.accessTokenExpiresAt),
-            refreshToken: refreshedTokens.refreshToken ?? token.refreshToken,
-            error: undefined,
-        };
-    } catch (error) {
-        console.error("RefreshAccessTokenError", error);
-        return {
-            ...token,
-            error: "RefreshAccessTokenError",
-        };
+async function refreshAccessToken(token: JWT) {
+    const refreshToken = token.refreshToken as string;
+
+    if (pendingRefreshRequests.has(refreshToken)) {
+        return await pendingRefreshRequests.get(refreshToken);
     }
+
+    const refreshPromise = (async () => {
+        try {
+            const authService = new LocalAuth();
+            const refreshedTokens = await authService.refreshSessionToken(
+                refreshToken,
+                token.accessToken as string
+            );
+
+            return {
+                ...token,
+                accessToken: refreshedTokens.accessToken,
+                accessTokenExpiresAt: Date.parse(refreshedTokens.accessTokenExpiresAt),
+                refreshToken: refreshedTokens.refreshToken ?? token.refreshToken,
+                error: undefined,
+            };
+        } catch (error) {
+            return {
+                ...token,
+                error: "RefreshAccessTokenError",
+            };
+        } finally {
+            setTimeout(() => {
+                pendingRefreshRequests.delete(refreshToken);
+            }, 10000);
+        }
+    })();
+
+    pendingRefreshRequests.set(refreshToken, refreshPromise);
+
+    return await refreshPromise;
 }
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
@@ -98,6 +115,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
                 return token;
             }
 
+            if (token.error === "RefreshAccessTokenError") {
+                return token;
+            }
+
             if (trigger === "update") {
                 const rotatedTokens = await refreshAccessToken(token);
                 return {
@@ -106,7 +127,16 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
                 };
             }
 
-            return token;
+            const TIME_NOW = Date.now();
+            if (TIME_NOW < (token.accessTokenExpiresAt as number) - 15000) {
+                return token;
+            }
+
+            const rotatedTokens = await refreshAccessToken(token);
+            return {
+                ...token,
+                ...rotatedTokens,
+            };
         },
 
         async session({ session, token }) {
@@ -115,7 +145,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
                 session.user.role = token.role as string;
 
                 const provider = token.provider || "credentials";
-                if (token.provider === "credentials") {
+                if (provider === "credentials") {
                     session.accessToken = token.accessToken as string;
                     session.error = token.error as string | undefined;
                     session.accessTokenExpiresAt = token.accessTokenExpiresAt as number;

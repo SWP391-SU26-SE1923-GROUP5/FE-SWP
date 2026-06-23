@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation"; // Added useRouter
 import {
     BrainCircuit,
     Code,
@@ -84,6 +84,7 @@ const AI_ACTIONS = ["quiz", "flashcards", "video-indexer", "code-sandbox"];
 
 export default function ActionDropdown({ file }: { file: File_ }) {
     const path = usePathname();
+    const router = useRouter();
     const fileExt = file.fileExtension?.toLowerCase() || "";
 
     const isAiDocSupported = SUPPORTED_AI_DOC_EXTENSIONS.includes(fileExt);
@@ -189,7 +190,14 @@ export default function ActionDropdown({ file }: { file: File_ }) {
             if (endpoint === "quiz") {
                 const amount = Number(extraParams?.amount) || 10;
                 const res = await generateQuiz(file.id, amount);
-                data = { quizTitle: res.quizTitle, questions: res.questions };
+
+                data = {
+                    quizTitle: res.quizTitle || `${file.fileName} Quiz`,
+                    questions: res.questions?.map((q: any) => ({
+                        questionTitle: q.title || q.questionTitle,
+                        answers: q.answers || []
+                    })) || []
+                };
             } else if (endpoint === "flashcards") {
                 const amount = Number(extraParams?.amount) || 10;
                 const res = await generateFlashcards(file.id, amount);
@@ -411,13 +419,25 @@ export default function ActionDropdown({ file }: { file: File_ }) {
                 )}
 
                 {isAiAction && !isLoading && (
-                    <DialogFooter className="mt-4 border-t light-border pt-4">
+                    <DialogFooter className="mt-4 border-t light-border pt-4 flex flex-col sm:flex-row gap-3">
                         <Button
                             onClick={closeAllModals}
                             className="btn-secondary w-full py-2 rounded-full text-dark-100 font-semibold hover:bg-light-700 transition-colors cursor-pointer"
                         >
-                            Close AI Workspace
+                            Close Workspace
                         </Button>
+
+                        {value === "quiz" && (
+                            <Button
+                                onClick={() => {
+                                    closeAllModals();
+                                    router.push("/quizzes");
+                                }}
+                                className="w-full py-2 rounded-full bg-brand text-white hover:bg-emerald-400 transition-colors cursor-pointer shadow-sm"
+                            >
+                                Go to My Quizzes
+                            </Button>
+                        )}
                     </DialogFooter>
                 )}
 

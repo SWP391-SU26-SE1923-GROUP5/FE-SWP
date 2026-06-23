@@ -1,11 +1,10 @@
 "use client";
 
 import React, { useEffect } from "react";
-import Image from "next/image";
 import { useReward } from "react-rewards";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { X } from "lucide-react";
+import { X, Trophy } from "lucide-react";
 
 type Props = {
     scorePercentage: number;
@@ -30,7 +29,7 @@ const QuizSubmission = ({ scorePercentage, score, totalQuestions }: Props) => {
     return (
         <div className="flex flex-col flex-1">
             <div className="flex justify-end pt-4">
-                <Button size="icon" variant="outline" onClick={handleBack} className="rounded-full">
+                <Button size="icon" variant="outline" onClick={handleBack} className="rounded-full cursor-pointer">
                     <X className="h-5 w-5 text-slate-500" />
                 </Button>
             </div>
@@ -43,12 +42,9 @@ const QuizSubmission = ({ scorePercentage, score, totalQuestions }: Props) => {
                     <div className="flex flex-col items-center mt-6">
                         <p className="text-xl font-bold text-brand mb-8">Flawless Victory!</p>
                         <div className="flex justify-center relative">
-                            <Image
-                                src="/assets/icons/success.svg"
-                                alt="Smiling owl"
-                                width={150}
-                                height={150}
-                                className="animate-bounce"
+                            <Trophy
+                                className="w-32 h-32 text-brand animate-bounce"
+                                strokeWidth={1.5}
                             />
                             <span id="rewardId" className="absolute top-1/2 left-1/2" />
                         </div>

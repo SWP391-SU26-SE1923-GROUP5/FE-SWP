@@ -7,6 +7,7 @@ import {
     QuizResponse,
     QuizRecord
 } from "@/types";
+import { revalidatePath } from "next/cache";
 
 const connection_url = process.env.NEXT_PUBLIC_API_URL;
 
@@ -272,4 +273,24 @@ export const getQuizById = async (quizId: string): Promise<QuizResponse> => {
             answers: q.answers || []
         })) || []
     };
+};
+
+export const deleteQuiz = async (quizId: string): Promise<void> => {
+    const session = await auth();
+    if (!session?.accessToken) throw new Error("Unauthorized. Please log in.");
+
+    const response = await fetch(`${connection_url}/api/Quiz/${quizId}`, {
+        method: 'DELETE',
+        headers: {
+            'Authorization': `Bearer ${session.accessToken}`,
+            'Content-Type': 'application/json',
+        },
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(`[${response.status}] ${errorData.message || "Failed to delete quiz."}`);
+    }
+
+    revalidatePath("/quizzes");
 };
