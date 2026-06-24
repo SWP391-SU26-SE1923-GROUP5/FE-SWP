@@ -139,12 +139,15 @@ export class LocalStorage implements IFileStorage {
                 Offset: offset.toString(),
                 Limit: limit.toString(),
                 SortBy: sortBy,
-                IsDescending: isDescending.toString(),
-                SubjectId: subjectId
+                IsDescending: isDescending.toString()
             });
 
             if (searchText) {
                 queryParams.append("SearchTerm", searchText);
+            }
+
+            if (subjectId) {
+                queryParams.append("SubjectId", subjectId);
             }
 
             const res = await fetch(`${connection_url}/api/Document?${queryParams.toString()}`, {

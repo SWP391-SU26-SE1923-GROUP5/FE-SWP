@@ -120,7 +120,7 @@ export interface GetFilesProps {
     sort?: string;
     limit?: number;
     page?: number;
-    subjectId: string;
+    subjectId?: string;
 }
 
 export interface UploadFileProps {

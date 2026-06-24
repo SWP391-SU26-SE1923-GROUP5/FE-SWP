@@ -104,7 +104,6 @@ const Search = () => {
         }
     };
 
-    // Shared navigation logic for both standard search clicks and AI citation clicks
     const navigateToTarget = (fileName: string, typeOrExt: string) => {
         isNavigating.current = true;
         setDropdownOpen(false);
@@ -135,7 +134,6 @@ const Search = () => {
     };
 
     const handleCitationClick = (source: string) => {
-        // Extract the extension from the source file name (e.g. "report.pdf" -> "pdf")
         const ext = source.split('.').pop() || "";
         navigateToTarget(source, ext);
     };
