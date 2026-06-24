@@ -333,11 +333,11 @@ export const semanticSearch = async (
     return await response.json();
 };
 
-export const summarizeDocument = async (documentId: string): Promise<SummaryResponse> => {
+export const summarizeRagDocument = async (documentId: string): Promise<SummaryResponse> => {
     const session = await auth();
     if (!session?.accessToken) throw new Error("Unauthorized. Please log in.");
 
-    const response = await fetch(`${connection_url}/api/chat/summarize`, {
+    const response = await fetch(`${connection_url}/api/Rag/summarize`, {
         method: 'POST',
         headers: {
             'Authorization': `Bearer ${session.accessToken}`,
@@ -350,7 +350,7 @@ export const summarizeDocument = async (documentId: string): Promise<SummaryResp
 
     if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(`[${response.status}] ${errorData.message || errorData.title || "Failed to generate document summary."}`);
+        throw new Error(`[${response.status}] ${errorData.message || errorData.title || "Failed to generate RAG summary."}`);
     }
 
     return await response.json();

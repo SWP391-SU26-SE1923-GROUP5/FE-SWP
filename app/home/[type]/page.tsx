@@ -1,15 +1,22 @@
 import Sort from "@/components/Sort";
-import {getFiles} from "@/lib/actions/file.actions";
-import {File_, FileType, SearchParamProps} from "@/types";
+import { getFiles } from "@/lib/actions/file.actions";
+import { File_, FileType, SearchParamProps } from "@/types";
 import Card from "@/components/Card";
-import {getFileTypesParams} from "@/lib/utils";
+import { getFileTypesParams } from "@/lib/utils";
 
 const Page = async ({ searchParams, params }: SearchParamProps) => {
-    const type = (await params)?.type as string || ""
-    const searchText = ((await searchParams)?.query as string) || ""
-    const sort = ((await searchParams)?.sort as string) || ""
-    const types = getFileTypesParams(type) as FileType[]
-    const files = await getFiles({ types, searchText, sort });
+    const resolvedSearchParams = await searchParams;
+    const resolvedParams = await params;
+
+    const type = resolvedParams?.type as string || "";
+    const searchText = (resolvedSearchParams?.query as string) || "";
+    const sort = (resolvedSearchParams?.sort as string) || "";
+
+    const subjectId = (resolvedSearchParams?.subjectId as string) || "";
+
+    const types = getFileTypesParams(type) as FileType[];
+
+    const files = await getFiles({ types, searchText, sort, subjectId });
 
     return (
         <div className="page-container">
@@ -23,22 +30,22 @@ const Page = async ({ searchParams, params }: SearchParamProps) => {
 
                     <div className="sort-container">
                         <p className="body-1 hidden sm:block text-light-200">Sort by:</p>
-
                         <Sort />
                     </div>
                 </div>
             </section>
 
-            {files.total > 0 ? (
+            {files.documents.length > 0 ? (
                 <section className="file-list">
                     {files.documents.map((file: File_) => (
                         <Card key={file.id} file={file}/>
                     ))}
                 </section>
-            ) :
-                <p className="empty-list">No file uploaded</p>
-            }
+            ) : (
+                <p className="empty-list">No files uploaded</p>
+            )}
         </div>
-    )
-}
-export default Page
+    );
+};
+
+export default Page;

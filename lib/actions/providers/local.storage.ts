@@ -6,7 +6,9 @@ import {
     UpdateFileUsersProps,
     UploadFileProps,
     UpdateEditedFileProps,
-    File_, FileType
+    File_,
+    FileType,
+    Subject
 } from "@/types";
 import { auth } from "@/auth";
 import { revalidatePath } from "next/cache";
@@ -72,14 +74,36 @@ export class LocalStorage implements IFileStorage {
         throw error;
     }
 
-    async uploadFile({ file, path }: UploadFileProps) {
+    async getSubjects(): Promise<Subject[]> {
+        try {
+            const headers = await this.getHeaders();
+
+            const res = await fetch(`${connection_url}/api/Subject`, {
+                method: 'GET',
+                headers,
+            });
+
+            if (!res.ok) {
+                const errorData = await res.json().catch(() => ({}));
+                throw new Error(`[${res.status}] ${errorData.message || "Failed to fetch subjects"}`);
+            }
+
+            const responseData = await res.json();
+            return parseStringify(responseData?.items || responseData?.Items || []);
+
+        } catch (error) {
+            this.handleError(error, "GetSubjects");
+        }
+    }
+
+    async uploadFile({ file, path, subjectId }: UploadFileProps) {
         try {
             const headers = await this.getHeaders(true);
 
             const formData = new FormData();
             formData.append('file', file);
             formData.append('title', file.name);
-            formData.append('subjectId', "fbe99f57-8958-4cca-c348-08decc198121");
+            formData.append('subjectId', subjectId);
 
             const res = await fetch(`${connection_url}/api/DocumentUpload/upload/file`, {
                 method: 'POST',
@@ -104,7 +128,7 @@ export class LocalStorage implements IFileStorage {
         }
     }
 
-    async getFiles({ types = [], searchText = "", sort = "CreatedAt-desc", limit = 10, page = 1 }: GetFilesProps & { page?: number }) {
+    async getFiles({ types = [], searchText = "", sort = "CreatedAt-desc", limit = 10, page = 1, subjectId }: GetFilesProps) {
         try {
             const headers = await this.getHeaders();
             const [sortBy, orderBy] = sort.split('-');
@@ -115,7 +139,8 @@ export class LocalStorage implements IFileStorage {
                 Offset: offset.toString(),
                 Limit: limit.toString(),
                 SortBy: sortBy,
-                IsDescending: isDescending.toString()
+                IsDescending: isDescending.toString(),
+                SubjectId: subjectId
             });
 
             if (searchText) {
@@ -237,8 +262,9 @@ export class LocalStorage implements IFileStorage {
 
             const newFileResponse = await this.uploadFile({
                 file,
-                path
-            });
+                path,
+                subjectId: "placeholder-or-fetch-from-original-file"
+            } as any);
 
             return parseStringify(newFileResponse);
         } catch (error) {

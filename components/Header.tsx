@@ -5,8 +5,11 @@ import { BrainCircuit, FileText } from "lucide-react";
 import Search from "@/components/Search";
 import FileUploader from "@/components/FileUploader";
 import { signOutUser } from "@/lib/actions/user.actions";
+import { getSubjects } from "@/lib/actions/file.actions";
 
-const Header = () => {
+const Header = async () => {
+    const subjects = await getSubjects();
+
     return (
         <header className="header">
             <Search />
@@ -30,7 +33,7 @@ const Header = () => {
                     </Button>
                 </Link>
 
-                <FileUploader />
+                <FileUploader subjects={subjects} />
 
                 <form action={async () => {
                     "use server"
@@ -50,4 +53,5 @@ const Header = () => {
         </header>
     )
 }
+
 export default Header;

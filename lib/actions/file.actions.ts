@@ -9,6 +9,7 @@ const getStorageProvider = (): IFileStorage => {
 
 const storageProvider = getStorageProvider();
 
+export const getSubjects = storageProvider.getSubjects.bind(storageProvider);
 export const uploadFile = storageProvider.uploadFile.bind(storageProvider);
 export const getFiles = storageProvider.getFiles.bind(storageProvider);
 export const renameFile = storageProvider.renameFile.bind(storageProvider);

@@ -108,16 +108,25 @@ export interface File_ extends BaseDocument {
     fileSizeBytes: number;
 }
 
+export interface Subject extends BaseDocument {
+    subjectCode: string;
+    subjectName: string;
+    description: string;
+}
+
 export interface GetFilesProps {
     types?: FileType[];
     searchText?: string;
     sort?: string;
     limit?: number;
+    page?: number;
+    subjectId: string;
 }
 
 export interface UploadFileProps {
     file: File;
     path: string;
+    subjectId: string;
 }
 
 export interface UploadFileResponse {
@@ -162,6 +171,7 @@ export interface StorageCategoryStats {
 }
 
 export interface IFileStorage {
+    getSubjects(): Promise<Subject[]>;
     uploadFile(props: UploadFileProps): Promise<UploadFileResponse | undefined>;
     getFiles(props: GetFilesProps): Promise<{ documents: File_[]; total: number }>;
     renameFile(props: RenameFileProps): Promise<File_ | undefined>;

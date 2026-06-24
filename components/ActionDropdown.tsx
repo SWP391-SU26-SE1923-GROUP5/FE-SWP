@@ -2,12 +2,11 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { usePathname, useRouter } from "next/navigation"; // Added useRouter
+import { usePathname, useRouter } from "next/navigation";
 import {
+    AlignLeft,
     BrainCircuit,
-    Code,
     FileText,
-    Film,
     Loader2,
     RotateCcw,
     Sparkles,
@@ -39,7 +38,7 @@ import { ActionType, AiResultState, File_, Flashcard, QuizQuestion } from "@/typ
 import { actionsDropdownItems } from "@/constants/actionsDropdownItems";
 import { triggerDownload } from "@/lib/utils";
 import { deleteFile, renameFile, updateFileUsers } from "@/lib/actions/file.actions";
-import { generateQuiz, generateFlashcards } from "@/lib/actions/ai.actions";
+import { generateQuiz, generateFlashcards, summarizeRagDocument } from "@/lib/actions/ai.actions";
 
 import { FileDetails, ShareInput } from "@/components/ActionsModalContent";
 import ApryseViewer from "./ApryseViewer";
@@ -65,22 +64,7 @@ const SUPPORTED_AI_DOC_EXTENSIONS = [
     ".json", "json"
 ];
 
-const SUPPORTED_AI_VIDEO_EXTENSIONS = [
-    ".mp4", "mp4",
-    ".webm", "webm",
-    ".mov", "mov"
-];
-
-const SUPPORTED_AI_CODE_EXTENSIONS = [
-    ".go", "go",
-    ".py", "py",
-    ".js", "js",
-    ".ts", "ts",
-    ".lua", "lua",
-    ".java", "java"
-];
-
-const AI_ACTIONS = ["quiz", "flashcards", "video-indexer", "code-sandbox"];
+const AI_ACTIONS = ["quiz", "flashcards", "summarize"];
 
 export default function ActionDropdown({ file }: { file: File_ }) {
     const path = usePathname();
@@ -88,9 +72,6 @@ export default function ActionDropdown({ file }: { file: File_ }) {
     const fileExt = file.fileExtension?.toLowerCase() || "";
 
     const isAiDocSupported = SUPPORTED_AI_DOC_EXTENSIONS.includes(fileExt);
-    const isVideoSupported = SUPPORTED_AI_VIDEO_EXTENSIONS.includes(fileExt);
-    const isCodeSupported = SUPPORTED_AI_CODE_EXTENSIONS.includes(fileExt);
-    const hasAnyAiSupport = isAiDocSupported || isVideoSupported || isCodeSupported;
 
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -202,6 +183,9 @@ export default function ActionDropdown({ file }: { file: File_ }) {
                 const amount = Number(extraParams?.amount) || 10;
                 const res = await generateFlashcards(file.id, amount);
                 data = { deckTitle: `${file.fileName} Flashcards`, cards: res };
+            } else if (endpoint === "summarize") {
+                const res = await summarizeRagDocument(file.id);
+                data = { summary: res.summary };
             }
 
             setAiResult({ type: endpoint, data });
@@ -272,6 +256,16 @@ export default function ActionDropdown({ file }: { file: File_ }) {
                     {isAiAction && !isLoading && aiResult && (
                         <div className="text-left space-y-6">
                             <h2 className="h2-bold text-dark-100 mb-6">{label}</h2>
+
+                            {value === "summarize" && aiResult.data?.summary && (
+                                <div className="space-y-4">
+                                    <div className="p-6 border light-border rounded-xl bg-light-800">
+                                        <p className="text-dark-200 leading-relaxed whitespace-pre-wrap">
+                                            {aiResult.data.summary as string}
+                                        </p>
+                                    </div>
+                                </div>
+                            )}
 
                             {value === "quiz" && aiResult.data?.questions && (
                                 <div className="space-y-6">
@@ -507,90 +501,75 @@ export default function ActionDropdown({ file }: { file: File_ }) {
                             </DropdownMenuItem>
                         ))}
 
-                    {hasAnyAiSupport && (
+                    {isAiDocSupported && (
                         <>
                             <DropdownMenuSeparator className="my-2 bg-light-300" />
                             <DropdownMenuLabel className="text-brand flex items-center gap-2 subtitle-2">
                                 <Sparkles className="h-4 w-4" /> AI Tools
                             </DropdownMenuLabel>
 
-                            {isAiDocSupported && (
-                                <>
-                                    <DropdownMenuSub>
-                                        <DropdownMenuSubTrigger className="shad-dropdown-item gap-2">
-                                            <BrainCircuit className="h-4 w-4 text-brand" /> Generate Quiz
-                                        </DropdownMenuSubTrigger>
-                                        <DropdownMenuPortal>
-                                            <DropdownMenuSubContent>
-                                                <DropdownMenuItem
-                                                    onClick={() => triggerAIFeature("quiz", "Quiz Engine", { amount: "10" })}
-                                                    className="shad-dropdown-item cursor-pointer"
-                                                >
-                                                    10 Questions
-                                                </DropdownMenuItem>
-                                                <DropdownMenuItem
-                                                    onClick={() => triggerAIFeature("quiz", "Quiz Engine", { amount: "20" })}
-                                                    className="shad-dropdown-item cursor-pointer"
-                                                >
-                                                    20 Questions
-                                                </DropdownMenuItem>
-                                                <DropdownMenuItem
-                                                    onClick={() => triggerAIFeature("quiz", "Quiz Engine", { amount: "50" })}
-                                                    className="shad-dropdown-item cursor-pointer"
-                                                >
-                                                    50 Questions
-                                                </DropdownMenuItem>
-                                            </DropdownMenuSubContent>
-                                        </DropdownMenuPortal>
-                                    </DropdownMenuSub>
+                            <DropdownMenuItem
+                                onClick={() => triggerAIFeature("summarize", "Document Summary")}
+                                className="shad-dropdown-item gap-2 cursor-pointer"
+                            >
+                                <AlignLeft className="h-4 w-4 text-brand" /> Summarize Document
+                            </DropdownMenuItem>
 
-                                    <DropdownMenuSub>
-                                        <DropdownMenuSubTrigger className="shad-dropdown-item gap-2">
-                                            <FileText className="h-4 w-4 text-brand" /> Extract Flashcards
-                                        </DropdownMenuSubTrigger>
-                                        <DropdownMenuPortal>
-                                            <DropdownMenuSubContent>
-                                                <DropdownMenuItem
-                                                    onClick={() => triggerAIFeature("flashcards", "Flashcards", { amount: "10" })}
-                                                    className="shad-dropdown-item cursor-pointer"
-                                                >
-                                                    10 Cards
-                                                </DropdownMenuItem>
-                                                <DropdownMenuItem
-                                                    onClick={() => triggerAIFeature("flashcards", "Flashcards", { amount: "20" })}
-                                                    className="shad-dropdown-item cursor-pointer"
-                                                >
-                                                    20 Cards
-                                                </DropdownMenuItem>
-                                                <DropdownMenuItem
-                                                    onClick={() => triggerAIFeature("flashcards", "Flashcards", { amount: "50" })}
-                                                    className="shad-dropdown-item cursor-pointer"
-                                                >
-                                                    50 Cards
-                                                </DropdownMenuItem>
-                                            </DropdownMenuSubContent>
-                                        </DropdownMenuPortal>
-                                    </DropdownMenuSub>
-                                </>
-                            )}
+                            <DropdownMenuSub>
+                                <DropdownMenuSubTrigger className="shad-dropdown-item gap-2">
+                                    <BrainCircuit className="h-4 w-4 text-brand" /> Generate Quiz
+                                </DropdownMenuSubTrigger>
+                                <DropdownMenuPortal>
+                                    <DropdownMenuSubContent>
+                                        <DropdownMenuItem
+                                            onClick={() => triggerAIFeature("quiz", "Quiz Engine", { amount: "10" })}
+                                            className="shad-dropdown-item cursor-pointer"
+                                        >
+                                            10 Questions
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem
+                                            onClick={() => triggerAIFeature("quiz", "Quiz Engine", { amount: "20" })}
+                                            className="shad-dropdown-item cursor-pointer"
+                                        >
+                                            20 Questions
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem
+                                            onClick={() => triggerAIFeature("quiz", "Quiz Engine", { amount: "50" })}
+                                            className="shad-dropdown-item cursor-pointer"
+                                        >
+                                            50 Questions
+                                        </DropdownMenuItem>
+                                    </DropdownMenuSubContent>
+                                </DropdownMenuPortal>
+                            </DropdownMenuSub>
 
-                            {isVideoSupported && (
-                                <DropdownMenuItem
-                                    onClick={() => triggerAIFeature("video-indexer", "Video Indexer")}
-                                    className="shad-dropdown-item gap-2"
-                                >
-                                    <Film className="h-4 w-4 text-brand" /> Index Video Chapters
-                                </DropdownMenuItem>
-                            )}
-
-                            {isCodeSupported && (
-                                <DropdownMenuItem
-                                    onClick={() => triggerAIFeature("code-sandbox", "Code Sandbox")}
-                                    className="shad-dropdown-item gap-2"
-                                >
-                                    <Code className="h-4 w-4 text-brand" /> Run in Sandbox
-                                </DropdownMenuItem>
-                            )}
+                            <DropdownMenuSub>
+                                <DropdownMenuSubTrigger className="shad-dropdown-item gap-2">
+                                    <FileText className="h-4 w-4 text-brand" /> Extract Flashcards
+                                </DropdownMenuSubTrigger>
+                                <DropdownMenuPortal>
+                                    <DropdownMenuSubContent>
+                                        <DropdownMenuItem
+                                            onClick={() => triggerAIFeature("flashcards", "Flashcards", { amount: "10" })}
+                                            className="shad-dropdown-item cursor-pointer"
+                                        >
+                                            10 Cards
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem
+                                            onClick={() => triggerAIFeature("flashcards", "Flashcards", { amount: "20" })}
+                                            className="shad-dropdown-item cursor-pointer"
+                                        >
+                                            20 Cards
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem
+                                            onClick={() => triggerAIFeature("flashcards", "Flashcards", { amount: "50" })}
+                                            className="shad-dropdown-item cursor-pointer"
+                                        >
+                                            50 Cards
+                                        </DropdownMenuItem>
+                                    </DropdownMenuSubContent>
+                                </DropdownMenuPortal>
+                            </DropdownMenuSub>
                         </>
                     )}
                 </DropdownMenuContent>
