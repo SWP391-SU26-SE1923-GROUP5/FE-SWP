@@ -75,4 +75,25 @@ export class LocalPayment implements IPaymentService {
             this.handleError(error, "CreateCheckoutSession");
         }
     }
+
+    async getCurrentUserTier() {
+        try {
+            const headers = await this.getHeaders();
+
+            const res = await fetch(`${connection_url}/api/User/me/tier`, {
+                method: 'GET',
+                headers
+            });
+
+            if (!res.ok) {
+                const errorData = await res.json().catch(() => ({}));
+                throw new Error(`[${res.status}] ${errorData.message || "Failed to fetch current user tier"}`);
+            }
+
+            const data = await res.json();
+            return parseStringify(data);
+        } catch (error) {
+            this.handleError(error, "GetCurrentUserTier");
+        }
+    }
 }

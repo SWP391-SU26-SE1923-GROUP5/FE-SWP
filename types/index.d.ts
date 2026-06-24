@@ -252,7 +252,18 @@ export interface TierMembership {
     updatedAt: string;
 }
 
+export interface CurrentUserTier {
+    tierId: string;
+    tierName: string;
+    storageLimitMb: number;
+    aiTokens: number;
+    tierExpireAt: string;
+    currentStorageMb: number;
+    currentAiTokensUsed: number;
+}
+
 export interface IPaymentService {
     getMembershipTiers(): Promise<TierMembership[]>;
     createCheckoutSession(tierId: string): Promise<void>;
+    getCurrentUserTier(): Promise<CurrentUserTier>;
 }

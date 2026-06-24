@@ -19,7 +19,8 @@ import {
 import { ChartConfig, ChartContainer } from "@/components/ui/chart";
 import { Button } from "@/components/ui/button";
 import { convertFileSize } from "@/lib/utils";
-import { getMembershipTiers } from "@/lib/actions/payment.actions";
+
+import { getCurrentUserTier } from "@/lib/actions/payment.actions";
 
 const chartConfig = {
     size: {
@@ -38,11 +39,11 @@ export const Chart = ({ used = 0 }: { used?: number }) => {
     useEffect(() => {
         const fetchTierData = async () => {
             try {
-                const tiers = await getMembershipTiers();
+                const userTier = await getCurrentUserTier();
 
-                if (tiers && tiers.length > 0) {
-                    setStorageLimitMb(tiers[0].storageLimitMb);
-                    setTierName(tiers[0].tierName);
+                if (userTier) {
+                    setStorageLimitMb(userTier.storageLimitMb);
+                    setTierName(userTier.tierName);
                 }
             } catch (error) {
                 console.error("Failed to load tier data", error);
@@ -55,7 +56,7 @@ export const Chart = ({ used = 0 }: { used?: number }) => {
 
     const totalBytes = storageLimitMb * 1024 * 1024;
     const percentage = totalBytes > 0 ? Number(((used / totalBytes) * 100).toFixed(2)) : 0;
-    const chartData = [{ name: "Used", storage: percentage, fill: "#064e3b" }];
+    const chartData = [{ name: "Used", storage: Math.min(percentage, 100), fill: "#064e3b" }];
 
     return (
         <Card className="chart flex flex-row items-center justify-between p-6 bg-emerald-500 text-white border-none shadow-md">

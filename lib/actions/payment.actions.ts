@@ -11,3 +11,4 @@ const paymentProvider = getPaymentProvider();
 
 export const getMembershipTiers = paymentProvider.getMembershipTiers.bind(paymentProvider);
 export const createCheckoutSession = paymentProvider.createCheckoutSession.bind(paymentProvider);
+export const getCurrentUserTier = paymentProvider.getCurrentUserTier.bind(paymentProvider);

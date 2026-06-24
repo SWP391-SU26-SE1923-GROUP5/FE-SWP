@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { CheckCircle2, XCircle, ArrowRight, ArrowLeft } from "lucide-react";
+import { auth } from "@/auth";
 
 type Props = {
     searchParams: Promise<{ [key: string]: string | undefined }>;
@@ -8,8 +9,35 @@ type Props = {
 
 export default async function VNPayReturnPage({ searchParams }: Props) {
     const params = await searchParams;
-    const responseCode = params["vnp_ResponseCode"];
-    const isSuccess = responseCode === "00";
+
+    const queryString = new URLSearchParams(params as Record<string, string>).toString();
+
+    const session = await auth();
+    let isSuccess = false;
+    let errorMessage = "We couldn't complete your payment. Don't worry, no charges were made to your account.";
+
+    try {
+        const backendUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5171";
+        const res = await fetch(`${backendUrl}/api/Payment/vnpay-return?${queryString}`, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${session?.accessToken}`,
+                'Content-Type': 'application/json'
+            },
+            cache: 'no-store'
+        });
+
+        const data = await res.json();
+
+        if (data?.success) {
+            isSuccess = true;
+        } else {
+            errorMessage = data?.message || errorMessage;
+        }
+    } catch (error) {
+        console.error("Backend verification failed:", error);
+        errorMessage = "Failed to communicate with the verification server. Please check your dashboard.";
+    }
 
     return (
         <div className="min-h-screen bg-slate-50 flex flex-col relative overflow-hidden">
@@ -60,7 +88,7 @@ export default async function VNPayReturnPage({ searchParams }: Props) {
 
                             <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 mb-4 tracking-tight">Transaction Failed</h1>
                             <p className="text-slate-500 text-base mb-8 leading-relaxed">
-                                We couldn&apos;t complete your payment. Don&apos;t worry, no charges were made to your account. Please try again or use a different payment method.
+                                {errorMessage}
                             </p>
 
                             <div className="flex flex-col gap-3 w-full">
