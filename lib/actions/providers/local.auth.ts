@@ -5,14 +5,15 @@ import { parseStringify } from "@/lib/utils";
 const connection_url = process.env.NEXT_PUBLIC_API_URL;
 
 export class LocalAuth implements IAuthService {
-    async createAccount({ fullName, email, password }: CreateAccountProps) {
+    async createAccount({ fullName, email, password, dateOfBirth }: CreateAccountProps) {
         const res = await fetch(`${connection_url}/api/Auth/register`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 fullName,
                 email,
-                password
+                password,
+                dateOfBirth
             })
         });
 

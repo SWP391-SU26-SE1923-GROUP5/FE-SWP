@@ -17,6 +17,12 @@ interface AuthFormProps<T extends FieldValues> {
     formType: "SIGN_IN" | "SIGN_UP";
 }
 
+export function formatLabel(key: string) {
+    if (key === "email") return "Email Address";
+    const withSpaces = key.replace(/([A-Z])/g, ' $1');
+    return withSpaces.charAt(0).toUpperCase() + withSpaces.slice(1).trim();
+}
+
 const AuthForm = <T extends FieldValues>({
                                              schema,
                                              defaultValues,
@@ -54,16 +60,22 @@ const AuthForm = <T extends FieldValues>({
             {Object.keys(defaultValues).map((field) => {
                 const fieldName = field as Path<T>;
                 const error = form.formState.errors[fieldName];
+                const labelText = formatLabel(field);
+
+                const inputType =
+                    field === "password" ? "password" :
+                        field === "dateOfBirth" ? "date" :
+                            "text";
 
                 return (
                     <div key={field} className="space-y-2">
                         <Label htmlFor={field} className="paragraph-medium text-dark400_light700">
-                            {field === "email" ? "Email Address" : field.charAt(0).toUpperCase() + field.slice(1)}
+                            {labelText}
                         </Label>
                         <Input
                             id={field}
                             {...form.register(fieldName)}
-                            type={field === "password" ? "password" : "text"}
+                            type={inputType}
                             className="paragraph-regular background-light900_dark300 light-border-2 text-dark300_light700 no-focus min-h-12 rounded-1.5 border"
                         />
                         {error && (

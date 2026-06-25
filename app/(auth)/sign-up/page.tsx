@@ -12,10 +12,10 @@ const SignUp = () => {
     const handleSignUp = async (data: z.infer<typeof SignUpSchema>) => {
         try {
             const result = await createAccount({
-                fullName: data.name,
-                username: data.username,
+                fullName: data.fullName,
                 email: data.email,
                 password: data.password,
+                dateOfBirth: data.dateOfBirth
             });
 
             if (result?.email) {
@@ -25,7 +25,6 @@ const SignUp = () => {
 
             return { success: false, error: "Failed to create account." };
         } catch (error: unknown) {
-            console.error("Sign up error:", error);
             return {
                 success: false,
                 error: "An unexpected error occurred during sign up."
@@ -37,10 +36,10 @@ const SignUp = () => {
         <AuthForm
             schema={SignUpSchema}
             defaultValues={{
+                fullName: "",
                 email: "",
                 password: "",
-                name: "",
-                username: "",
+                dateOfBirth: "",
             }}
             onSubmit={handleSignUp}
             formType="SIGN_UP"

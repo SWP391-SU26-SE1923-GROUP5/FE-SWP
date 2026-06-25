@@ -74,7 +74,7 @@ export interface SignInProps {
 
 export interface CreateAccountProps extends SignInProps {
     fullName: string;
-    username: string;
+    dateOfBirth: string;
 }
 
 export interface VerifyOtpProps {
