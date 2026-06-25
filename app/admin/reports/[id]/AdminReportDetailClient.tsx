@@ -13,9 +13,6 @@ interface AdminReportDetailClientProps {
     currentUserId: string;
 }
 
-/**
- * Admin Report Detail Client - Review and take action on reports
- */
 export default function AdminReportDetailClient({
     reportId,
     currentUserId
@@ -27,14 +24,12 @@ export default function AdminReportDetailClient({
     const [isActioning, setIsActioning] = useState(false);
     const [actionNotes, setActionNotes] = useState('');
 
-    // 📋 Fetch report detail
     useEffect(() => {
         const fetchReport = async () => {
             setIsLoading(true);
             setError(null);
 
             try {
-                // ⚠️ Placeholder - Replace with actual API endpoint
                 const response = await axios.get(`/api/Report/${reportId}`);
                 setReport(response.data);
             } catch (err) {
@@ -52,7 +47,6 @@ export default function AdminReportDetailClient({
         fetchReport();
     }, [reportId]);
 
-    // 🎯 Handle approve action
     const handleApprove = async () => {
         if (!report) return;
         
@@ -63,10 +57,8 @@ export default function AdminReportDetailClient({
                 notes: actionNotes
             };
 
-            // ⚠️ Placeholder - Replace with actual API endpoint
             await axios.put(`/api/Report/${reportId}`, payload);
 
-            // Show success and redirect
             alert('Report approved successfully!');
             router.push('/admin/reports');
         } catch (err) {
@@ -80,7 +72,6 @@ export default function AdminReportDetailClient({
         }
     };
 
-    // ❌ Handle reject action
     const handleReject = async () => {
         if (!report) return;
         
@@ -96,10 +87,8 @@ export default function AdminReportDetailClient({
                 notes: actionNotes
             };
 
-            // ⚠️ Placeholder - Replace with actual API endpoint
             await axios.put(`/api/Report/${reportId}`, payload);
 
-            // Show success and redirect
             alert('Report rejected successfully!');
             router.push('/admin/reports');
         } catch (err) {
@@ -113,7 +102,6 @@ export default function AdminReportDetailClient({
         }
     };
 
-    // 🎯 Get status badge color
     const getStatusColor = (status: string) => {
         switch (status) {
             case 'Pending':
@@ -129,7 +117,6 @@ export default function AdminReportDetailClient({
         }
     };
 
-    // Loading state
     if (isLoading) {
         return (
             <div className="flex items-center justify-center min-h-[400px]">
@@ -141,7 +128,6 @@ export default function AdminReportDetailClient({
         );
     }
 
-    // Error state
     if (error || !report) {
         return (
             <div className="space-y-4">
@@ -162,7 +148,6 @@ export default function AdminReportDetailClient({
 
     return (
         <div className="space-y-6">
-            {/* Header */}
             <div>
                 <Link
                     href="/admin/reports"
@@ -174,7 +159,6 @@ export default function AdminReportDetailClient({
                 <h1 className="text-3xl font-bold text-gray-900">Report Details</h1>
             </div>
 
-            {/* Status Info */}
             <div className="bg-white rounded-lg shadow p-6">
                 <div className="flex items-center justify-between">
                     <div>
@@ -191,7 +175,6 @@ export default function AdminReportDetailClient({
             </div>
 
             <div className="grid grid-cols-2 gap-6">
-                {/* Report Information */}
                 <div className="bg-white rounded-lg shadow p-6">
                     <h2 className="text-lg font-bold text-gray-900 mb-4">Report Information</h2>
                     
@@ -218,7 +201,6 @@ export default function AdminReportDetailClient({
                     </div>
                 </div>
 
-                {/* Document Information */}
                 <div className="bg-white rounded-lg shadow p-6">
                     <h2 className="text-lg font-bold text-gray-900 mb-4">Reported Document</h2>
                     
@@ -252,7 +234,6 @@ export default function AdminReportDetailClient({
                 </div>
             </div>
 
-            {/* Action Section - Only show if status is Pending */}
             {report.status === 'Pending' && (
                 <div className="bg-white rounded-lg shadow p-6">
                     <h2 className="text-lg font-bold text-gray-900 mb-4">Take Action</h2>
@@ -292,7 +273,6 @@ export default function AdminReportDetailClient({
                 </div>
             )}
 
-            {/* Info: Already processed */}
             {report.status !== 'Pending' && (
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                     <p className="text-sm text-blue-700">

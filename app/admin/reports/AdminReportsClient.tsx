@@ -12,9 +12,6 @@ interface AdminReportsClientProps {
     initialPage: number;
 }
 
-/**
- * Admin Reports Client - List all reported documents
- */
 export default function AdminReportsClient({
     currentUserId,
     initialStatus,
@@ -29,7 +26,6 @@ export default function AdminReportsClient({
 
     const reportsPerPage = 10;
 
-    // 📋 Fetch reports list
     useEffect(() => {
         const fetchReports = async () => {
             setIsLoading(true);
@@ -44,7 +40,6 @@ export default function AdminReportsClient({
                     sortOrder: 'desc'
                 };
 
-                // ⚠️ Placeholder - Replace with actual API endpoint
                 const response = await axios.get('/api/Report', { params });
                 
                 setReports(response.data.data || []);
@@ -66,7 +61,6 @@ export default function AdminReportsClient({
 
     const totalPages = Math.ceil(totalReports / reportsPerPage);
 
-    // 🎯 Get status badge color
     const getStatusColor = (status: string) => {
         switch (status) {
             case 'Pending':
@@ -84,7 +78,6 @@ export default function AdminReportsClient({
 
     return (
         <div className="space-y-6">
-            {/* Header */}
             <div className="flex items-center justify-between">
                 <div>
                     <h1 className="text-3xl font-bold text-gray-900">Reported Documents</h1>
@@ -92,7 +85,6 @@ export default function AdminReportsClient({
                 </div>
             </div>
 
-            {/* Filters */}
             <div className="bg-white rounded-lg shadow p-4">
                 <div className="flex items-center gap-4">
                     <label className="text-sm font-medium text-gray-700">Filter by Status:</label>
@@ -113,7 +105,6 @@ export default function AdminReportsClient({
                 </div>
             </div>
 
-            {/* Loading State */}
             {isLoading && (
                 <div className="flex items-center justify-center min-h-[400px]">
                     <div className="text-center">
@@ -123,21 +114,18 @@ export default function AdminReportsClient({
                 </div>
             )}
 
-            {/* Error State */}
             {error && !isLoading && (
                 <div className="bg-red-50 border border-red-200 rounded-lg p-4">
                     <p className="text-sm text-red-700">{error}</p>
                 </div>
             )}
 
-            {/* Empty State */}
             {!isLoading && !error && reports.length === 0 && (
                 <div className="text-center py-12">
                     <p className="text-gray-600">No reports found</p>
                 </div>
             )}
 
-            {/* Reports Table */}
             {!isLoading && !error && reports.length > 0 && (
                 <div className="bg-white rounded-lg shadow overflow-hidden">
                     <table className="w-full">
@@ -198,7 +186,6 @@ export default function AdminReportsClient({
                 </div>
             )}
 
-            {/* Pagination */}
             {!isLoading && !error && totalPages > 1 && (
                 <div className="flex items-center justify-center gap-2">
                     <button
