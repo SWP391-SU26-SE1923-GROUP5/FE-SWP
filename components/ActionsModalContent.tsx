@@ -8,7 +8,7 @@ import { useEffect, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
-import { getUserById } from "@/lib/actions/user.actions"; // Adjust path if needed
+import { getUserById } from "@/lib/actions/user.actions";
 
 const ImageThumbnail = ({ file }: { file: File_ }) => (
     <div className="file-details-thumbnail">

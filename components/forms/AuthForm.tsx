@@ -19,6 +19,7 @@ interface AuthFormProps<T extends FieldValues> {
 
 export function formatLabel(key: string) {
     if (key === "email") return "Email Address";
+    if (key === "dateOfBirth") return "Date Of Birth";
     const withSpaces = key.replace(/([A-Z])/g, ' $1');
     return withSpaces.charAt(0).toUpperCase() + withSpaces.slice(1).trim();
 }

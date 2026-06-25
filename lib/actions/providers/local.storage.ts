@@ -173,8 +173,8 @@ export class LocalStorage implements IFileStorage {
 
             const responseData = await res.json();
 
-            let documents: File_[] = responseData?.items || responseData?.Items || [];
-            let total = responseData?.totalCount || responseData?.TotalCount || 0;
+            let documents: File_[] = responseData?.items || [];
+            let total = responseData?.totalCount || 0;
 
             if (types.length > 0) {
                 documents = documents.filter((file) => {
