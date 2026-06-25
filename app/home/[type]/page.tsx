@@ -2,7 +2,7 @@ import Sort from "@/components/Sort";
 import { getFiles, getSubjects } from "@/lib/actions/file.actions";
 import { File_, FileType, SearchParamProps } from "@/types";
 import Card from "@/components/Card";
-import { getFileTypesParams } from "@/lib/utils";
+import { getFileTypesParams, convertFileSize } from "@/lib/utils";
 
 const Page = async ({ searchParams, params }: SearchParamProps) => {
     const resolvedSearchParams = await searchParams;
@@ -20,6 +20,10 @@ const Page = async ({ searchParams, params }: SearchParamProps) => {
         getSubjects()
     ]);
 
+    const totalSizeInBytes = files.documents.reduce((acc: number, file: File_) => {
+        return acc + (file.fileSizeBytes || 0);
+    }, 0);
+
     return (
         <div className="page-container">
             <section className="w-full">
@@ -27,7 +31,7 @@ const Page = async ({ searchParams, params }: SearchParamProps) => {
 
                 <div className="total-size-section">
                     <p className="body-1">
-                        Total: <span className="h5">0 MB</span>
+                        Total: <span className="h5">{convertFileSize(totalSizeInBytes)}</span>
                     </p>
 
                     <div className="sort-container">

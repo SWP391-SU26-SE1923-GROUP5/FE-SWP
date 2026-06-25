@@ -100,8 +100,13 @@ export class LocalStorage implements IFileStorage {
         try {
             const currentSpace = await this.getTotalSpaceUsed();
 
-            if (currentSpace && (currentSpace.used + file.size > currentSpace.all)) {
-                throw new Error("Storage limit exceeded. Please delete some files or upgrade your plan to upload this file.");
+            if (currentSpace) {
+                const projectedSpace = currentSpace.used + file.size;
+
+                if (projectedSpace > currentSpace.all) {
+                    console.error(`[UPLOAD BLOCKED] Projected: ${projectedSpace} Bytes | Limit: ${currentSpace.all} Bytes`);
+                    throw new Error("Storage limit exceeded. Please delete some files or upgrade your plan to upload this file.");
+                }
             }
 
             const headers = await this.getHeaders(true);
@@ -347,9 +352,12 @@ export class LocalStorage implements IFileStorage {
             const documents: File_[] = responseData?.items || [];
 
             const user = session?.user as any;
-            const userCapacityBytes = user?.currentStorageCapacity ||
-                (user?.tierStorageLimitMb ? user.tierStorageLimitMb * 1024 * 1024 : 0) ||
-                (1 * 1024 * 1024 * 1024);
+
+            let userCapacityBytes = 3 * 1024 * 1024 * 1024;
+
+            if (user?.tierStorageLimitMb && Number(user.tierStorageLimitMb) > 0) {
+                userCapacityBytes = Number(user.tierStorageLimitMb) * 1024 * 1024;
+            }
 
             const totalSpace = {
                 image: { size: 0, latestDate: "" },
