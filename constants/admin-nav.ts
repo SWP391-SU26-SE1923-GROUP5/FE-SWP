@@ -3,6 +3,7 @@ import {
     Users,
     Files,
     Settings,
+    Flag,
     type LucideIcon,
 } from "lucide-react";
 
@@ -31,6 +32,12 @@ export const adminNavItems: AdminNavItem[] = [
         url: "/admin/files",
         icon: Files,
         description: "Browse and moderate uploaded files",
+    },
+    {
+        name: "Reports",
+        url: "/admin/reports",
+        icon: Flag,
+        description: "Manage reported documents",
     },
     {
         name: "Settings",
