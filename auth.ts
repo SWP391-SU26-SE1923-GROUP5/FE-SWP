@@ -94,6 +94,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
                     email: result.user.email,
                     name: result.user.fullName,
                     role: result.user.role,
+                    currentStorageCapacity: result.user.currentStorageCapacity,
+                    tierStorageLimitMb: result.user.tierStorageLimitMb,
                     accessToken: result.accessToken,
                     refreshToken: result.refreshToken,
                     accessTokenExpiresAt: Date.parse(result.accessTokenExpiresAt),
@@ -110,12 +112,14 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             if (user) {
                 token.id = user.id as string;
                 token.role = user.role as string;
+                token.currentStorageCapacity = (user as any).currentStorageCapacity;
+                token.tierStorageLimitMb = (user as any).tierStorageLimitMb;
                 token.provider = account?.provider ?? "credentials";
 
                 if (token.provider === "credentials") {
-                    token.accessToken = user.accessToken;
-                    token.refreshToken = user.refreshToken;
-                    token.accessTokenExpiresAt = user.accessTokenExpiresAt;
+                    token.accessToken = (user as any).accessToken;
+                    token.refreshToken = (user as any).refreshToken;
+                    token.accessTokenExpiresAt = (user as any).accessTokenExpiresAt;
                 }
             }
 
@@ -151,6 +155,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             if (token && session.user) {
                 session.user.id = token.id as string;
                 session.user.role = token.role as string;
+                (session.user as any).currentStorageCapacity = token.currentStorageCapacity;
+                (session.user as any).tierStorageLimitMb = token.tierStorageLimitMb;
 
                 const provider = token.provider || "credentials";
                 if (provider === "credentials") {

@@ -98,6 +98,12 @@ export class LocalStorage implements IFileStorage {
 
     async uploadFile({ file, path, subjectId }: UploadFileProps) {
         try {
+            const currentSpace = await this.getTotalSpaceUsed();
+
+            if (currentSpace && (currentSpace.used + file.size > currentSpace.all)) {
+                throw new Error("Storage limit exceeded. Please delete some files or upgrade your plan to upload this file.");
+            }
+
             const headers = await this.getHeaders(true);
 
             const formData = new FormData();
@@ -325,6 +331,7 @@ export class LocalStorage implements IFileStorage {
     async getTotalSpaceUsed() {
         try {
             const headers = await this.getHeaders();
+            const session = await auth();
 
             const res = await fetch(`${connection_url}/api/Document`, {
                 method: 'GET',
@@ -337,8 +344,12 @@ export class LocalStorage implements IFileStorage {
             }
 
             const responseData = await res.json();
-
             const documents: File_[] = responseData?.items || [];
+
+            const user = session?.user as any;
+            const userCapacityBytes = user?.currentStorageCapacity ||
+                (user?.tierStorageLimitMb ? user.tierStorageLimitMb * 1024 * 1024 : 0) ||
+                (1 * 1024 * 1024 * 1024);
 
             const totalSpace = {
                 image: { size: 0, latestDate: "" },
@@ -347,7 +358,7 @@ export class LocalStorage implements IFileStorage {
                 audio: { size: 0, latestDate: "" },
                 other: { size: 0, latestDate: "" },
                 used: 0,
-                all: 2 * 1024 * 1024 * 1024
+                all: userCapacityBytes
             };
 
             documents.forEach((file) => {

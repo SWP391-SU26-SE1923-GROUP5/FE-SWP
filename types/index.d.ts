@@ -90,6 +90,11 @@ export interface IAuthService {
     signOutUser(): Promise<void>;
     verifyOtp(props: VerifyOtpProps): Promise<string>;
     resendOtp(props: { email: string }): Promise<string>;
+    refreshSessionToken(refreshToken: string, accessToken: string): Promise<{
+        accessToken: string;
+        refreshToken: string;
+        accessTokenExpiresAt: string;
+    }>;
 }
 
 export type FileType = "document" | "image" | "video" | "audio" | "other";

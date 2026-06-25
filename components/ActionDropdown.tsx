@@ -10,6 +10,7 @@ import {
     Loader2,
     RotateCcw,
     Sparkles,
+    MessageSquare
 } from "lucide-react";
 
 import {
@@ -38,7 +39,17 @@ import { ActionType, AiResultState, File_, Flashcard, QuizQuestion } from "@/typ
 import { actionsDropdownItems } from "@/constants/actionsDropdownItems";
 import { triggerDownload } from "@/lib/utils";
 import { deleteFile, renameFile, updateFileUsers } from "@/lib/actions/file.actions";
-import { generateQuiz, generateFlashcards, summarizeRagDocument } from "@/lib/actions/ai.actions";
+import {
+    generateQuiz,
+    generateFlashcards,
+    summarizeRagDocument,
+    createChatSession,
+    sendChatMessage,
+    getSessionMessages,
+    getUserSessions,
+    ChatSession,
+    ChatMessage
+} from "@/lib/actions/ai.actions";
 
 import { FileDetails, ShareInput } from "@/components/ActionsModalContent";
 import ApryseViewer from "./ApryseViewer";
@@ -64,7 +75,7 @@ const SUPPORTED_AI_DOC_EXTENSIONS = [
     ".json", "json"
 ];
 
-const AI_ACTIONS = ["quiz", "flashcards", "summarize"];
+const AI_ACTIONS = ["quiz", "flashcards", "summarize", "ask-ai"];
 
 export default function ActionDropdown({ file }: { file: File_ }) {
     const path = usePathname();
@@ -89,6 +100,13 @@ export default function ActionDropdown({ file }: { file: File_ }) {
     const [userAnswers, setUserAnswers] = useState<Record<number, string>>({});
     const [flippedCards, setFlippedCards] = useState<Record<number, boolean>>({});
 
+    const [chatSessions, setChatSessions] = useState<ChatSession[]>([]);
+    const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
+    const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+    const [chatInput, setChatInput] = useState("");
+    const [isChatLoading, setIsChatLoading] = useState(false);
+    const [isSending, setIsSending] = useState(false);
+
     const closeAllModals = () => {
         setIsModalOpen(false);
         setIsDropdownOpen(false);
@@ -102,6 +120,10 @@ export default function ActionDropdown({ file }: { file: File_ }) {
         setAiResult(null);
         setUserAnswers({});
         setFlippedCards({});
+        setChatSessions([]);
+        setSelectedSessionId(null);
+        setChatMessages([]);
+        setChatInput("");
     };
 
     const handleAction = async () => {
@@ -186,6 +208,18 @@ export default function ActionDropdown({ file }: { file: File_ }) {
             } else if (endpoint === "summarize") {
                 const res = await summarizeRagDocument(file.id);
                 data = { summary: res.summary };
+            } else if (endpoint === "ask-ai") {
+                const sessions = await getUserSessions();
+                const docSessions = sessions.filter(s => s.documentId === file.id);
+                setChatSessions(docSessions);
+
+                if (docSessions.length > 0) {
+                    const firstSession = docSessions[0];
+                    setSelectedSessionId(firstSession.id);
+                    const msgs = await getSessionMessages(firstSession.id);
+                    setChatMessages(msgs);
+                }
+                data = { ready: true };
             }
 
             setAiResult({ type: endpoint, data });
@@ -199,6 +233,76 @@ export default function ActionDropdown({ file }: { file: File_ }) {
             }
         } finally {
             setIsLoading(false);
+        }
+    };
+
+    const handleCreateSession = async () => {
+        setIsChatLoading(true);
+        try {
+            const newSession = await createChatSession(`Chat about ${file.fileName}`);
+            setChatSessions((prev) => [newSession, ...prev]);
+            setSelectedSessionId(newSession.id);
+            setChatMessages([]);
+        } catch (error: unknown) {
+            toast.error("Failed to create chat session.");
+        } finally {
+            setIsChatLoading(false);
+        }
+    };
+
+    const handleSelectSession = async (sessionId: string) => {
+        setSelectedSessionId(sessionId);
+        setIsChatLoading(true);
+        try {
+            const msgs = await getSessionMessages(sessionId);
+            setChatMessages(msgs);
+        } catch (error: unknown) {
+            toast.error("Failed to load chat messages.");
+        } finally {
+            setIsChatLoading(false);
+        }
+    };
+
+    const handleSendMessage = async () => {
+        if (!chatInput.trim()) return;
+
+        let currentSessionId = selectedSessionId;
+
+        if (!currentSessionId) {
+            setIsChatLoading(true);
+            try {
+                const newSession = await createChatSession(`Chat about ${file.fileName}`);
+                setChatSessions((prev) => [newSession, ...prev]);
+                currentSessionId = newSession.id;
+                setSelectedSessionId(newSession.id);
+            } catch (error) {
+                setIsChatLoading(false);
+                toast.error("Failed to initialize session.");
+                return;
+            }
+            setIsChatLoading(false);
+        }
+
+        const tempMessage: ChatMessage = {
+            id: Date.now().toString(),
+            chatSessionId: currentSessionId,
+            sender: "User",
+            content: chatInput,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+        };
+
+        setChatMessages((prev) => [...prev, tempMessage]);
+        setChatInput("");
+        setIsSending(true);
+
+        try {
+            const aiResponse = await sendChatMessage(currentSessionId, file.id, tempMessage.content);
+            setChatMessages((prev) => [...prev, aiResponse]);
+        } catch (error) {
+            toast.error("Failed to send message.");
+        } finally {
+            setIsSending(false);
         }
     };
 
@@ -263,6 +367,76 @@ export default function ActionDropdown({ file }: { file: File_ }) {
                                         <p className="text-dark-200 leading-relaxed whitespace-pre-wrap">
                                             {aiResult.data.summary as string}
                                         </p>
+                                    </div>
+                                </div>
+                            )}
+
+                            {value === "ask-ai" && (
+                                <div className="flex flex-col h-[50vh] gap-4">
+                                    <div className="flex items-center justify-between">
+                                        <select
+                                            className="p-2 rounded-md border light-border bg-white text-sm outline-none cursor-pointer"
+                                            value={selectedSessionId || ""}
+                                            onChange={(e) => {
+                                                if (e.target.value === "new") handleCreateSession();
+                                                else handleSelectSession(e.target.value);
+                                            }}
+                                        >
+                                            <option value="" disabled>Select a session</option>
+                                            <option value="new" className="font-semibold text-brand">+ New Chat Session</option>
+                                            {chatSessions.map((s) => (
+                                                <option key={s.id} value={s.id}>{s.sessionTitle}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+
+                                    <div className="flex-1 overflow-y-auto bg-light-800 rounded-xl p-4 space-y-4 border light-border custom-scrollbar flex flex-col">
+                                        {isChatLoading ? (
+                                            <div className="flex justify-center items-center h-full">
+                                                <Loader2 className="animate-spin text-brand h-6 w-6" />
+                                            </div>
+                                        ) : chatMessages.length === 0 ? (
+                                            <div className="flex-1 flex items-center justify-center text-light-400 text-sm">
+                                                Start asking questions about this document.
+                                            </div>
+                                        ) : (
+                                            chatMessages.map((msg) => (
+                                                <div
+                                                    key={msg.id}
+                                                    className={`p-3 rounded-xl max-w-[85%] text-sm ${
+                                                        msg.sender === "User"
+                                                            ? "bg-brand text-white self-end ml-auto rounded-tr-sm"
+                                                            : "bg-white text-dark-200 border light-border self-start mr-auto rounded-tl-sm whitespace-pre-wrap"
+                                                    }`}
+                                                >
+                                                    {msg.content}
+                                                </div>
+                                            ))
+                                        )}
+                                        {isSending && (
+                                            <div className="bg-white border light-border p-3 rounded-xl max-w-[85%] self-start mr-auto rounded-tl-sm flex items-center gap-2">
+                                                <Loader2 className="h-4 w-4 animate-spin text-brand" />
+                                                <span className="text-sm text-light-400">AI is thinking...</span>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <div className="flex gap-2">
+                                        <Input
+                                            value={chatInput}
+                                            onChange={(e) => setChatInput(e.target.value)}
+                                            onKeyDown={(e) => e.key === "Enter" && handleSendMessage()}
+                                            placeholder="Ask a question about this document..."
+                                            disabled={isSending || isChatLoading}
+                                            className="flex-1"
+                                        />
+                                        <Button
+                                            onClick={handleSendMessage}
+                                            disabled={isSending || isChatLoading || !chatInput.trim()}
+                                            className="bg-brand text-white px-6 hover:bg-emerald-500"
+                                        >
+                                            Send
+                                        </Button>
                                     </div>
                                 </div>
                             )}
@@ -507,6 +681,13 @@ export default function ActionDropdown({ file }: { file: File_ }) {
                             <DropdownMenuLabel className="text-brand flex items-center gap-2 subtitle-2">
                                 <Sparkles className="h-4 w-4" /> AI Tools
                             </DropdownMenuLabel>
+
+                            <DropdownMenuItem
+                                onClick={() => triggerAIFeature("ask-ai", "Ask AI")}
+                                className="shad-dropdown-item gap-2 cursor-pointer"
+                            >
+                                <MessageSquare className="h-4 w-4 text-brand" /> Ask AI
+                            </DropdownMenuItem>
 
                             <DropdownMenuItem
                                 onClick={() => triggerAIFeature("summarize", "Document Summary")}

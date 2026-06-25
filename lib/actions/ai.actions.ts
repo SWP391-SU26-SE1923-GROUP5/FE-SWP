@@ -63,11 +63,10 @@ export interface SemanticSearchResponse {
 }
 
 export const createChatSession = async (
-    documentId: string | null = null,
     sessionTitle: string = "New Chat Session"
 ): Promise<ChatSession> => {
     const session = await auth();
-    if (!session?.accessToken || !session?.user?.id) {
+    if (!session?.accessToken) {
         throw new Error("Unauthorized. Please log in.");
     }
 
@@ -78,8 +77,6 @@ export const createChatSession = async (
             'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-            userId: session.user.id,
-            documentId: documentId,
             sessionTitle: sessionTitle
         })
     });
@@ -87,6 +84,35 @@ export const createChatSession = async (
     if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         throw new Error(`[${response.status}] ${errorData.message || errorData.title || "Failed to create chat session."}`);
+    }
+
+    return await response.json();
+};
+
+export const sendChatMessage = async (
+    sessionId: string,
+    documentId: string,
+    message: string
+): Promise<ChatMessage> => {
+    const session = await auth();
+    if (!session?.accessToken) throw new Error("Unauthorized. Please log in.");
+
+    const response = await fetch(`${connection_url}/api/Chat/messages`, {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${session.accessToken}`,
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            sessionId: sessionId,
+            documentId: documentId,
+            message: message
+        })
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(`[${response.status}] ${errorData.message || "Failed to send message."}`);
     }
 
     return await response.json();

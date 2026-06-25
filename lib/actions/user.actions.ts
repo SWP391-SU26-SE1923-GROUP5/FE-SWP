@@ -14,3 +14,4 @@ export const signOutUser = async () => getAuthProvider().signOutUser();
 export const verifyOtp = async (props: VerifyOtpProps) => getAuthProvider().verifyOtp(props);
 export const resendOtp = async (props: { email: string }) => getAuthProvider().resendOtp(props);
 export const getUserById = async (id: string) => getAuthProvider().getUserById(id);
+export const refreshSessionToken = async (refreshToken: string, accessToken: string) => getAuthProvider().refreshSessionToken(refreshToken, accessToken);

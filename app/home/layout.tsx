@@ -1,20 +1,21 @@
 import Sidebar from "@/components/Sidebar";
 import MobileNavigation from "@/components/MobileNavigation";
 import Header from "@/components/Header";
-import {getCurrentUser} from "@/lib/actions/user.actions";
-import {redirect} from "next/navigation";
-import {avatarPlaceholderUrl} from "@/constants/avatar";
+import { getCurrentUser } from "@/lib/actions/user.actions";
+import { avatarPlaceholderUrl } from "@/constants/avatar";
 
 const Layout = async ({ children }: { children: React.ReactNode}) => {
     const currentUser = await getCurrentUser();
-    if(!currentUser) return redirect("/sign-in")
+
+    const fullName = currentUser?.fullName || "User";
+    const email = currentUser?.email || "";
 
     return (
         <main className="flex h-screen">
-            <Sidebar fullName={currentUser.fullName} avatar={avatarPlaceholderUrl} email={currentUser.email} />
+            <Sidebar fullName={fullName} avatar={avatarPlaceholderUrl} email={email} />
 
             <section className="flex h-full flex-1 flex-col">
-                <MobileNavigation fullName={currentUser.fullName} avatar={avatarPlaceholderUrl} email={currentUser.email} />
+                <MobileNavigation fullName={fullName} avatar={avatarPlaceholderUrl} email={email} />
                 <Header />
 
                 <div className="main-content">{children}</div>
