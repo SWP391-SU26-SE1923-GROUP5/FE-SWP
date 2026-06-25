@@ -19,14 +19,12 @@ import FileUploader from "@/components/FileUploader";
 import {signOutUser} from "@/lib/actions/user.actions";
 
 interface Props {
-    ownerId: string;
-    accountId: string;
     fullName: string;
     avatar: string;
     email: string;
 }
 
-const MobileNavigation = ({ ownerId, accountId, fullName, avatar, email }: Props) => {
+const MobileNavigation = ({fullName, avatar, email}: Props) => {
     const [open, setOpen] = useState(false);
     const pathname = usePathname()
 
@@ -104,7 +102,7 @@ const MobileNavigation = ({ ownerId, accountId, fullName, avatar, email }: Props
                     <Separator className="my-5 bg-light-200/20"/>
 
                     <div className="flex flex-col justify-between gap-5 pb-5">
-                        <FileUploader ownerId={ownerId} accountId={accountId} />
+                        <FileUploader />
 
                         <Button type="submit" className="mobile-sign-out-button bg-red-800 rounded-full py-6" onClick={async () => await signOutUser()}>
                             <Image

@@ -9,9 +9,16 @@ import FormattedDateTime from "@/components/FormattedDateTime";
 import Thumbnail from "@/components/Thumbnail";
 import { File_ } from "@/types";
 
-const Dashboard = async () => {
+interface DashboardProps {
+    searchParams?: Promise<{ subjectId?: string }>;
+}
+
+const Dashboard = async ({ searchParams }: DashboardProps) => {
+    const params = await searchParams;
+    const subjectId = params?.subjectId || "";
+
     const [files, totalSpace] = await Promise.all([
-        getFiles({ types: [], limit: 10 }),
+        getFiles({ types: [], limit: 10, subjectId }),
         getTotalSpaceUsed(),
     ]);
 
@@ -43,16 +50,21 @@ const Dashboard = async () => {
                 {files.documents.length > 0 ? (
                     <ul className="mt-5 flex flex-col gap-5">
                         {files.documents.map((file: File_) => (
-                            <Link href={file.url} target="_blank" className="flex items-center gap-3" key={file.$id}>
-                                <Thumbnail type={file.type} extension={file.extension} url={file.url} />
-                                <div className="recent-file-details">
-                                    <div className="flex flex-col gap-1">
-                                        <p className="recent-file-name">{file.name}</p>
-                                        <FormattedDateTime date={file.$createdAt} className="caption" />
+                            <li key={file.id} className="flex items-center justify-between gap-3">
+                                <Link href={file.fileLink} target="_blank" className="flex items-center gap-3 flex-1">
+                                    <Thumbnail type={file.fileType} extension={file.fileExtension} url={file.fileLink} />
+                                    <div className="recent-file-details">
+                                        <div className="flex flex-col gap-1">
+                                            <p className="recent-file-name">{file.fileName}</p>
+                                            <FormattedDateTime date={file.createdAt || ""} className="caption" />
+                                        </div>
                                     </div>
+                                </Link>
+
+                                <div className="shrink-0">
                                     <ActionDropdown file={file} />
                                 </div>
-                            </Link>
+                            </li>
                         ))}
                     </ul>
                 ) : (

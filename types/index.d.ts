@@ -1,57 +1,41 @@
-import NextAuth, {type DefaultSession} from "next-auth";
+import NextAuth, { type DefaultSession, type DefaultUser } from "next-auth";
+import { type DefaultJWT } from "next-auth/jwt";
 
 declare module "next-auth" {
     interface Session {
+        accessToken?: string;
+        accessTokenExpiresAt?: number;
+        error?: string;
         user: {
             id: string;
             role: string;
         } & DefaultSession["user"];
     }
 
-    interface User {
+    interface User extends DefaultUser {
         role: string;
+        accessToken?: string;
+        refreshToken?: string;
+        accessTokenExpiresAt?: number;
     }
 }
 
 declare module "next-auth/jwt" {
-    interface JWT {
+    interface JWT extends DefaultJWT {
         id: string;
         role: string;
+        provider?: string;
+        accessToken?: string;
+        refreshToken?: string;
+        accessTokenExpiresAt?: number;
+        error?: string;
     }
 }
 
 export interface BaseDocument {
-    $id: string;
-    $createdAt?: string;
-    $updatedAt?: string;
-}
-
-export interface User extends BaseDocument {
-    email: string;
-    accountId: string;
-    fullName: string;
-    username: string;
-    avatar?: string;
-    password_hash?: string;
-    role?: "user" | "admin";
-    files?: any;
-    role: string;
-}
-
-export type FileType = "document" | "image" | "video" | "audio" | "other";
-
-import {Models} from "node-appwrite";
-
-export interface File_ extends Models.Document {
-    name: string;
-    url: string;
-    type: FileType;
-    bucketFileId: string;
-    accountId: string;
-    owner?: string;
-    extension: string;
-    size: number;
-    users: string[];
+    id: string;
+    createdAt?: string;
+    updatedAt?: string;
 }
 
 export type ActionType = {
@@ -60,24 +44,116 @@ export type ActionType = {
     icon?: string;
 };
 
-export interface UploadFileProps {
-    file: File;
-    ownerId: string;
-    accountId: string;
-    path: string;
+export interface SearchParamProps {
+    params: Promise<{ [key: string]: string }>;
+    searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}
+
+export interface User extends BaseDocument {
+    fullName: string;
+    email: string;
+    role: string;
+    dateOfBirth?: string;
+    currentStorageCapacity?: number;
+    currentAiTokenUsage?: number;
+    status?: string;
+}
+
+export interface LoginResponse {
+    user: User;
+    accessToken: string;
+    accessTokenExpiresAt: string;
+    refreshToken: string;
+    refreshTokenExpiresAt: string;
+}
+
+export interface SignInProps {
+    email: string;
+    password?: string;
+}
+
+export interface CreateAccountProps extends SignInProps {
+    fullName: string;
+    dateOfBirth: string;
+}
+
+export interface VerifyOtpProps {
+    email: string;
+    otp: string;
+}
+
+export interface IAuthService {
+    createAccount(props: CreateAccountProps): Promise<{ email: string | null }>;
+    signInUser(props: SignInProps): Promise<LoginResponse | null>;
+    getCurrentUser(): Promise<User | null>;
+    getUserById(id: string): Promise<User>;
+    signOutUser(): Promise<void>;
+    verifyOtp(props: VerifyOtpProps): Promise<string>;
+    resendOtp(props: { email: string }): Promise<string>;
+    refreshSessionToken(refreshToken: string, accessToken: string): Promise<{
+        accessToken: string;
+        refreshToken: string;
+        accessTokenExpiresAt: string;
+    }>;
+}
+
+export type FileType = "document" | "image" | "video" | "audio" | "other";
+
+export interface File_ extends BaseDocument {
+    userId: string;
+    subjectId: string;
+    title: string;
+    fileLink: string;
+    fileName: string;
+    fileExtension: string;
+    fileType: string;
+    sharedUsers: string;
+    shareStatus: string;
+    status: number;
+    fileSizeBytes: number;
+}
+
+export interface Subject extends BaseDocument {
+    id: string;
+    subjectCode: string;
+    subjectName: string;
+    description: string;
+    createdAt?: string;
+    updatedAt?: string;
 }
 
 export interface GetFilesProps {
-    types: FileType[];
+    types?: FileType[];
     searchText?: string;
     sort?: string;
     limit?: number;
+    page?: number;
+    subjectId?: string;
+}
+
+export interface UploadFileProps {
+    file: File;
+    path: string;
+    subjectId: string;
+}
+
+export interface UploadFileResponse {
+    documentId: string;
+    status: string;
+    chunkCount: number;
+    message: string;
 }
 
 export interface RenameFileProps {
     fileId: string;
     name: string;
     extension: string;
+    path: string;
+}
+
+export interface UpdateEditedFileProps {
+    fileId: string;
+    file: File;
     path: string;
 }
 
@@ -89,67 +165,87 @@ export interface UpdateFileUsersProps {
 
 export interface DeleteFileProps {
     fileId: string;
-    bucketFileId: string;
     path: string;
 }
 
-export interface UpdateEditedFileProps {
+export interface DownloadFileProps {
     fileId: string;
-    oldBucketFileId: string;
-    file: File;
-    path: string;
+    path?: string;
+}
+
+export interface StorageCategoryStats {
+    size: number;
+    latestDate: string;
 }
 
 export interface IFileStorage {
-    uploadFile(props: UploadFileProps): Promise<File_ | undefined>;
-
-    getFiles(props: GetFilesProps): Promise<any>;
-
+    getSubjects(): Promise<Subject[]>;
+    uploadFile(props: UploadFileProps): Promise<UploadFileResponse | undefined>;
+    getFiles(props: GetFilesProps): Promise<{ documents: File_[]; total: number }>;
     renameFile(props: RenameFileProps): Promise<File_ | undefined>;
-
     updateFileUsers(props: UpdateFileUsersProps): Promise<File_ | undefined>;
-
-    updateEditedFile(props: UpdateEditedFileProps): Promise<File_ | undefined>;
-
+    updateEditedFile(props: UpdateEditedFileProps): Promise<UploadFileResponse | undefined>;
     deleteFile(props: DeleteFileProps): Promise<{ status: string } | undefined>;
-
-    getTotalSpaceUsed(): Promise<any>;
-
-    getFileBuffer(bucketFileId: string): Promise<Buffer>;
+    downloadFile(props: DownloadFileProps): Promise<{ data: string }>;
+    getTotalSpaceUsed(): Promise<{
+        image: StorageCategoryStats;
+        document: StorageCategoryStats;
+        video: StorageCategoryStats;
+        audio: StorageCategoryStats;
+        other: StorageCategoryStats;
+        used: number;
+        all: number;
+    }>;
 }
 
-export interface CreateAccountProps {
-    fullName: string;
-    username: string;
-    email: string;
-    password?: string;
+export interface Flashcard {
+    id: string;
+    documentId: string;
+    front: string;
+    back: string;
+    createdAt: string;
+    updatedAt: string;
 }
 
-export interface SignInProps {
-    email: string;
-    password?: string;
+export interface QuizAnswer {
+    selectedOption: string;
+    isCorrect: boolean;
 }
 
-export interface IAuthService {
-    getUserById(id: string | undefined): Promise<User | null>;
-
-    getUserFullName(id: string | undefined): Promise<string | null>;
-
-    getUserByEmail(email: string): Promise<User | null>;
-
-    createAccount(props: CreateAccountProps): Promise<{ accountId: string | null }>;
-
-    signInUser(props: SignInProps): Promise<{ accountId: string | null }>;
-
-    getCurrentUser(): Promise<User | null>;
-
-    signOutUser(): Promise<void>;
+export interface QuizQuestion {
+    questionTitle: string;
+    questionType: number;
+    position: number;
+    answers: QuizAnswer[];
 }
 
-export interface ProcessFileAIProps {
-    file: File;
-    endpoint: string;
-    extraParams?: Record<string, string>;
+export interface QuizResponse {
+    quizTitle: string;
+    questions: QuizQuestion[];
+}
+
+export interface QuizRecord {
+    id: string;
+    documentId: string;
+    title: string;
+    createdAt: string;
+    updatedAt: string;
+}
+
+export interface SummaryResponse {
+    summary: string;
+}
+
+export interface AiResultState {
+    type: string;
+    data?: {
+        fileUrl?: string;
+        quizTitle?: string;
+        questions?: QuizQuestion[];
+        deckTitle?: string;
+        cards?: Flashcard[];
+        summary?: string;
+    };
 }
 
 export interface DeepResearchProps {
@@ -157,32 +253,39 @@ export interface DeepResearchProps {
     topic: string;
 }
 
+export interface ProcessFileAIProps {
+    file: File_;
+    endpoint: string;
+    extraParams?: Record<string, string | number | boolean>;
+}
+
 export interface IAIService {
-    executeAIFeature(props: ProcessFileAIProps): Promise<any>;
-
-    executeDeepResearch(props: DeepResearchProps): Promise<any>;
-
+    executeAIFeature<T = unknown>(props: ProcessFileAIProps): Promise<T>;
+    executeDeepResearch<T = unknown>(props: DeepResearchProps): Promise<T>;
     generateEmbeddings(texts: string[]): Promise<number[][]>;
 }
 
-export interface QuizQuestion {
-    question_text: string;
-    correct_answer: string;
-    options: string[];
+export interface TierMembership {
+    id: string;
+    tierName: string;
+    storageLimitMb: number;
+    aiTokens: number;
+    createdAt: string;
+    updatedAt: string;
 }
 
-export interface Flashcard {
-    front: string;
-    back: string;
+export interface CurrentUserTier {
+    tierId: string;
+    tierName: string;
+    storageLimitMb: number;
+    aiTokens: number;
+    tierExpireAt: string;
+    currentStorageMb: number;
+    currentAiTokensUsed: number;
 }
 
-export interface AiResultState {
-    type: string;
-    data?: {
-        fileUrl?: string;
-        quiz_title?: string;
-        questions?: QuizQuestion[];
-        deck_title?: string;
-        cards?: Flashcard[];
-    };
+export interface IPaymentService {
+    getMembershipTiers(): Promise<TierMembership[]>;
+    createCheckoutSession(tierId: string): Promise<void>;
+    getCurrentUserTier(): Promise<CurrentUserTier>;
 }

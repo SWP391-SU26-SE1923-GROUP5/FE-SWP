@@ -7,7 +7,8 @@ import {
     RadialBarChart,
     PolarAngleAxis,
 } from "recharts";
-
+import Link from "next/link";
+import { useState, useEffect } from "react";
 import {
     Card,
     CardContent,
@@ -16,7 +17,10 @@ import {
     CardDescription,
 } from "@/components/ui/card";
 import { ChartConfig, ChartContainer } from "@/components/ui/chart";
-import { calculatePercentage, convertFileSize } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { convertFileSize } from "@/lib/utils";
+
+import { getCurrentUserTier } from "@/lib/actions/payment.actions";
 
 const chartConfig = {
     size: {
@@ -28,15 +32,36 @@ const chartConfig = {
     },
 } satisfies ChartConfig;
 
-export const Chart = ({ used = 0 }: { used: number }) => {
-    const percentage = Number(calculatePercentage(used)) || 0;
+export const Chart = ({ used = 0 }: { used?: number }) => {
+    const [storageLimitMb, setStorageLimitMb] = useState(0);
+    const [tierName, setTierName] = useState("Loading...");
 
-    const chartData = [{ name: "Used", storage: percentage, fill: "white" }];
+    useEffect(() => {
+        const fetchTierData = async () => {
+            try {
+                const userTier = await getCurrentUserTier();
+
+                if (userTier) {
+                    setStorageLimitMb(userTier.storageLimitMb);
+                    setTierName(userTier.tierName);
+                }
+            } catch (error) {
+                console.error("Failed to load tier data", error);
+                setTierName("Free Plan");
+            }
+        };
+
+        fetchTierData();
+    }, []);
+
+    const totalBytes = storageLimitMb * 1024 * 1024;
+    const percentage = totalBytes > 0 ? Number(((used / totalBytes) * 100).toFixed(2)) : 0;
+    const chartData = [{ name: "Used", storage: Math.min(percentage, 100), fill: "#064e3b" }];
 
     return (
         <Card className="chart flex flex-row items-center justify-between p-6 bg-emerald-500 text-white border-none shadow-md">
 
-            <CardContent className="p-0 flex items-center justify-center">
+            <CardContent className="p-0 flex items-center justify-center shrink-0">
                 <ChartContainer config={chartConfig} className="w-[140px] h-[140px]">
                     <RadialBarChart
                         data={chartData}
@@ -74,10 +99,7 @@ export const Chart = ({ used = 0 }: { used: number }) => {
                                                     y={viewBox.cy}
                                                     className="text-3xl font-bold fill-white"
                                                 >
-                                                    {percentage
-                                                        ? percentage.toString().replace(/^0+/, "")
-                                                        : "0"}
-                                                    %
+                                                    {percentage}%
                                                 </tspan>
                                                 <tspan
                                                     x={viewBox.cx}
@@ -96,12 +118,24 @@ export const Chart = ({ used = 0 }: { used: number }) => {
                 </ChartContainer>
             </CardContent>
 
-            <CardHeader className="chart-details text-left p-0 flex-1 ml-6 space-y-1">
+            <CardHeader className="chart-details text-left p-0 flex-1 ml-6 space-y-1.5">
+                <span className="text-[10px] font-bold bg-white/20 w-fit px-2.5 py-0.5 rounded-full backdrop-blur-sm mb-1">
+                    {tierName}
+                </span>
                 <CardTitle className="text-xl font-bold text-white">Available Storage</CardTitle>
                 <CardDescription className="text-sm text-white/90">
-                    {used ? convertFileSize(used) : "2GB"} / 2GB
+                    {convertFileSize(used)} / {totalBytes > 0 ? convertFileSize(totalBytes) : "0 B"}
                 </CardDescription>
+
+                <div className="pt-2">
+                    <Button asChild className="w-full bg-white text-emerald-600 hover:bg-slate-100 h-9 text-xs font-semibold rounded-full cursor-pointer">
+                        <Link href="/pricing">
+                            Upgrade Plan
+                        </Link>
+                    </Button>
+                </div>
             </CardHeader>
+
         </Card>
     );
 };

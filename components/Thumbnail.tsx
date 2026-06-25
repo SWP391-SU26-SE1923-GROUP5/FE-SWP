@@ -11,7 +11,6 @@ interface Props {
 
 const Thumbnail = ({ type, extension, url = "", imageClassName, className }: Props) => {
     const isImage = type === 'image' && extension !== 'svg';
-
     return (
         <figure className={cn("thumbnail", className)}>
             <Image
