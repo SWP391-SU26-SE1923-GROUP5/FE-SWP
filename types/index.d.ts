@@ -109,9 +109,12 @@ export interface File_ extends BaseDocument {
 }
 
 export interface Subject extends BaseDocument {
+    id: string;
     subjectCode: string;
     subjectName: string;
     description: string;
+    createdAt?: string;
+    updatedAt?: string;
 }
 
 export interface GetFilesProps {
@@ -191,8 +194,12 @@ export interface IFileStorage {
 }
 
 export interface Flashcard {
+    id: string;
+    documentId: string;
     front: string;
     back: string;
+    createdAt: string;
+    updatedAt: string;
 }
 
 export interface QuizAnswer {

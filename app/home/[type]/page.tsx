@@ -1,5 +1,5 @@
 import Sort from "@/components/Sort";
-import { getFiles } from "@/lib/actions/file.actions";
+import { getFiles, getSubjects } from "@/lib/actions/file.actions";
 import { File_, FileType, SearchParamProps } from "@/types";
 import Card from "@/components/Card";
 import { getFileTypesParams } from "@/lib/utils";
@@ -11,12 +11,14 @@ const Page = async ({ searchParams, params }: SearchParamProps) => {
     const type = resolvedParams?.type as string || "";
     const searchText = (resolvedSearchParams?.query as string) || "";
     const sort = (resolvedSearchParams?.sort as string) || "";
-
     const subjectId = (resolvedSearchParams?.subjectId as string) || "";
 
     const types = getFileTypesParams(type) as FileType[];
 
-    const files = await getFiles({ types, searchText, sort, subjectId });
+    const [files, subjects] = await Promise.all([
+        getFiles({ types, searchText, sort, subjectId }),
+        getSubjects()
+    ]);
 
     return (
         <div className="page-container">
@@ -30,7 +32,7 @@ const Page = async ({ searchParams, params }: SearchParamProps) => {
 
                     <div className="sort-container">
                         <p className="body-1 hidden sm:block text-light-200">Sort by:</p>
-                        <Sort />
+                        <Sort subjects={subjects} />
                     </div>
                 </div>
             </section>
