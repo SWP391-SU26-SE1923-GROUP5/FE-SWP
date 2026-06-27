@@ -13,6 +13,7 @@ export interface AdminNavItem {
     url: string;
     icon: LucideIcon;
     description?: string;
+    badge?: number;
 }
 
 export const adminNavItems: AdminNavItem[] = [

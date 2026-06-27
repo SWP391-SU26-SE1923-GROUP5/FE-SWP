@@ -48,7 +48,7 @@ export default async function DocumentReportPage({
       const document: DocumentData = await response.json();
       documentOwnerId = document.ownerId;
 
-      if (currentUser.$id === document.ownerId) {
+      if (currentUser.id === document.ownerId) {
         return (
           <div className="flex items-center justify-center min-h-screen">
             <div className="text-center max-w-md">
@@ -94,7 +94,7 @@ export default async function DocumentReportPage({
   return (
     <DocumentReportClient
       documentId={documentId}
-      currentUserId={currentUser.$id || ''}
+      currentUserId={currentUser.id}
     />
   );
 }

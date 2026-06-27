@@ -1,8 +1,6 @@
 import { NextResponse } from "next/server";
-import {
-    AdminPermissionError,
-    getSystemStats,
-} from "@/lib/actions/admin.actions";
+import { AdminPermissionError } from "@/lib/actions/admin-errors";
+import { getSystemStats } from "@/lib/actions/admin.actions";
 
 export async function GET() {
     try {

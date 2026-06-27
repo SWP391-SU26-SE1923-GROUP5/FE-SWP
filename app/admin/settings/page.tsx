@@ -40,8 +40,8 @@ export default async function AdminSettingsPage() {
                     <dl className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                         <DetailRow label="Name" value={currentUser.fullName} />
                         <DetailRow label="Email" value={currentUser.email} />
-                        <DetailRow label="Username" value={currentUser.username} />
-                        <DetailRow label="Account ID" value={currentUser.accountId} />
+                        <DetailRow label="Role" value={currentUser.role || "user"} />
+                        <DetailRow label="Account ID" value={currentUser.id} />
                     </dl>
                 ) : (
                     <p className="text-sm text-light-400">No active session.</p>

@@ -6,7 +6,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { LogOut, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
-import { adminNavItems } from "@/constants/admin-nav";
+import { adminNavItems, type AdminNavItem } from "@/constants/admin-nav";
 import { avatarPlaceholderUrl } from "@/constants/avatar";
 import { cn } from "@/lib/utils";
 import { signOutUser } from "@/lib/actions/user.actions";
@@ -15,12 +15,22 @@ interface AdminSidebarProps {
     fullName: string;
     email: string;
     avatar?: string;
+    userCount?: number;
+    fileCount?: number;
+    reportCount?: number;
 }
 
-export default function AdminSidebar({ fullName, email, avatar }: AdminSidebarProps) {
+export default function AdminSidebar({ fullName, email, avatar, userCount, fileCount, reportCount }: AdminSidebarProps) {
     const pathname = usePathname();
     const router = useRouter();
     const [signingOut, setSigningOut] = useState(false);
+
+    const getBadgeCount = (item: AdminNavItem): number | undefined => {
+        if (item.url === "/admin/users") return userCount;
+        if (item.url === "/admin/files") return fileCount;
+        if (item.url === "/admin/reports") return reportCount;
+        return undefined;
+    };
 
     const handleSignOut = async () => {
         if (signingOut) return;
@@ -50,11 +60,12 @@ export default function AdminSidebar({ fullName, email, avatar }: AdminSidebarPr
                 </div>
             </Link>
 
-            <p className="admin-sidebar-section">Main</p>
+            <p className="admin-sidebar-section">Navigation</p>
             <nav className="flex flex-col gap-1">
                 {adminNavItems.map((item) => {
                     const Icon = item.icon;
                     const isActive = pathname === item.url || (item.url !== "/admin" && pathname.startsWith(item.url));
+                    const badge = getBadgeCount(item);
                     return (
                         <Link
                             key={item.url}
@@ -62,20 +73,20 @@ export default function AdminSidebar({ fullName, email, avatar }: AdminSidebarPr
                             className={cn("admin-sidebar-link", isActive && "admin-sidebar-link-active")}
                         >
                             <Icon className="admin-sidebar-icon" />
-                            <div className="flex-1 truncate">
+                            <div className="flex-1 truncate flex items-center justify-between">
                                 <span className="block">{item.name}</span>
+                                {badge !== undefined && badge > 0 && (
+                                    <span className={cn(
+                                        "flex items-center justify-center min-w-[20px] h-5 rounded-full text-[10px] font-bold px-1.5",
+                                        isActive ? "bg-white/20 text-white" : "bg-brand/15 text-brand"
+                                    )}>
+                                        {badge > 99 ? "99+" : badge}
+                                    </span>
+                                )}
                             </div>
                         </Link>
                     );
                 })}
-            </nav>
-
-            <p className="admin-sidebar-section mt-6">Quick Links</p>
-            <nav className="flex flex-col gap-1">
-                <Link href="/home" className="admin-sidebar-link" onClick={(e) => { e.preventDefault(); router.push("/home"); }}>
-                    <ShieldCheck className="admin-sidebar-icon" />
-                    <span>User App</span>
-                </Link>
             </nav>
 
             <div className="mt-auto rounded-2xl border border-light-300 bg-light-300/30 p-3">

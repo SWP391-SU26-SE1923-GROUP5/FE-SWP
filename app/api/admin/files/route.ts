@@ -1,13 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import {
-    AdminFileQuerySchema,
-} from "@/lib/admin/validations";
-import {
-    AdminPermissionError,
-    AdminValidationError,
-    getAdminFiles,
-} from "@/lib/actions/admin.actions";
+import { AdminPermissionError, AdminValidationError } from "@/lib/actions/admin-errors";
+import { AdminFileQuerySchema } from "@/lib/admin/validations";
+import { getAdminFiles } from "@/lib/actions/admin.actions";
 
 export async function GET(request: NextRequest) {
     try {
