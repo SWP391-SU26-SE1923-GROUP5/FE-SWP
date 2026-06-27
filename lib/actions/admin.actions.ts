@@ -604,19 +604,13 @@ export const getSystemStats = async (): Promise<AdminDashboard> => {
     await requireAdmin();
     try {
         const [dashboard, local] = await Promise.all([
-            backendFetch<any>("/api/Admin/dashboard", {method: "GET"}),
+            backendFetch<any>("/api/Admin/dashboard", { method: "GET" }),
             computeLocalUserCounts(),
         ]);
         const mapped: AdminDashboard = {
             totalUsers: dashboard.totalUsers ?? dashboard.TotalUsers ?? local.total,
             totalDocuments: dashboard.totalDocuments ?? dashboard.TotalDocuments ?? 0,
-            totalPayments: dashboard.totalPayments ?? dashboard.TotalPayments ?? 0,
-            pendingPayments: dashboard.pendingPayments ?? dashboard.PendingPayments ?? 0,
-            completedPayments: dashboard.completedPayments ?? dashboard.CompletedPayments ?? 0,
             totalReports: dashboard.totalReports ?? dashboard.TotalReports ?? 0,
-            totalFlashcards: dashboard.totalFlashcards ?? dashboard.TotalFlashcards ?? 0,
-            totalQuizzes: dashboard.totalQuizzes ?? dashboard.TotalQuizzes ?? 0,
-            generatedAt: dashboard.generatedAt ?? dashboard.GeneratedAt ?? new Date().toISOString(),
         };
         return parseStringify(mapped);
     } catch (error) {
@@ -626,13 +620,7 @@ export const getSystemStats = async (): Promise<AdminDashboard> => {
             return parseStringify({
                 totalUsers: local.total,
                 totalDocuments: 0,
-                totalPayments: 0,
-                pendingPayments: 0,
-                completedPayments: 0,
                 totalReports: 0,
-                totalFlashcards: 0,
-                totalQuizzes: 0,
-                generatedAt: new Date().toISOString(),
             });
         }
         wrapBackendError(error);

@@ -109,13 +109,7 @@ export interface AdminReport {
 export interface AdminDashboard {
     totalUsers: number;
     totalDocuments: number;
-    totalPayments: number;
-    pendingPayments: number;
-    completedPayments: number;
     totalReports: number;
-    totalFlashcards: number;
-    totalQuizzes: number;
-    generatedAt: string;
 }
 
 export interface AdminUserListResponse {
