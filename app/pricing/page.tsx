@@ -39,6 +39,13 @@ export default async function PricingPage() {
 
                     const isUpgradeLocked = hasPaidPlan && !isCurrentTier;
 
+                    const formattedPrice = tier.price && tier.price > 0
+                        ? `${tier.price.toLocaleString('vi-VN')} VND`
+                        : 'Free';
+                    const storageStr = tier.storageLimitMb >= 1024
+                        ? `${Math.round(tier.storageLimitMb / 1024)} GB`
+                        : `${tier.storageLimitMb} MB`;
+
                     return (
                         <div
                             key={tier.id}
@@ -56,8 +63,12 @@ export default async function PricingPage() {
                                 </div>
                             )}
 
-                            <div className="mb-8">
+                            <div className="mb-6">
                                 <h3 className="text-2xl font-bold text-dark-100 mb-2">{tier.tierName}</h3>
+                                <div className="mt-2 mb-2 flex items-baseline gap-1">
+                                    <span className="text-3xl font-extrabold text-dark-100">{formattedPrice}</span>
+                                    {tier.price && tier.price > 0 && <span className="text-light-400 text-sm font-medium">/month</span>}
+                                </div>
                                 <p className="text-light-400 text-sm">Perfect for growing your knowledge base.</p>
                             </div>
 
@@ -67,7 +78,7 @@ export default async function PricingPage() {
                                         <Check className="h-5 w-5 text-brand" />
                                     </div>
                                     <span className="text-dark-200">
-                                        <strong className="font-semibold text-dark-100">{tier.storageLimitMb} MB</strong> of secure cloud storage
+                                        <strong className="font-semibold text-dark-100">{storageStr}</strong> of secure cloud storage
                                     </span>
                                 </li>
                                 <li className="flex items-start gap-3">
@@ -75,7 +86,7 @@ export default async function PricingPage() {
                                         <Check className="h-5 w-5 text-brand" />
                                     </div>
                                     <span className="text-dark-200">
-                                        <strong className="font-semibold text-dark-100">{tier.aiTokens}</strong> AI generation tokens
+                                        <strong className="font-semibold text-dark-100">{tier.aiTokens.toLocaleString()}</strong> AI generation tokens
                                     </span>
                                 </li>
                                 <li className="flex items-start gap-3">

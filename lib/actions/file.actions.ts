@@ -18,3 +18,6 @@ export const updateEditedFile = storageProvider.updateEditedFile.bind(storagePro
 export const deleteFile = storageProvider.deleteFile.bind(storageProvider);
 export const getTotalSpaceUsed = storageProvider.getTotalSpaceUsed.bind(storageProvider);
 export const downloadFile = storageProvider.downloadFile.bind(storageProvider);
+export const previewFile = storageProvider.previewFile.bind(storageProvider);
+export const getFileStatus = storageProvider.getFileStatus.bind(storageProvider);
+export const reprocessFile = storageProvider.reprocessFile.bind(storageProvider);

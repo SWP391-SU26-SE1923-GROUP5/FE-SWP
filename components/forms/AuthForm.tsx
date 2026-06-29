@@ -31,7 +31,6 @@ const AuthForm = <T extends FieldValues>({
                                              onSubmit,
                                          }: AuthFormProps<T>) => {
     const form = useForm<T>({
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         resolver: zodResolver(schema as any),
         defaultValues: defaultValues as DefaultValues<T>,
     });

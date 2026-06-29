@@ -187,6 +187,7 @@ export interface IFileStorage {
     updateEditedFile(props: UpdateEditedFileProps): Promise<UploadFileResponse | undefined>;
     deleteFile(props: DeleteFileProps): Promise<{ status: string } | undefined>;
     downloadFile(props: DownloadFileProps): Promise<{ data: string }>;
+    previewFile(props: DownloadFileProps): Promise<{ data: string; contentType: string }>;
     getTotalSpaceUsed(): Promise<{
         image: StorageCategoryStats;
         document: StorageCategoryStats;
@@ -196,6 +197,8 @@ export interface IFileStorage {
         used: number;
         all: number;
     }>;
+    getFileStatus(fileId: string): Promise<{ id: string; status: number; errorMessage?: string } | null>;
+    reprocessFile(fileId: string): Promise<{ documentId: string; status: string; message: string } | null>;
 }
 
 export interface Flashcard {
@@ -207,12 +210,44 @@ export interface Flashcard {
     updatedAt: string;
 }
 
+export interface FlashcardReviewResponse {
+    reviewId: string;
+    flashcardId: string;
+    nextReviewDate: string;
+    easeFactor: number;
+    interval: number;
+    repetitions: number;
+}
+
+export interface ReviewFlashcardResult {
+    review: FlashcardReviewResponse;
+    xpEarned: number;
+    newAchievements: AchievementDto[];
+}
+
+export interface DueFlashcard {
+    reviewId: string;
+    flashcardId: string;
+    documentId: string;
+    front: string;
+    back: string;
+    nextReviewDate: string;
+}
+
+export interface FlashcardReviewStats {
+    totalReviewed: number;
+    dueNow: number;
+    masteredCount: number;
+    averageEaseFactor: number;
+}
+
 export interface QuizAnswer {
     selectedOption: string;
     isCorrect: boolean;
 }
 
 export interface QuizQuestion {
+    id?: string;
     questionTitle: string;
     questionType: number;
     position: number;
@@ -268,6 +303,7 @@ export interface IAIService {
 export interface TierMembership {
     id: string;
     tierName: string;
+    price?: number;
     storageLimitMb: number;
     aiTokens: number;
     createdAt: string;
@@ -288,4 +324,114 @@ export interface IPaymentService {
     getMembershipTiers(): Promise<TierMembership[]>;
     createCheckoutSession(tierId: string): Promise<void>;
     getCurrentUserTier(): Promise<CurrentUserTier>;
+}
+
+// ==================== ANALYTICS TYPES ====================
+export interface DashboardKpiDto {
+    totalStudyHours: number;
+    totalStudyMinutes: number;
+    cardsReviewed: number;
+    averageAccuracy: number;
+    efficiencyScore: number;
+    currentStreakDays: number;
+    flashcardsDueToday?: number | null;
+}
+
+export interface DashboardChartPointDto {
+    date: string;
+    accuracyPercent?: number | null;
+    cardsCount: number;
+}
+
+export interface DashboardSubjectMasteryDto {
+    subjectId: string;
+    subjectCode: string;
+    subjectName: string;
+    masteryPercent: number;
+}
+
+export interface AiTipDto {
+    severity: "info" | "warning" | "danger" | string;
+    title: string;
+    message: string;
+}
+
+export interface DashboardDto {
+    kpis: DashboardKpiDto;
+    accuracyTrend: DashboardChartPointDto[];
+    cardsReviewedTrend: DashboardChartPointDto[];
+    subjectMasteries: DashboardSubjectMasteryDto[];
+    aiTips: AiTipDto[];
+}
+
+export interface IAnalyticsService {
+    getDashboard(): Promise<DashboardDto | null>;
+}
+
+export interface NotificationResponseDto {
+    id: string;
+    userId: string;
+    message: string;
+    isRead: boolean;
+    type: string;
+    createdAt: string;
+    updatedAt?: string | null;
+}
+
+export interface INotificationService {
+    getMyNotifications(): Promise<NotificationResponseDto[]>;
+    markAsRead(id: string): Promise<boolean>;
+    markAllAsRead(): Promise<boolean>;
+}
+
+export interface LeaderboardEntryDto {
+    userId: string;
+    fullName: string;
+    totalXp: number;
+    currentLevel: number;
+    currentStreak: number;
+    rank: number;
+}
+
+export interface UserStatsResponseDto {
+    totalXp: number;
+    currentLevel: number;
+    currentStreak: number;
+    bestStreak: number;
+    lastActivityDate?: string | null;
+    xpToNextLevel: number;
+}
+
+export interface IGamificationService {
+    getLeaderboard(top?: number, period?: string): Promise<LeaderboardEntryDto[]>;
+    getMyStats(): Promise<UserStatsResponseDto | null>;
+}
+
+export interface UserTierInfoDto {
+    tierId: string;
+    tierName: string;
+    storageLimitMb: number;
+    aiTokens: number;
+    tierExpireAt?: string | null;
+    currentStorageMb: number;
+    currentAiTokensUsed: number;
+}
+
+export interface AchievementDto {
+    id: string;
+    code: string;
+    title: string;
+    description: string;
+    category: string;
+    targetValue: number;
+    iconUrl: string;
+    xpReward: number;
+    isUnlocked: boolean;
+    earnedDate?: string | null;
+    currentProgress: number;
+}
+
+export interface IProfileService {
+    getMyTierInfo(): Promise<UserTierInfoDto | null>;
+    getMyAchievements(): Promise<AchievementDto[]>;
 }

@@ -9,7 +9,7 @@ import Thumbnail from "@/components/Thumbnail";
 import { MAX_FILE_SIZE } from "@/constants/fileSize";
 import { toast } from "sonner"
 import { uploadFile } from "@/lib/actions/file.actions";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Subject } from "@/types";
 import { ChevronDown, BookOpen } from "lucide-react";
 
@@ -28,28 +28,26 @@ const FileUploader = ({ subjects, className }: FileUploaderProps) => {
             toast.error("Please select a subject before uploading.");
             return;
         }
-
         setFiles(acceptedFiles);
-
         const uploadPromises = acceptedFiles.map(async file => {
             if (file.size > MAX_FILE_SIZE) {
-                setFiles((prevFiles) =>
-                    prevFiles.filter((f) => f.name !== file.name)
-                );
-                return toast.error(`${file.name} is too large. Max file size is 50MB.`);
+                setFiles((prev) => prev.filter((f) => f.name !== file.name));
+                return toast.error(`${file.name} exceeds maximum file size of 50MB.`);
             }
-
-            return uploadFile({ file, path, subjectId: selectedSubjectId }).then((uploadedFile) => {
-                if (uploadedFile) {
-                    setFiles((prevFiles) =>
-                        prevFiles.filter((f) => f.name !== file.name)
-                    );
-                }
-            });
-        })
-
-        await Promise.all(uploadPromises)
-    }, [path, selectedSubjectId])
+            return uploadFile({ file, path, subjectId: selectedSubjectId })
+                .then((uploadedFile) => {
+                    if (uploadedFile) {
+                        setFiles((prev) => prev.filter((f) => f.name !== file.name));
+                        toast.success(`Uploaded ${file.name}. AI is processing in the background!`);
+                    }
+                })
+                .catch((err: any) => {
+                    setFiles((prev) => prev.filter((f) => f.name !== file.name));
+                    toast.error(err.message || `Failed to upload file ${file.name}`);
+                });
+        });
+        await Promise.all(uploadPromises);
+    }, [path, selectedSubjectId]);
 
     const { getRootProps, getInputProps } = useDropzone({ onDrop })
 
