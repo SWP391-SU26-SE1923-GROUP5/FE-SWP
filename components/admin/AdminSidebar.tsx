@@ -1,12 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { LogOut, ShieldCheck } from "lucide-react";
+import { LogOut } from "lucide-react";
 import { toast } from "sonner";
-import { adminNavItems, type AdminNavItem } from "@/constants/admin-nav";
+import { adminNavItems } from "@/constants/admin-nav";
 import { avatarPlaceholderUrl } from "@/constants/avatar";
 import { cn } from "@/lib/utils";
 import { signOutUser } from "@/lib/actions/user.actions";
@@ -15,22 +15,11 @@ interface AdminSidebarProps {
     fullName: string;
     email: string;
     avatar?: string;
-    userCount?: number;
-    fileCount?: number;
-    reportCount?: number;
 }
 
-export default function AdminSidebar({ fullName, email, avatar, userCount, fileCount, reportCount }: AdminSidebarProps) {
+export default function AdminSidebar({ fullName, email, avatar }: AdminSidebarProps) {
     const pathname = usePathname();
-    const router = useRouter();
     const [signingOut, setSigningOut] = useState(false);
-
-    const getBadgeCount = (item: AdminNavItem): number | undefined => {
-        if (item.url === "/admin/users") return userCount;
-        if (item.url === "/admin/files") return fileCount;
-        if (item.url === "/admin/reports") return reportCount;
-        return undefined;
-    };
 
     const handleSignOut = async () => {
         if (signingOut) return;
@@ -65,7 +54,6 @@ export default function AdminSidebar({ fullName, email, avatar, userCount, fileC
                 {adminNavItems.map((item) => {
                     const Icon = item.icon;
                     const isActive = pathname === item.url || (item.url !== "/admin" && pathname.startsWith(item.url));
-                    const badge = getBadgeCount(item);
                     return (
                         <Link
                             key={item.url}
@@ -73,17 +61,7 @@ export default function AdminSidebar({ fullName, email, avatar, userCount, fileC
                             className={cn("admin-sidebar-link", isActive && "admin-sidebar-link-active")}
                         >
                             <Icon className="admin-sidebar-icon" />
-                            <div className="flex-1 truncate flex items-center justify-between">
-                                <span className="block">{item.name}</span>
-                                {badge !== undefined && badge > 0 && (
-                                    <span className={cn(
-                                        "flex items-center justify-center min-w-[20px] h-5 rounded-full text-[10px] font-bold px-1.5",
-                                        isActive ? "bg-white/20 text-white" : "bg-brand/15 text-brand"
-                                    )}>
-                                        {badge > 99 ? "99+" : badge}
-                                    </span>
-                                )}
-                            </div>
+                            <span className="block">{item.name}</span>
                         </Link>
                     );
                 })}

@@ -1,8 +1,5 @@
 import {
     LayoutDashboard,
-    Users,
-    Files,
-    AlertTriangle,
     Flag,
     Settings,
     type LucideIcon,
@@ -13,7 +10,6 @@ export interface AdminNavItem {
     url: string;
     icon: LucideIcon;
     description?: string;
-    badge?: number;
 }
 
 export const adminNavItems: AdminNavItem[] = [
@@ -24,28 +20,10 @@ export const adminNavItems: AdminNavItem[] = [
         description: "System overview and metrics",
     },
     {
-        name: "Users",
-        url: "/admin/users",
-        icon: Users,
-        description: "Manage user accounts and roles",
-    },
-    {
-        name: "Files",
-        url: "/admin/files",
-        icon: Files,
-        description: "Browse and moderate uploaded files",
-    },
-    {
         name: "Reports",
         url: "/admin/reports",
         icon: Flag,
         description: "Review submitted violation reports",
-    },
-    {
-        name: "Document Violations",
-        url: "/admin/document-violations",
-        icon: AlertTriangle,
-        description: "Moderate flagged documents",
     },
     {
         name: "Settings",
