@@ -116,7 +116,7 @@ export class LocalStorage implements IFileStorage {
             formData.append('title', file.name);
             formData.append('subjectId', subjectId);
 
-            const res = await fetch(`${connection_url}/api/DocumentUpload/upload/file`, {
+            const res = await fetch(`${connection_url}/api/Document/upload/file`, {
                 method: 'POST',
                 headers: headers,
                 body: formData
@@ -136,6 +136,33 @@ export class LocalStorage implements IFileStorage {
             return parseStringify(uploadResponse);
         } catch (error) {
             this.handleError(error, "UploadFile");
+        }
+    }
+
+    async getFileStatus(fileId: string) {
+        try {
+            const headers = await this.getHeaders();
+            const res = await fetch(`${connection_url}/api/Document/${fileId}/status`, {
+                headers,
+                cache: 'no-store',
+            });
+            return res.ok ? await res.json() : null;
+        } catch (error) {
+            return null;
+        }
+    }
+
+    async reprocessFile(fileId: string) {
+        try {
+            const headers = await this.getHeaders();
+            const res = await fetch(`${connection_url}/api/Document/${fileId}/reprocess`, {
+                method: 'POST',
+                headers
+            });
+            if (!res.ok) throw new Error("Cannot reprocess this document.");
+            return await res.json();
+        } catch (error: any) {
+            throw new Error(error.message || "Error sending reprocess request");
         }
     }
 
@@ -164,6 +191,7 @@ export class LocalStorage implements IFileStorage {
             const res = await fetch(`${connection_url}/api/Document?${queryParams.toString()}`, {
                 method: 'GET',
                 headers,
+                cache: 'no-store',
             });
 
             if (!res.ok) {
@@ -321,15 +349,41 @@ export class LocalStorage implements IFileStorage {
                 throw new Error(`[${res.status}] ${errorData.message || "Download failed"}`);
             }
 
+            const contentType = res.headers.get("content-type") || "application/octet-stream";
             const arrayBuffer = await res.arrayBuffer();
 
             const buffer = Buffer.from(arrayBuffer);
             const base64Data = buffer.toString('base64');
 
-            return parseStringify({ data: base64Data });
+            return parseStringify({ data: base64Data, contentType });
 
         } catch (error) {
             this.handleError(error, "DownloadFile");
+        }
+    }
+
+    async previewFile({ fileId }: { fileId: string }) {
+        try {
+            const headers = await this.getHeaders();
+
+            const res = await fetch(`${connection_url}/api/Document/${fileId}/preview`, {
+                method: 'GET',
+                headers,
+            });
+
+            if (!res.ok) {
+                const errorData = await res.json().catch(() => ({}));
+                throw new Error(`[${res.status}] ${errorData.message || "Preview failed"}`);
+            }
+
+            const contentType = res.headers.get("content-type") || "application/octet-stream";
+            const arrayBuffer = await res.arrayBuffer();
+            const buffer = Buffer.from(arrayBuffer);
+            const base64Data = buffer.toString('base64');
+
+            return parseStringify({ data: base64Data, contentType });
+        } catch (error) {
+            this.handleError(error, "PreviewFile");
         }
     }
 

@@ -37,5 +37,5 @@ export default async function QuizPage({ params }: Props) {
         );
     }
 
-    return <QuizQuestions quizData={quizData} />;
+    return <QuizQuestions quizData={quizData} quizId={quizId} />;
 }
