@@ -1,10 +1,10 @@
 "use client";
 
 import AuthForm from "@/components/forms/AuthForm";
-import {SignInSchema} from "@/lib/validations";
-import {useRouter} from "next/navigation";
-import {z} from "zod";
-import {signIn} from "next-auth/react";
+import { SignInSchema } from "@/lib/validations";
+import { useRouter } from "next/navigation";
+import { z } from "zod";
+import { signIn } from "next-auth/react";
 import ROUTES from "@/constants/routes";
 
 const SignIn = () => {
@@ -19,9 +19,12 @@ const SignIn = () => {
                 callbackUrl: ROUTES.HOME
             });
 
-            console.log("NEXT_AUTH_RESULT:", result);
-
             if (result?.error) {
+                if (result.error.toLowerCase().includes("verify your email")) {
+                    router.push(`/verify-otp?email=${encodeURIComponent(data.email)}`);
+                    return { success: true };
+                }
+
                 return {
                     success: false,
                     error: "Invalid email or password.",
@@ -31,7 +34,7 @@ const SignIn = () => {
             if (result?.ok) {
                 router.push(ROUTES.HOME);
                 router.refresh();
-                return {success: true};
+                return { success: true };
             }
 
             return {

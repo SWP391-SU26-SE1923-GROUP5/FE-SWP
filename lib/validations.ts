@@ -46,3 +46,35 @@ export const SignUpSchema = z.object({
         .min(1, { message: 'Date of birth is required.' })
         .regex(/^\d{4}-\d{2}-\d{2}$/, { message: 'Please select a valid date.' }),
 });
+
+export const ForgotPasswordEmailSchema = z.object({
+    email: z
+        .string()
+        .min(1, { message: "Email is required." })
+        .max(255, { message: "Email cannot exceed 255 characters." })
+        .email({ message: "Please provide a valid email address." })
+});
+export const ForgotPasswordOtpSchema = z.object({
+    otp: z
+        .string()
+        .min(6, { message: "OTP must be exactly 6 digits." })
+        .max(6, { message: "OTP must be exactly 6 digits." })
+        .regex(/^[0-9]+$/, { message: "OTP must be a 6-digit number." })
+});
+export const ResetPasswordSchema = z.object({
+    newPassword: z
+        .string()
+        .min(12, { message: "Password must be at least 12 characters long." })
+        .max(128, { message: "Password cannot exceed 128 characters." })
+        .regex(/[A-Z]/, { message: "Password must contain at least one uppercase letter." })
+        .regex(/[a-z]/, { message: "Password must contain at least one lowercase letter." })
+        .regex(/[0-9]/, { message: "Password must contain at least one number." })
+        .regex(/[^a-zA-Z0-9]/, { message: "Password must contain at least one special character." })
+        .refine((val) => !/\s/.test(val), { message: "Password must not contain whitespace." }),
+    confirmPassword: z
+        .string()
+        .min(1, { message: "Please confirm your new password." })
+}).refine((data) => data.newPassword === data.confirmPassword, {
+    message: "Passwords do not match.",
+    path: ["confirmPassword"]
+});

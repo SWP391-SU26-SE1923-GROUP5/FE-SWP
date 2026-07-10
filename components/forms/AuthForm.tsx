@@ -97,24 +97,30 @@ const AuthForm = <T extends FieldValues>({
                     : buttonText}
             </Button>
 
-            <div className="mt-4">
-                <p className="text-dark400_light700">
-                    {formType === "SIGN_IN" ? (
-                        <>
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-2 text-dark400_light700">
+                {formType === "SIGN_IN" ? (
+                    <>
+                        <p>
                             Don&#39;t have an account?{" "}
                             <Link href={ROUTES.SIGN_UP} className="paragraph-semibold primary-text-gradient">
                                 Sign up
                             </Link>
-                        </>
-                    ) : (
-                        <>
-                            Already have an account?{" "}
-                            <Link href={ROUTES.SIGN_IN} className="paragraph-semibold primary-text-gradient">
-                                Sign in
-                            </Link>
-                        </>
-                    )}
-                </p>
+                        </p>
+                        <Link
+                            href="/forgot-password"
+                            className="paragraph-semibold primary-text-gradient hover:underline ml-auto"
+                        >
+                            Forgot password?
+                        </Link>
+                    </>
+                ) : (
+                    <p>
+                        Already have an account?{" "}
+                        <Link href={ROUTES.SIGN_IN} className="paragraph-semibold primary-text-gradient">
+                            Sign in
+                        </Link>
+                    </p>
+                )}
             </div>
         </form>
     );
