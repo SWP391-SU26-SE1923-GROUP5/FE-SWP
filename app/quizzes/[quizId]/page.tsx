@@ -37,5 +37,9 @@ export default async function QuizPage({ params }: Props) {
         );
     }
 
-    return <QuizQuestions quizData={quizData} quizId={quizId} />;
+    return (
+        <div className="flex flex-col flex-1 max-w-3xl w-full m-auto min-h-screen p-6">
+            <QuizQuestions quizData={quizData} quizId={quizId} />
+        </div>
+    );
 }

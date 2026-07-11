@@ -97,12 +97,8 @@ export default function AnalyticsPage() {
                     <div>
                         <div className="flex items-center gap-2.5 flex-wrap">
                             <h1 className="h2 text-dark100_light900 font-bold">Learning Analytics</h1>
-                            <span className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-xs font-semibold bg-brand/10 text-brand dark:bg-brand/20 border border-brand/20">
-                                <Sparkles className="w-3.5 h-3.5" />
-                                AI Insights
-                            </span>
                         </div>
-                        <p className="body-2 text-dark500_light400 mt-0.5">Track your progress and get AI-powered coaching insights from your study sessions.</p>
+                        <p className="body-2 text-dark500_light400 mt-0.5">Track your progress and review detailed metrics across your study sessions.</p>
                     </div>
                 </div>
             </div>
@@ -125,9 +121,8 @@ export default function AnalyticsPage() {
                             {kpis.totalStudyHours}h {kpis.totalStudyMinutes}m
                         </div>
                     </div>
-                    <div className="mt-4 pt-3 border-t border-light-700/60 dark:border-dark-400/60 flex items-center justify-between text-xs text-light-200 dark:text-dark-400">
+                    <div className="mt-4 pt-3 border-t border-light-700/60 dark:border-dark-400/60 text-xs text-light-200 dark:text-dark-400">
                         <span>Active session hours</span>
-                        <span className="text-brand font-semibold">Accumulated</span>
                     </div>
                 </div>
 
@@ -147,9 +142,8 @@ export default function AnalyticsPage() {
                             {kpis.cardsReviewed.toLocaleString()}
                         </div>
                     </div>
-                    <div className="mt-4 pt-3 border-t border-light-700/60 dark:border-dark-400/60 flex items-center justify-between text-xs text-light-200 dark:text-dark-400">
+                    <div className="mt-4 pt-3 border-t border-light-700/60 dark:border-dark-400/60 text-xs text-light-200 dark:text-dark-400">
                         <span>Flashcard interactions</span>
-                        <span className="text-blue-500 font-semibold">{kpis.flashcardsDueToday} due today</span>
                     </div>
                 </div>
 
@@ -169,9 +163,8 @@ export default function AnalyticsPage() {
                             {Number(kpis.averageAccuracy).toFixed(1)}%
                         </div>
                     </div>
-                    <div className="mt-4 pt-3 border-t border-light-700/60 dark:border-dark-400/60 flex items-center justify-between text-xs text-light-200 dark:text-dark-400">
+                    <div className="mt-4 pt-3 border-t border-light-700/60 dark:border-dark-400/60 text-xs text-light-200 dark:text-dark-400">
                         <span>Overall quiz performance</span>
-                        <span className="text-amber-600 dark:text-amber-400 font-semibold">High Precision</span>
                     </div>
                 </div>
 
@@ -193,9 +186,8 @@ export default function AnalyticsPage() {
                             {kpis.efficiencyScore}%
                         </div>
                     </div>
-                    <div className="mt-4 pt-3 border-t border-light-700/60 dark:border-dark-400/60 flex items-center justify-between text-xs text-light-200 dark:text-dark-400">
+                    <div className="mt-4 pt-3 border-t border-light-700/60 dark:border-dark-400/60 text-xs text-light-200 dark:text-dark-400">
                         <span>Study momentum</span>
-                        <span className="text-purple-600 dark:text-purple-400 font-semibold">Active learner</span>
                     </div>
                 </div>
             </div>
