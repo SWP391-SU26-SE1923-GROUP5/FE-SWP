@@ -195,8 +195,8 @@ export default function ActionDropdown({ file }: { file: File_ }) {
                 const res = await generateQuiz(file.id, amount);
 
                 data = {
-                    id: res.id,
-                    quizTitle: res.title || res.quizTitle || `${file.fileName} Quiz`,
+                    id: res.id || res.quizId,
+                    quizTitle: res.title || res.quizTitle || res.documentName || `${file.fileName} Quiz`,
                     questions: res.questions?.map((q: any) => ({
                         id: q.id,
                         questionTitle: q.title || q.questionTitle,
@@ -326,10 +326,10 @@ export default function ActionDropdown({ file }: { file: File_ }) {
 
         return (
             <DialogContent
-                className={`p-8 ${
+                className={`p-6 sm:p-8 ${
                     value === "edit" || isAiAction
                         ? "max-w-5xl! w-full max-h-[90vh] overflow-y-auto custom-scrollbar"
-                        : "shad-dialog"
+                        : "shad-dialog sm:max-w-[460px] w-full max-h-[90vh] overflow-hidden"
                 }`}
                 aria-describedby={undefined}
             >
@@ -639,13 +639,20 @@ export default function ActionDropdown({ file }: { file: File_ }) {
         <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
             <DropdownMenu open={isDropdownOpen} onOpenChange={setIsDropdownOpen}>
                 <DropdownMenuTrigger asChild className="shad-no-focus">
-                    <Image
-                        src="/assets/icons/dots.svg"
-                        alt="dots"
-                        width={34}
-                        height={34}
-                        className="cursor-pointer"
-                    />
+                    <button
+                        type="button"
+                        onClick={(e) => e.stopPropagation()}
+                        className="flex items-center justify-center p-1.5 rounded-full hover:bg-light-300/50 transition-colors focus:outline-none shrink-0 cursor-pointer"
+                        aria-label="File actions"
+                    >
+                        <Image
+                            src="/assets/icons/dots.svg"
+                            alt="dots"
+                            width={28}
+                            height={28}
+                            className="cursor-pointer object-contain shrink-0"
+                        />
+                    </button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent>
                     <DropdownMenuLabel className="max-w-[200px] truncate">

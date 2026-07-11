@@ -28,7 +28,7 @@ export default async function FlashcardsPage() {
         }
         acc[card.documentId].cards.push(card);
         return acc;
-    }, {} as Record<string, { documentId: string; cards: typeof flashcards }>);
+    }, {} as Record<string, { documentId: string; cards: any[] }>);
 
     const decks = Object.values(groupedDecks);
 
@@ -68,7 +68,7 @@ export default async function FlashcardsPage() {
                             <span className="text-3xl font-black">{actualDueCount}</span>
                             <span className="text-xs text-emerald-100 ml-1.5 uppercase font-medium">Cards</span>
                         </div>
-                        <Link href="/flashcard/due">
+                        <Link href="/flashcards/due">
                             <Button
                                 variant="secondary"
                                 disabled={actualDueCount === 0}
@@ -129,7 +129,7 @@ export default async function FlashcardsPage() {
             <h2 className="text-xl font-bold text-dark-200 mb-6">Document Decks</h2>
 
             {!flashcards || flashcards.length === 0 ? (
-                <div className="flex flex-col items-center justify-center flex-1 py-20 px-6 text-center bg-slate-50/50 border-2 border-dashed border-slate-200 rounded-3xl">
+                <div className="flex flex-col items-center justify-center flex-1 py-20 px-6 text-center bg-slate-50/50 border-2 border-dashed border-slate-200 rounded-3xl w-full">
                     <div className="h-16 w-16 bg-white rounded-full flex items-center justify-center shadow-sm mb-4">
                         <Layers className="h-8 w-8 text-slate-300" />
                     </div>
@@ -150,7 +150,7 @@ export default async function FlashcardsPage() {
                         const documentName = fileMap[deck.documentId] || "Document Deck";
 
                         return (
-                            <Link href={`/flashcard/${deck.documentId}`} key={deck.documentId}>
+                            <Link href={`/flashcards/${deck.documentId}`} key={deck.documentId}>
                                 <div className="p-6 border border-slate-200 rounded-2xl bg-white shadow-sm hover:border-brand hover:shadow-md transition-all cursor-pointer group flex flex-col justify-between min-h-[200px]">
                                     <div>
                                         <div className="flex items-center justify-between mb-4">

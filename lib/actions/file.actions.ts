@@ -21,3 +21,6 @@ export const downloadFile = storageProvider.downloadFile.bind(storageProvider);
 export const previewFile = storageProvider.previewFile.bind(storageProvider);
 export const getFileStatus = storageProvider.getFileStatus.bind(storageProvider);
 export const reprocessFile = storageProvider.reprocessFile.bind(storageProvider);
+export const getTrashFiles = storageProvider.getTrashFiles.bind(storageProvider);
+export const restoreFile = storageProvider.restoreFile.bind(storageProvider);
+export const permanentDeleteFile = storageProvider.permanentDeleteFile.bind(storageProvider);

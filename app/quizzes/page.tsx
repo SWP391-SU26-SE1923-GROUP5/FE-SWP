@@ -23,7 +23,7 @@ export default async function QuizDashboard() {
             </div>
 
             {!quizzes || quizzes.length === 0 ? (
-                <div className="flex flex-col items-center justify-center flex-1 py-20 px-6 text-center bg-slate-50/50 border-2 border-dashed border-slate-200 rounded-3xl">
+                <div className="flex flex-col items-center justify-center flex-1 py-20 px-6 text-center bg-slate-50/50 border-2 border-dashed border-slate-200 rounded-3xl w-full">
                     <div className="h-16 w-16 bg-white rounded-full flex items-center justify-center shadow-sm mb-4">
                         <BrainCircuit className="h-8 w-8 text-slate-300" />
                     </div>
@@ -43,7 +43,7 @@ export default async function QuizDashboard() {
                     {quizzes.map((quiz) => (
                         <div key={quiz.id} className="relative group flex flex-col h-full border border-slate-200 rounded-2xl bg-white hover:border-brand hover:shadow-lg hover:-translate-y-1 transition-all duration-300">
 
-                            <Link href={`/quiz/${quiz.id}`} className="flex flex-col flex-1 p-6">
+                            <Link href={`/quizzes/${quiz.id}`} className="flex flex-col flex-1 p-6">
                                 <div className="flex items-start gap-4 mb-4 pr-10">
                                     <div className="p-3 bg-brand/10 rounded-xl text-brand group-hover:bg-brand group-hover:text-white transition-colors duration-300">
                                         <BrainCircuit className="h-6 w-6" />

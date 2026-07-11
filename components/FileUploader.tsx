@@ -7,8 +7,8 @@ import { cn, convertFileToUrl, getFileType } from "@/lib/utils";
 import Image from "next/image";
 import Thumbnail from "@/components/Thumbnail";
 import { MAX_FILE_SIZE } from "@/constants/fileSize";
-import { toast } from "sonner"
-import { uploadFile } from "@/lib/actions/file.actions";
+import { toast } from "sonner";
+import { uploadFile, getSubjects } from "@/lib/actions/file.actions";
 import { usePathname } from "next/navigation";
 import { Subject } from "@/types";
 import { ChevronDown, BookOpen, X } from "lucide-react";
@@ -22,16 +22,33 @@ import {
 } from "@/components/ui/dialog";
 
 interface FileUploaderProps {
-    subjects: Subject[];
+    subjects?: Subject[];
     className?: string;
 }
 
-const FileUploader = ({ subjects, className }: FileUploaderProps) => {
+const FileUploader = ({ subjects: initialSubjects = [], className }: FileUploaderProps) => {
     const [isOpen, setIsOpen] = useState(false);
     const [files, setFiles] = useState<File[]>([]);
     const [selectedSubjectId, setSelectedSubjectId] = useState<string>("");
     const [isUploading, setIsUploading] = useState(false);
+    const [subjectsList, setSubjectsList] = useState<Subject[]>(initialSubjects);
     const path = usePathname();
+
+    React.useEffect(() => {
+        if (initialSubjects && initialSubjects.length > 0) {
+            setSubjectsList(initialSubjects);
+        }
+    }, [initialSubjects]);
+
+    React.useEffect(() => {
+        if (isOpen && (!subjectsList || subjectsList.length === 0)) {
+            getSubjects()
+                .then(res => {
+                    if (res && Array.isArray(res)) setSubjectsList(res);
+                })
+                .catch(err => console.error("Failed to load fallback subjects inside modal:", err));
+        }
+    }, [isOpen, subjectsList]);
 
     const onDrop = useCallback((acceptedFiles: File[]) => {
         const validFiles = acceptedFiles.filter(file => {
@@ -142,7 +159,7 @@ const FileUploader = ({ subjects, className }: FileUploaderProps) => {
                                     disabled={isUploading}
                                 >
                                     <option value="" disabled>Choose an existing subject...</option>
-                                    {subjects?.map((subject) => (
+                                    {subjectsList?.map((subject) => (
                                         <option key={subject.id} value={subject.id}>
                                             {subject.subjectName}
                                         </option>

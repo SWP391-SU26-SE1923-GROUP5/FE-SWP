@@ -1,8 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import {
     Trash2,
     RotateCcw,
@@ -11,8 +10,16 @@ import {
     Clock,
     ArrowLeft,
     CheckCircle2,
-    FileText,
-    AlertCircle
+    X,
+    BookOpen,
+    ArrowUpDown,
+    ChevronUp,
+    ChevronDown,
+    ChevronLeft,
+    ChevronRight,
+    LayoutGrid,
+    ListFilter,
+    HardDrive
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -30,128 +37,246 @@ import {
     AlertDialogTitle,
     AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import { getTrashFiles, restoreFile, permanentDeleteFile } from '@/lib/actions/file.actions';
+import { File_ } from '@/types';
+import Pagination from '@/components/Pagination';
 
-interface MockTrashFile {
+interface TrashItemView {
     id: string;
     name: string;
     subjectName: string;
     size: number;
     deletedAt: string;
+    deletedTimestamp: number;
     daysRemaining: number;
     url: string;
 }
 
-const initialTrashFiles: MockTrashFile[] = [
-    {
-        id: '1',
-        name: 'CS401_Lecture_05_Deep_Learning_Architectures.pdf',
-        subjectName: 'Artificial Intelligence',
-        size: 14800000,
-        deletedAt: '2026-07-08',
-        daysRemaining: 28,
-        url: '/assets/icons/file-pdf.svg'
-    },
-    {
-        id: '2',
-        name: 'Database_Normalization_Cheat_Sheet_v2.docx',
-        subjectName: 'Database Systems',
-        size: 4200000,
-        deletedAt: '2026-07-01',
-        daysRemaining: 21,
-        url: '/assets/icons/file-docx.svg'
-    },
-    {
-        id: '3',
-        name: 'Final_Project_Presentation_Slides.pptx',
-        subjectName: 'Software Engineering',
-        size: 28500000,
-        deletedAt: '2026-06-15',
-        daysRemaining: 5,
-        url: '/assets/icons/file-other.svg'
-    },
-    {
-        id: '4',
-        name: 'Calculus_II_Practice_Exam_Solutions.pdf',
-        subjectName: 'Advanced Mathematics',
-        size: 8900000,
-        deletedAt: '2026-06-12',
-        daysRemaining: 2,
-        url: '/assets/icons/file-pdf.svg'
-    }
-];
+type SortField = 'name' | 'subject' | 'size' | 'deletedAt' | 'daysRemaining';
+type SortOrder = 'asc' | 'desc';
+type ViewMode = 'table' | 'grid';
 
 export default function TrashPage() {
-    const [trashFiles, setTrashFiles] = useState<MockTrashFile[]>(initialTrashFiles);
+    const [trashFiles, setTrashFiles] = useState<TrashItemView[]>([]);
     const [searchQuery, setSearchQuery] = useState('');
-    const [selectedFileToDelete, setSelectedFileToDelete] = useState<MockTrashFile | null>(null);
+    const [selectedFileToDelete, setSelectedFileToDelete] = useState<TrashItemView | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [actionLoading, setActionLoading] = useState<string | null>(null);
 
-    const filteredFiles = trashFiles.filter(file =>
-        file.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        file.subjectName.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    // Sorting & Pagination state
+    const [sortField, setSortField] = useState<SortField>('daysRemaining');
+    const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
+    const [currentPage, setCurrentPage] = useState(1);
+    const [itemsPerPage, setItemsPerPage] = useState(10);
+    const [viewMode, setViewMode] = useState<ViewMode>('table');
 
-    const totalRecoverableBytes = trashFiles.reduce((acc, file) => acc + file.size, 0);
-    const totalRecoverableMB = (totalRecoverableBytes / (1024 * 1024)).toFixed(1);
+    const loadTrash = async () => {
+        setLoading(true);
+        try {
+            const data = await getTrashFiles();
+            const docs = data?.documents || [];
+            const mapped: TrashItemView[] = docs.map((doc: File_) => {
+                const deletedTimestamp = doc.updatedAt ? new Date(doc.updatedAt).getTime() : Date.now();
+                const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000;
+                const remainingMs = Math.max(0, (deletedTimestamp + thirtyDaysMs) - Date.now());
+                const daysRemaining = Math.max(1, Math.ceil(remainingMs / (24 * 60 * 60 * 1000)));
 
-    const handleRestore = (id: string, name: string) => {
-        setTrashFiles(prev => prev.filter(f => f.id !== id));
-        toast.success(`Restored "${name}" successfully. Storage quota has been refunded!`);
+                return {
+                    id: doc.id,
+                    name: doc.fileName || doc.title || 'Untitled file',
+                    subjectName: doc.subjectId ? `Subject #${doc.subjectId.slice(0, 6)}` : 'General',
+                    size: doc.fileSizeBytes || 0,
+                    deletedAt: doc.updatedAt
+                        ? new Date(doc.updatedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
+                        : new Date().toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }),
+                    deletedTimestamp,
+                    daysRemaining,
+                    url: doc.fileLink || ''
+                };
+            });
+            setTrashFiles(mapped);
+        } catch (error: any) {
+            console.error('Failed to load trash files:', error);
+            toast.error('Could not fetch deleted documents from trash.');
+        } finally {
+            setLoading(false);
+        }
     };
 
-    const handleDeletePermanently = (id: string, name: string) => {
-        setTrashFiles(prev => prev.filter(f => f.id !== id));
-        setSelectedFileToDelete(null);
-        toast.error(`"${name}" has been permanently deleted.`);
+    useEffect(() => {
+        loadTrash();
+    }, []);
+
+    // Reset pagination when filter/search changes
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchQuery, sortField, sortOrder, itemsPerPage]);
+
+    const filteredAndSortedFiles = useMemo(() => {
+        let result = trashFiles.filter(file =>
+            file.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            file.subjectName.toLowerCase().includes(searchQuery.toLowerCase())
+        );
+
+        result.sort((a, b) => {
+            let comp = 0;
+            switch (sortField) {
+                case 'name':
+                    comp = a.name.localeCompare(b.name);
+                    break;
+                case 'subject':
+                    comp = a.subjectName.localeCompare(b.subjectName);
+                    break;
+                case 'size':
+                    comp = a.size - b.size;
+                    break;
+                case 'deletedAt':
+                    comp = a.deletedTimestamp - b.deletedTimestamp;
+                    break;
+                case 'daysRemaining':
+                    comp = a.daysRemaining - b.daysRemaining;
+                    break;
+            }
+            return sortOrder === 'asc' ? comp : -comp;
+        });
+
+        return result;
+    }, [trashFiles, searchQuery, sortField, sortOrder]);
+
+    // Pagination calculations
+    const totalItems = filteredAndSortedFiles.length;
+    const totalPages = Math.max(1, Math.ceil(totalItems / itemsPerPage));
+    const paginatedFiles = useMemo(() => {
+        const start = (currentPage - 1) * itemsPerPage;
+        return filteredAndSortedFiles.slice(start, start + itemsPerPage);
+    }, [filteredAndSortedFiles, currentPage, itemsPerPage]);
+
+    const totalRecoverableBytes = useMemo(() => {
+        return trashFiles.reduce((acc, file) => acc + file.size, 0);
+    }, [trashFiles]);
+
+    const totalRecoverableMB = (totalRecoverableBytes / (1024 * 1024)).toFixed(2);
+
+    const handleSort = (field: SortField) => {
+        if (sortField === field) {
+            setSortOrder(prev => (prev === 'asc' ? 'desc' : 'asc'));
+        } else {
+            setSortField(field);
+            setSortOrder('asc');
+        }
     };
 
-    const handleEmptyTrash = () => {
-        setTrashFiles([]);
-        toast.success('Trash bin emptied. All storage space has been permanently reclaimed.');
+    const handleRestore = async (id: string, name: string) => {
+        setActionLoading(id);
+        try {
+            await restoreFile({ fileId: id, path: '/trash' });
+            setTrashFiles(prev => prev.filter(f => f.id !== id));
+            toast.success(`Restored "${name}" successfully. Storage quota has been refunded!`);
+        } catch (error: any) {
+            toast.error(error?.message || `Failed to restore "${name}".`);
+        } finally {
+            setActionLoading(null);
+        }
+    };
+
+    const handleDeletePermanently = async (id: string, name: string) => {
+        setActionLoading(id);
+        try {
+            await permanentDeleteFile({ fileId: id, path: '/trash' });
+            setTrashFiles(prev => prev.filter(f => f.id !== id));
+            setSelectedFileToDelete(null);
+            toast.success(`"${name}" has been permanently purged.`);
+        } catch (error: any) {
+            toast.error(error?.message || `Failed to permanently delete "${name}".`);
+        } finally {
+            setActionLoading(null);
+        }
+    };
+
+    const handleEmptyTrash = async () => {
+        if (trashFiles.length === 0) return;
+        setLoading(true);
+        try {
+            for (const f of trashFiles) {
+                await permanentDeleteFile({ fileId: f.id, path: '/trash' }).catch(() => null);
+            }
+            setTrashFiles([]);
+            toast.success('Trash bin emptied. All storage space has been permanently reclaimed.');
+        } catch {
+            toast.error('An error occurred while emptying the trash bin.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const renderSortIcon = (field: SortField) => {
+        if (sortField !== field) {
+            return <ArrowUpDown className="h-3.5 w-3.5 text-light-400 opacity-40 group-hover:opacity-100 transition-opacity" />;
+        }
+        return sortOrder === 'asc' ? (
+            <ChevronUp className="h-3.5 w-3.5 text-brand" />
+        ) : (
+            <ChevronDown className="h-3.5 w-3.5 text-brand" />
+        );
     };
 
     return (
-        <div className="flex flex-col gap-8 pb-16 pt-4 max-w-7xl mx-auto w-full px-4 sm:px-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-light-800 dark:border-dark-400 pb-6">
-                <div className="space-y-1.5">
-                    <div className="flex items-center gap-3">
-                        <Link href="/home" className="p-2 rounded-full hover:bg-light-800 dark:hover:bg-dark-300 transition text-dark300_light700">
-                            <ArrowLeft className="h-5 w-5" />
-                        </Link>
+        <div className="flex flex-col gap-6 pb-20 pt-6 max-w-7xl mx-auto w-full px-5 sm:px-6">
+            
+            {/* Top Navigation & Header Banner */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-light-700 dark:border-dark-400 pb-5">
+                <div className="flex items-center gap-3.5">
+                    <Link
+                        href="/home"
+                        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white dark:bg-dark-300 border border-light-700 dark:border-dark-400 shadow-xs hover:bg-light-800 dark:hover:bg-dark-400 text-dark300_light700 transition-all"
+                        title="Back to Dashboard"
+                    >
+                        <ArrowLeft className="h-5 w-5" />
+                    </Link>
+                    <div>
                         <div className="flex items-center gap-2.5">
-                            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-red-500/10 text-red-600">
-                                <Trash2 className="h-6 w-6" />
-                            </div>
-                            <h1 className="h1 font-bold text-dark100_light900">Trash Bin</h1>
+                            <h1 className="h2 text-dark100_light900 font-bold">Trash Bin</h1>
+                            <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20">
+                                {trashFiles.length} {trashFiles.length === 1 ? 'document' : 'documents'}
+                            </span>
                         </div>
+                        <p className="caption text-dark500_light400 mt-0.5">
+                            Deleted documents automatically purge after 30 days. Restore files right now to refund your exact storage quota.
+                        </p>
                     </div>
-                    <p className="text-sm text-dark500_light400 pl-14">
-                        Items are permanently purged after 30 days. Restoring a document immediately reclaims your storage quota.
-                    </p>
                 </div>
 
                 {trashFiles.length > 0 && (
                     <AlertDialog>
                         <AlertDialogTrigger asChild>
-                            <Button variant="destructive" className="rounded-full px-6 py-5 flex items-center gap-2 cursor-pointer shadow-sm self-start sm:self-auto">
+                            <Button
+                                type="button"
+                                variant="destructive"
+                                disabled={loading || actionLoading !== null}
+                                className="h-10 px-5 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-semibold flex items-center gap-2 shadow-sm cursor-pointer self-start sm:self-center disabled:opacity-50 transition"
+                            >
                                 <Trash2 className="h-4 w-4" />
-                                <span className="font-semibold">Empty Trash</span>
+                                <span>Empty Trash Bin ({totalRecoverableMB} MB)</span>
                             </Button>
                         </AlertDialogTrigger>
-                        <AlertDialogContent className="rounded-3xl bg-white dark:bg-dark-200 border border-light-800 dark:border-dark-400">
-                            <AlertDialogHeader>
-                                <AlertDialogTitle className="text-xl font-bold text-dark100_light900 flex items-center gap-2">
-                                    <AlertTriangle className="h-6 w-6 text-red-500" />
-                                    Empty entire trash bin?
-                                </AlertDialogTitle>
-                                <AlertDialogDescription className="text-dark500_light400">
-                                    This action cannot be undone. All {trashFiles.length} files ({totalRecoverableMB} MB) will be permanently deleted from servers and cannot be recovered.
+                        <AlertDialogContent className="rounded-3xl bg-white dark:bg-dark-200 border border-light-700 dark:border-dark-400 shadow-2xl p-6 sm:p-8">
+                            <AlertDialogHeader className="space-y-2">
+                                <div className="flex items-center gap-2.5 text-red-600 font-bold text-lg">
+                                    <AlertTriangle className="h-5 w-5" />
+                                    <span>Purge entire trash bin permanently?</span>
+                                </div>
+                                <AlertDialogDescription className="text-dark500_light400 text-sm">
+                                    You are about to permanently delete <span className="font-semibold text-dark100_light900">{trashFiles.length} files</span> ({totalRecoverableMB} MB total). All AI vector embeddings in Qdrant and cloud storage items will be purged forever and cannot be undone.
                                 </AlertDialogDescription>
                             </AlertDialogHeader>
-                            <AlertDialogFooter className="pt-4">
-                                <AlertDialogCancel className="rounded-xl px-5 cursor-pointer border-light-800 dark:border-dark-400">
+                            <AlertDialogFooter className="pt-4 flex gap-2">
+                                <AlertDialogCancel className="rounded-xl h-10 px-5 text-xs font-semibold cursor-pointer border border-light-700 dark:border-dark-400 bg-light-800 dark:bg-dark-300 text-dark200_light800 m-0">
                                     Cancel
                                 </AlertDialogCancel>
-                                <AlertDialogAction onClick={handleEmptyTrash} className="rounded-xl px-6 bg-red-600 hover:bg-red-700 text-white font-semibold cursor-pointer">
+                                <AlertDialogAction
+                                    onClick={handleEmptyTrash}
+                                    className="rounded-xl h-10 px-6 bg-red-600 hover:bg-red-700 text-white text-xs font-semibold cursor-pointer shadow-md m-0"
+                                >
                                     Yes, Empty Trash
                                 </AlertDialogAction>
                             </AlertDialogFooter>
@@ -160,168 +285,396 @@ export default function TrashPage() {
                 )}
             </div>
 
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 bg-light-900 dark:bg-dark-300 p-4 rounded-2xl border border-light-800 dark:border-dark-400 shadow-xs">
-                <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600">
-                        <AlertCircle className="h-5 w-5" />
+            {/* Action Toolbar (Search, Sort Selector, View Mode & Stats) */}
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white dark:bg-dark-300 p-4 rounded-2xl border border-light-700 dark:border-dark-400 shadow-xs">
+                
+                {/* Left: Reclaimable Quota indicator & Search */}
+                <div className="flex flex-col sm:flex-row sm:items-center gap-4 flex-1">
+                    <div className="flex items-center gap-2.5 px-3.5 py-2 rounded-xl bg-light-800 dark:bg-dark-200 border border-light-700 dark:border-dark-400 shrink-0">
+                        <HardDrive className="h-4 w-4 text-brand" />
+                        <span className="text-xs font-semibold text-dark200_light800">
+                            Reclaimable: <span className="font-bold text-brand">{totalRecoverableMB} MB</span>
+                        </span>
                     </div>
-                    <div>
-                        <p className="text-sm font-semibold text-dark200_light800">
-                            {trashFiles.length} {trashFiles.length === 1 ? 'item' : 'items'} in Trash
-                        </p>
-                        <p className="text-xs text-dark500_light400">
-                            Total recoverable storage: <span className="font-medium text-brand">{totalRecoverableMB} MB</span>
-                        </p>
+
+                    <div className="relative w-full sm:max-w-md">
+                        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-dark500_light400 pointer-events-none" />
+                        <Input
+                            type="text"
+                            placeholder="Filter by file title or subject..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="pl-10 pr-9 h-10 w-full rounded-xl border border-light-700 dark:border-dark-400 bg-light-800/60 dark:bg-dark-200 text-xs text-dark100_light900 placeholder:text-dark500_light400 focus-visible:ring-2 focus-visible:ring-brand focus-visible:border-transparent transition-all"
+                        />
+                        {searchQuery && (
+                            <button
+                                onClick={() => setSearchQuery('')}
+                                className="absolute right-3 top-1/2 -translate-y-1/2 text-dark500_light400 hover:text-dark100_light900 p-0.5 rounded-full"
+                            >
+                                <X className="h-3.5 w-3.5" />
+                            </button>
+                        )}
                     </div>
                 </div>
 
-                <div className="relative min-w-[280px]">
-                    <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-dark500_light400 pointer-events-none" />
-                    <Input
-                        type="text"
-                        placeholder="Search deleted files or subjects..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="pl-10 h-11 rounded-xl border-light-800 dark:border-dark-400 bg-white dark:bg-dark-200 text-sm focus-visible:ring-emerald-500"
-                    />
+                {/* Right: Quick Sort Selector & View Mode Switcher */}
+                <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0 border-t lg:border-t-0 pt-3 lg:pt-0 border-light-700 dark:border-dark-400">
+                    <div className="flex items-center gap-2">
+                        <span className="text-xs font-medium text-dark500_light400">Sort by:</span>
+                        <select
+                            value={sortField}
+                            onChange={(e) => setSortField(e.target.value as SortField)}
+                            className="h-9 px-3 rounded-xl border border-light-700 dark:border-dark-400 bg-light-800/60 dark:bg-dark-200 text-xs font-semibold text-dark200_light800 focus:outline-none focus:ring-1 focus:ring-brand cursor-pointer"
+                        >
+                            <option value="daysRemaining">Urgency (Days Left)</option>
+                            <option value="name">File Name</option>
+                            <option value="subject">Subject</option>
+                            <option value="size">File Size</option>
+                            <option value="deletedAt">Date Deleted</option>
+                        </select>
+                        <button
+                            onClick={() => setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')}
+                            className="h-9 px-2.5 rounded-xl border border-light-700 dark:border-dark-400 bg-light-800/60 dark:bg-dark-200 text-dark200_light800 hover:bg-light-700 dark:hover:bg-dark-400 transition flex items-center justify-center cursor-pointer"
+                            title={`Order: ${sortOrder === 'asc' ? 'Ascending' : 'Descending'}`}
+                        >
+                            {sortOrder === 'asc' ? <ChevronUp className="h-4 w-4 text-brand" /> : <ChevronDown className="h-4 w-4 text-brand" />}
+                        </button>
+                    </div>
+
+                    <div className="flex items-center gap-1 bg-light-800 dark:bg-dark-200 p-1 rounded-xl border border-light-700 dark:border-dark-400">
+                        <button
+                            onClick={() => setViewMode('table')}
+                            className={`p-1.5 rounded-lg transition-all cursor-pointer ${
+                                viewMode === 'table' ? 'bg-white dark:bg-dark-300 text-brand shadow-xs' : 'text-dark500_light400 hover:text-dark100_light900'
+                            }`}
+                            title="Table View (Compact Layout)"
+                        >
+                            <ListFilter className="h-4 w-4" />
+                        </button>
+                        <button
+                            onClick={() => setViewMode('grid')}
+                            className={`p-1.5 rounded-lg transition-all cursor-pointer ${
+                                viewMode === 'grid' ? 'bg-white dark:bg-dark-300 text-brand shadow-xs' : 'text-dark500_light400 hover:text-dark100_light900'
+                            }`}
+                            title="Grid View (Visual Cards)"
+                        >
+                            <LayoutGrid className="h-4 w-4" />
+                        </button>
+                    </div>
                 </div>
             </div>
 
-            {trashFiles.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-20 px-4 text-center border-2 border-dashed border-light-800 dark:border-dark-400 rounded-3xl bg-light-900/40 dark:bg-dark-300/20">
-                    <div className="flex h-20 w-20 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-600 mb-4 shadow-inner">
-                        <CheckCircle2 className="h-10 w-10" />
+            {/* Main Content Area */}
+            {loading ? (
+                <div className="flex flex-col items-center justify-center py-24 px-4 text-center bg-white dark:bg-dark-300 rounded-2xl border border-light-700 dark:border-dark-400">
+                    <div className="w-8 h-8 rounded-full border-3 border-brand border-t-transparent animate-spin mb-3" />
+                    <p className="body-2 text-dark500_light400">Loading trash documents...</p>
+                </div>
+            ) : trashFiles.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-24 px-6 text-center bg-white dark:bg-dark-300 rounded-2xl border border-light-700 dark:border-dark-400 shadow-xs w-full">
+                    <div className="flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500/10 text-brand mb-4">
+                        <CheckCircle2 className="h-8 w-8" />
                     </div>
-                    <h3 className="h3 font-bold text-dark100_light900 mb-2">Trash Bin is Empty</h3>
-                    <p className="text-sm text-dark500_light400 max-w-md mb-6">
-                        All clean! There are no deleted files consuming storage. When you remove documents from your subjects, they will appear here for 30 days before being permanently purged.
+                    <h3 className="h3 font-bold text-dark100_light900 mb-1.5">Your Trash Bin is Clean</h3>
+                    <p className="caption text-dark500_light400 max-w-md mb-6 leading-relaxed">
+                        There are no deleted documents occupying your storage quota. When you remove items from your subjects, they will appear here for 30 days before permanent automatic purge.
                     </p>
                     <Link href="/home">
-                        <Button className="primary-gradient text-light-900 rounded-full px-8 py-6 font-medium shadow-md cursor-pointer">
+                        <Button className="primary-btn h-10 px-6 text-xs rounded-xl cursor-pointer">
                             Back to Dashboard
                         </Button>
                     </Link>
                 </div>
-            ) : filteredFiles.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-16 px-4 text-center border border-light-800 dark:border-dark-400 rounded-3xl bg-white dark:bg-dark-200">
-                    <Search className="h-12 w-12 text-dark500_light400 mb-3 opacity-40" />
-                    <h4 className="text-lg font-semibold text-dark200_light800 mb-1">No matching files found</h4>
-                    <p className="text-sm text-dark500_light400">
-                        Try adjusting your search terms for "{searchQuery}"
+            ) : filteredAndSortedFiles.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-20 px-6 text-center bg-white dark:bg-dark-300 rounded-2xl border border-light-700 dark:border-dark-400 w-full">
+                    <Search className="h-10 w-10 text-dark500_light400 mb-2 opacity-40" />
+                    <h4 className="text-base font-bold text-dark100_light900 mb-1">No matching files found</h4>
+                    <p className="caption text-dark500_light400 max-w-sm mb-4">
+                        No deleted documents matched "{searchQuery}"
                     </p>
+                    <Button
+                        variant="outline"
+                        onClick={() => setSearchQuery('')}
+                        className="h-9 px-4 rounded-xl border-light-700 dark:border-dark-400 text-dark200_light800 text-xs font-semibold cursor-pointer"
+                    >
+                        Clear Search Filter
+                    </Button>
+                </div>
+            ) : viewMode === 'table' ? (
+                /* ==========================================
+                   STRUCTURED DATA TABLE VIEW (Exact Grid Columns)
+                   ========================================== */
+                <div className="rounded-2xl border border-light-700 dark:border-dark-400 bg-white dark:bg-dark-300 shadow-xs overflow-hidden">
+                    {/* Clickable Table Header Grid */}
+                    <div className="grid grid-cols-12 gap-4 px-6 py-3.5 bg-light-800/90 dark:bg-dark-200/90 border-b border-light-700 dark:border-dark-400 text-[11px] font-bold uppercase tracking-wider text-dark500_light400 select-none">
+                        <button
+                            onClick={() => handleSort('name')}
+                            className="col-span-12 sm:col-span-5 flex items-center gap-1.5 hover:text-dark100_light900 text-left group cursor-pointer"
+                        >
+                            <span>Document Name & Subject</span>
+                            {renderSortIcon('name')}
+                        </button>
+                        <button
+                            onClick={() => handleSort('size')}
+                            className="col-span-6 sm:col-span-2 flex items-center gap-1 hover:text-dark100_light900 group cursor-pointer"
+                        >
+                            <span>Size</span>
+                            {renderSortIcon('size')}
+                        </button>
+                        <button
+                            onClick={() => handleSort('deletedAt')}
+                            className="col-span-6 sm:col-span-2 flex items-center gap-1 hover:text-dark100_light900 group cursor-pointer"
+                        >
+                            <span>Deleted On</span>
+                            {renderSortIcon('deletedAt')}
+                        </button>
+                        <button
+                            onClick={() => handleSort('daysRemaining')}
+                            className="col-span-6 sm:col-span-2 flex items-center gap-1 hover:text-dark100_light900 group cursor-pointer"
+                        >
+                            <span>Auto-Purge</span>
+                            {renderSortIcon('daysRemaining')}
+                        </button>
+                        <div className="col-span-6 sm:col-span-1 text-right font-semibold">
+                            Actions
+                        </div>
+                    </div>
+
+                    {/* Table Rows */}
+                    <div className="divide-y divide-light-700/60 dark:divide-dark-400/60">
+                        {paginatedFiles.map((file) => {
+                            const { type, extension } = getFileType(file.name);
+                            const sizeMB = (file.size / (1024 * 1024)).toFixed(2);
+                            const isUrgent = file.daysRemaining <= 5;
+                            const isRowBusy = actionLoading === file.id;
+
+                            return (
+                                <div
+                                    key={file.id}
+                                    className="grid grid-cols-12 gap-4 px-6 py-4 items-center hover:bg-light-800/40 dark:hover:bg-dark-200/40 transition-colors group"
+                                >
+                                    {/* Col 1 (Span 5): Thumbnail, Name & Subject */}
+                                    <div className="col-span-12 sm:col-span-5 flex items-center gap-3.5 min-w-0">
+                                        <Thumbnail
+                                            type={type}
+                                            url={file.url}
+                                            extension={extension}
+                                            className="shrink-0 h-11 w-11 rounded-xl shadow-2xs"
+                                        />
+                                        <div className="min-w-0 flex-1 space-y-1">
+                                            <p className="font-semibold text-dark100_light900 text-sm truncate group-hover:text-brand transition-colors" title={file.name}>
+                                                {file.name}
+                                            </p>
+                                            <div className="flex items-center gap-2">
+                                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11px] font-medium bg-indigo-50 text-indigo-600 dark:bg-indigo-950/40 dark:text-indigo-400 border border-indigo-200/60 dark:border-indigo-800/60">
+                                                    <BookOpen className="h-3 w-3 shrink-0" />
+                                                    <span className="truncate max-w-[130px]">{file.subjectName}</span>
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Col 2 (Span 2): File Size */}
+                                    <div className="col-span-6 sm:col-span-2 text-xs font-semibold text-dark200_light800">
+                                        {sizeMB} MB
+                                    </div>
+
+                                    {/* Col 3 (Span 2): Deleted Date */}
+                                    <div className="col-span-6 sm:col-span-2 text-xs text-dark500_light400">
+                                        {file.deletedAt}
+                                    </div>
+
+                                    {/* Col 4 (Span 2): Urgency Countdown Pill */}
+                                    <div className="col-span-6 sm:col-span-2">
+                                        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold ${
+                                            isUrgent
+                                                ? 'bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20 animate-pulse'
+                                                : 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20'
+                                        }`}>
+                                            <Clock className="h-3 w-3 shrink-0" />
+                                            <span>{file.daysRemaining} {file.daysRemaining === 1 ? 'day' : 'days'} left</span>
+                                        </span>
+                                    </div>
+
+                                    {/* Col 5 (Span 1): Action Buttons (Restore & Delete) */}
+                                    <div className="col-span-6 sm:col-span-1 flex items-center justify-end gap-1.5">
+                                        <button
+                                            type="button"
+                                            disabled={isRowBusy}
+                                            onClick={() => handleRestore(file.id, file.name)}
+                                            className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-emerald-50 text-emerald-700 hover:bg-brand hover:text-white dark:bg-emerald-500/15 dark:text-emerald-400 dark:hover:bg-brand dark:hover:text-white transition-all flex items-center gap-1.5 border border-emerald-200/80 dark:border-emerald-500/30 cursor-pointer disabled:opacity-50"
+                                            title="Restore file right now"
+                                        >
+                                            <RotateCcw className="h-3.5 w-3.5" />
+                                            <span className="hidden sm:inline">{isRowBusy ? '...' : 'Restore'}</span>
+                                        </button>
+
+                                        <AlertDialog>
+                                            <AlertDialogTrigger asChild>
+                                                <button
+                                                    type="button"
+                                                    disabled={isRowBusy}
+                                                    onClick={() => setSelectedFileToDelete(file)}
+                                                    className="p-1.5 rounded-xl text-dark500_light400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors cursor-pointer disabled:opacity-50"
+                                                    title="Permanently Delete"
+                                                >
+                                                    <Trash2 className="h-4 w-4" />
+                                                </button>
+                                            </AlertDialogTrigger>
+                                            <AlertDialogContent className="rounded-3xl bg-white dark:bg-dark-200 border border-light-700 dark:border-dark-400 shadow-2xl p-6 sm:p-8">
+                                                <AlertDialogHeader className="space-y-2">
+                                                    <div className="flex items-center gap-2 text-red-600 font-bold text-lg">
+                                                        <AlertTriangle className="h-5 w-5" />
+                                                        <span>Permanently delete file?</span>
+                                                    </div>
+                                                    <AlertDialogDescription className="text-dark500_light400 text-sm">
+                                                        Are you sure you want to permanently delete <span className="font-semibold text-dark100_light900">"{file.name}"</span>? This will immediately remove all AI vector embeddings from Qdrant and cloud storage items. This action cannot be undone.
+                                                    </AlertDialogDescription>
+                                                </AlertDialogHeader>
+                                                <AlertDialogFooter className="pt-4 flex gap-2">
+                                                    <AlertDialogCancel className="rounded-xl h-10 px-5 text-xs font-semibold cursor-pointer border border-light-700 dark:border-dark-400 bg-light-800 dark:bg-dark-300 text-dark200_light800 m-0">
+                                                        Cancel
+                                                    </AlertDialogCancel>
+                                                    <AlertDialogAction
+                                                        onClick={() => handleDeletePermanently(file.id, file.name)}
+                                                        className="rounded-xl h-10 px-5 bg-red-600 hover:bg-red-700 text-white text-xs font-semibold cursor-pointer shadow-md m-0"
+                                                    >
+                                                        Delete Permanently
+                                                    </AlertDialogAction>
+                                                </AlertDialogFooter>
+                                            </AlertDialogContent>
+                                        </AlertDialog>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+
+                    {/* Pagination Bar */}
+                    <div className="px-6 pb-4">
+                        <Pagination
+                            page={currentPage}
+                            totalPages={totalPages}
+                            total={totalItems}
+                            onPageChange={(p) => setCurrentPage(p)}
+                            itemsPerPage={itemsPerPage}
+                            onItemsPerPageChange={(limit) => { setItemsPerPage(limit); setCurrentPage(1); }}
+                        />
+                    </div>
                 </div>
             ) : (
-                <div className="overflow-hidden rounded-3xl border border-light-800 dark:border-dark-400 bg-white dark:bg-dark-200 shadow-sm">
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-left border-collapse">
-                            <thead>
-                                <tr className="border-b border-light-800 dark:border-dark-400 bg-light-900/60 dark:bg-dark-300/40 text-xs font-semibold uppercase tracking-wider text-dark500_light400">
-                                    <th className="py-4 px-6">File Name & Subject</th>
-                                    <th className="py-4 px-6">Size</th>
-                                    <th className="py-4 px-6">Deleted On</th>
-                                    <th className="py-4 px-6">Auto-Purge In</th>
-                                    <th className="py-4 px-6 text-right">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-light-800 dark:divide-dark-400 text-sm">
-                                {filteredFiles.map((file) => {
-                                    const { type, extension } = getFileType(file.name);
-                                    const sizeMB = (file.size / (1024 * 1024)).toFixed(2);
-                                    const isUrgent = file.daysRemaining <= 5;
+                /* ==========================================
+                   GRID VIEW (Cards Mode with Pagination)
+                   ========================================== */
+                <div className="space-y-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+                        {paginatedFiles.map((file) => {
+                            const { type, extension } = getFileType(file.name);
+                            const sizeMB = (file.size / (1024 * 1024)).toFixed(2);
+                            const isUrgent = file.daysRemaining <= 5;
+                            const isRowBusy = actionLoading === file.id;
 
-                                    return (
-                                        <tr key={file.id} className="hover:bg-light-900/80 dark:hover:bg-dark-300/50 transition-colors group">
-                                            <td className="py-4 px-6 max-w-[320px]">
-                                                <div className="flex items-center gap-3.5">
-                                                    <Thumbnail
-                                                        type={type}
-                                                        url={file.url}
-                                                        extension={extension}
-                                                        className="h-11 w-11 shrink-0"
-                                                    />
-                                                    <div className="overflow-hidden">
-                                                        <p className="font-semibold text-dark200_light800 truncate" title={file.name}>
-                                                            {file.name}
-                                                        </p>
-                                                        <span className="inline-block mt-0.5 text-xs font-medium px-2.5 py-0.5 rounded-full bg-light-800 dark:bg-dark-400 text-dark400_light700">
-                                                            {file.subjectName}
-                                                        </span>
+                            return (
+                                <div
+                                    key={file.id}
+                                    className={`group flex flex-col justify-between rounded-2xl bg-white dark:bg-dark-300 p-5 border transition-all duration-200 shadow-xs hover:shadow-md hover:-translate-y-0.5 ${
+                                        isUrgent ? 'border-red-500/40 dark:border-red-500/30' : 'border-light-700 dark:border-dark-400'
+                                    }`}
+                                >
+                                    <div>
+                                        <div className="flex items-center justify-between gap-2 mb-3">
+                                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11px] font-medium bg-indigo-50 text-indigo-600 dark:bg-indigo-950/40 dark:text-indigo-400 border border-indigo-200/60 truncate max-w-[140px]">
+                                                <BookOpen className="h-3 w-3 shrink-0" />
+                                                <span>{file.subjectName}</span>
+                                            </span>
+                                            <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold ${
+                                                isUrgent ? 'bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20' : 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20'
+                                            }`}>
+                                                <Clock className="h-3 w-3" />
+                                                <span>{file.daysRemaining}d left</span>
+                                            </span>
+                                        </div>
+
+                                        <div className="flex flex-col items-center text-center my-3 space-y-2.5">
+                                            <Thumbnail
+                                                type={type}
+                                                url={file.url}
+                                                extension={extension}
+                                                className="h-16 w-16 rounded-2xl shadow-2xs"
+                                            />
+                                            <div className="w-full space-y-0.5">
+                                                <h4 className="font-bold text-dark100_light900 truncate text-sm px-1 group-hover:text-brand transition-colors" title={file.name}>
+                                                    {file.name}
+                                                </h4>
+                                                <p className="text-[11px] text-dark500_light400 font-medium">
+                                                    {sizeMB} MB • Deleted {file.deletedAt}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex items-center gap-2 mt-3 pt-3 border-t border-light-700/60 dark:border-dark-400/60">
+                                        <button
+                                            type="button"
+                                            disabled={isRowBusy}
+                                            onClick={() => handleRestore(file.id, file.name)}
+                                            className="flex-1 py-2 rounded-xl bg-emerald-50 text-emerald-700 hover:bg-brand hover:text-white dark:bg-emerald-500/15 dark:text-emerald-400 dark:hover:bg-brand font-semibold text-xs flex items-center justify-center gap-1.5 transition-all border border-emerald-200/80 cursor-pointer disabled:opacity-50"
+                                        >
+                                            <RotateCcw className="h-3.5 w-3.5" />
+                                            <span>{isRowBusy ? 'Restoring...' : 'Restore'}</span>
+                                        </button>
+
+                                        <AlertDialog>
+                                            <AlertDialogTrigger asChild>
+                                                <button
+                                                    type="button"
+                                                    disabled={isRowBusy}
+                                                    onClick={() => setSelectedFileToDelete(file)}
+                                                    className="p-2 rounded-xl text-dark500_light400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors cursor-pointer disabled:opacity-50 shrink-0"
+                                                    title="Permanently Delete"
+                                                >
+                                                    <Trash2 className="h-4 w-4" />
+                                                </button>
+                                            </AlertDialogTrigger>
+                                            <AlertDialogContent className="rounded-3xl bg-white dark:bg-dark-200 border border-light-700 dark:border-dark-400 shadow-2xl p-6 sm:p-8">
+                                                <AlertDialogHeader className="space-y-2">
+                                                    <div className="flex items-center gap-2 text-red-600 font-bold text-lg">
+                                                        <AlertTriangle className="h-5 w-5" />
+                                                        <span>Permanently delete file?</span>
                                                     </div>
-                                                </div>
-                                            </td>
-
-                                            <td className="py-4 px-6 font-medium text-dark300_light700 whitespace-nowrap">
-                                                {sizeMB} MB
-                                            </td>
-
-                                            <td className="py-4 px-6 text-dark400_light700 whitespace-nowrap">
-                                                {file.deletedAt}
-                                            </td>
-
-                                            <td className="py-4 px-6 whitespace-nowrap">
-                                                <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold ${
-                                                    isUrgent
-                                                        ? 'bg-red-500/10 text-red-600 border border-red-500/20'
-                                                        : 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20'
-                                                }`}>
-                                                    <Clock className="h-3.5 w-3.5" />
-                                                    <span>{file.daysRemaining} {file.daysRemaining === 1 ? 'day' : 'days'} left</span>
-                                                </div>
-                                            </td>
-
-                                            <td className="py-4 px-6 text-right whitespace-nowrap">
-                                                <div className="flex items-center justify-end gap-2">
-                                                    <Button
-                                                        type="button"
-                                                        onClick={() => handleRestore(file.id, file.name)}
-                                                        className="rounded-xl px-4 py-2 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-500/10 dark:text-emerald-400 dark:hover:bg-emerald-500/20 font-semibold text-xs flex items-center gap-1.5 cursor-pointer transition shadow-none border border-emerald-200 dark:border-emerald-500/30"
+                                                    <AlertDialogDescription className="text-dark500_light400 text-sm">
+                                                        Are you sure you want to permanently delete <span className="font-semibold text-dark100_light900">"{file.name}"</span>? This will immediately remove all AI vector embeddings from Qdrant and cloud storage items. This action cannot be undone.
+                                                    </AlertDialogDescription>
+                                                </AlertDialogHeader>
+                                                <AlertDialogFooter className="pt-4 flex gap-2">
+                                                    <AlertDialogCancel className="rounded-xl h-10 px-5 text-xs font-semibold cursor-pointer border border-light-700 dark:border-dark-400 bg-light-800 dark:bg-dark-300 text-dark200_light800 m-0">
+                                                        Cancel
+                                                    </AlertDialogCancel>
+                                                    <AlertDialogAction
+                                                        onClick={() => handleDeletePermanently(file.id, file.name)}
+                                                        className="rounded-xl h-10 px-5 bg-red-600 hover:bg-red-700 text-white text-xs font-semibold cursor-pointer shadow-md m-0"
                                                     >
-                                                        <RotateCcw className="h-3.5 w-3.5" />
-                                                        <span>Restore</span>
-                                                    </Button>
+                                                        Delete Permanently
+                                                    </AlertDialogAction>
+                                                </AlertDialogFooter>
+                                            </AlertDialogContent>
+                                        </AlertDialog>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
 
-                                                    <AlertDialog>
-                                                        <AlertDialogTrigger asChild>
-                                                            <Button
-                                                                type="button"
-                                                                variant="ghost"
-                                                                onClick={() => setSelectedFileToDelete(file)}
-                                                                className="rounded-xl p-2.5 text-dark500_light400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10 cursor-pointer transition"
-                                                                title="Delete Permanently"
-                                                            >
-                                                                <Trash2 className="h-4 w-4" />
-                                                            </Button>
-                                                        </AlertDialogTrigger>
-                                                        <AlertDialogContent className="rounded-3xl bg-white dark:bg-dark-200 border border-light-800 dark:border-dark-400">
-                                                            <AlertDialogHeader>
-                                                                <AlertDialogTitle className="text-xl font-bold text-dark100_light900 flex items-center gap-2">
-                                                                    <AlertTriangle className="h-6 w-6 text-red-500" />
-                                                                    Permanently delete file?
-                                                                </AlertDialogTitle>
-                                                                <AlertDialogDescription className="text-dark500_light400">
-                                                                    Are you sure you want to permanently delete <span className="font-semibold text-dark200_light800">"{file.name}"</span>? This will immediately remove all AI vector embeddings from Qdrant and blob storage. This action cannot be undone.
-                                                                </AlertDialogDescription>
-                                                            </AlertDialogHeader>
-                                                            <AlertDialogFooter className="pt-4">
-                                                                <AlertDialogCancel className="rounded-xl px-5 cursor-pointer border-light-800 dark:border-dark-400">
-                                                                    Cancel
-                                                                </AlertDialogCancel>
-                                                                <AlertDialogAction
-                                                                    onClick={() => handleDeletePermanently(file.id, file.name)}
-                                                                    className="rounded-xl px-6 bg-red-600 hover:bg-red-700 text-white font-semibold cursor-pointer"
-                                                                >
-                                                                    Delete Permanently
-                                                                </AlertDialogAction>
-                                                            </AlertDialogFooter>
-                                                        </AlertDialogContent>
-                                                    </AlertDialog>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    );
-                                })}
-                            </tbody>
-                        </table>
+                    {/* Grid Pagination Footer */}
+                    <div className="px-6 pb-4">
+                        <Pagination
+                            page={currentPage}
+                            totalPages={totalPages}
+                            total={totalItems}
+                            onPageChange={(p) => setCurrentPage(p)}
+                            itemsPerPage={itemsPerPage}
+                            onItemsPerPageChange={(limit) => { setItemsPerPage(limit); setCurrentPage(1); }}
+                        />
                     </div>
                 </div>
             )}

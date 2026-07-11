@@ -5,6 +5,14 @@ import { parseStringify } from "@/lib/utils";
 const connection_url = process.env.NEXT_PUBLIC_API_URL;
 
 export class LocalAuth implements IAuthService {
+    private handleError(error: any, context: string): never {
+        if (error && typeof error === 'object' && error.digest?.startsWith('NEXT_REDIRECT')) {
+            throw error;
+        }
+        console.error(`[LocalAuth:${context}]`, error instanceof Error ? error.message : error);
+        throw error;
+    }
+
     async createAccount({ fullName, email, password, dateOfBirth }: CreateAccountProps) {
         const res = await fetch(`${connection_url}/api/Auth/register`, {
             method: 'POST',
@@ -127,8 +135,7 @@ export class LocalAuth implements IAuthService {
 
             return parseStringify(targetUser);
         } catch (error) {
-            console.error("Get User By ID Error:", error);
-            throw error;
+            this.handleError(error, "getUserById");
         }
     }
 
@@ -145,8 +152,6 @@ export class LocalAuth implements IAuthService {
             },
             body: JSON.stringify({ refreshToken })
         });
-
-        console.log(refreshToken);
 
         const data = await res.json().catch(() => ({}));
 
@@ -173,8 +178,7 @@ export class LocalAuth implements IAuthService {
 
             return parseStringify(data.message || "Verification successful");
         } catch (error) {
-            console.error("Verify OTP Error:", error);
-            throw error;
+            this.handleError(error, "verifyOtp");
         }
     }
 
@@ -194,8 +198,7 @@ export class LocalAuth implements IAuthService {
 
             return parseStringify(data.message || "OTP resent successfully.");
         } catch (error) {
-            console.error("Resend OTP Error:", error);
-            throw error;
+            this.handleError(error, "resendOtp");
         }
     }
 }

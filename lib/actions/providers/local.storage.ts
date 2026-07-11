@@ -78,7 +78,7 @@ export class LocalStorage implements IFileStorage {
         try {
             const headers = await this.getHeaders();
 
-            const res = await fetch(`${connection_url}/api/Subject`, {
+            const res = await fetch(`${connection_url}/api/Subject?Limit=100`, {
                 method: 'GET',
                 headers,
             });
@@ -159,10 +159,13 @@ export class LocalStorage implements IFileStorage {
                 method: 'POST',
                 headers
             });
-            if (!res.ok) throw new Error("Cannot reprocess this document.");
+            if (!res.ok) {
+                const errorData = await res.json().catch(() => ({}));
+                throw new Error(`[${res.status}] ${errorData.message || "Cannot reprocess this document."}`);
+            }
             return await res.json();
-        } catch (error: any) {
-            throw new Error(error.message || "Error sending reprocess request");
+        } catch (error) {
+            this.handleError(error, "ReprocessFile");
         }
     }
 
@@ -171,11 +174,12 @@ export class LocalStorage implements IFileStorage {
             const headers = await this.getHeaders();
             const [sortBy, orderBy] = sort.split('-');
             const isDescending = orderBy === 'desc';
-            const offset = (page - 1) * limit;
+            const fetchLimit = types.length > 0 ? 100 : limit;
+            const fetchOffset = types.length > 0 ? 0 : (page - 1) * limit;
 
             const queryParams = new URLSearchParams({
-                Offset: offset.toString(),
-                Limit: limit.toString(),
+                Offset: fetchOffset.toString(),
+                Limit: fetchLimit.toString(),
                 SortBy: sortBy,
                 IsDescending: isDescending.toString()
             });
@@ -211,6 +215,8 @@ export class LocalStorage implements IFileStorage {
                 });
 
                 total = documents.length;
+                const offset = (page - 1) * limit;
+                documents = documents.slice(offset, offset + limit);
             }
 
             return parseStringify({ documents, total });
@@ -300,12 +306,27 @@ export class LocalStorage implements IFileStorage {
 
     async updateEditedFile({ fileId, file, path }: UpdateEditedFileProps) {
         try {
+            const headers = await this.getHeaders();
+            let subjectId = "";
+            try {
+                const getRes = await fetch(`${connection_url}/api/Document/${fileId}`, {
+                    method: 'GET',
+                    headers,
+                });
+                if (getRes.ok) {
+                    const currentFile = await getRes.json();
+                    subjectId = currentFile?.subjectId || "";
+                }
+            } catch (e) {
+                console.error("Failed to fetch existing file subjectId:", e);
+            }
+
             await this.deleteFile({ fileId, path });
 
             const newFileResponse = await this.uploadFile({
                 file,
                 path,
-                subjectId: "placeholder-or-fetch-from-original-file"
+                subjectId
             } as any);
 
             return parseStringify(newFileResponse);
@@ -447,6 +468,69 @@ export class LocalStorage implements IFileStorage {
 
         } catch (error) {
             this.handleError(error, "GetTotalSpaceUsed");
+        }
+    }
+
+    async getTrashFiles() {
+        try {
+            const headers = await this.getHeaders();
+            const res = await fetch(`${connection_url}/api/Document/trashed`, {
+                method: 'GET',
+                headers,
+                cache: 'no-store',
+            });
+
+            if (!res.ok) {
+                if (res.status === 404) return parseStringify({ documents: [] });
+                const errorData = await res.json().catch(() => ({}));
+                throw new Error(`[${res.status}] ${errorData.message || "Failed to fetch trash files"}`);
+            }
+
+            const responseData = await res.json();
+            const documents = responseData?.items || responseData?.documents || responseData || [];
+            return parseStringify({ documents: Array.isArray(documents) ? documents : [] });
+        } catch (error) {
+            this.handleError(error, "GetTrashFiles");
+        }
+    }
+
+    async restoreFile({ fileId, path }: { fileId: string; path?: string }) {
+        try {
+            const headers = await this.getHeaders();
+            const res = await fetch(`${connection_url}/api/Document/${fileId}/restore`, {
+                method: 'POST',
+                headers,
+            });
+
+            if (!res.ok) {
+                const errorData = await res.json().catch(() => ({}));
+                throw new Error(`[${res.status}] ${errorData.message || "Restore failed"}`);
+            }
+
+            if (path) revalidatePath(path);
+            return parseStringify({ status: "success" });
+        } catch (error) {
+            this.handleError(error, "RestoreFile");
+        }
+    }
+
+    async permanentDeleteFile({ fileId, path }: { fileId: string; path?: string }) {
+        try {
+            const headers = await this.getHeaders();
+            const res = await fetch(`${connection_url}/api/Document/${fileId}`, {
+                method: 'DELETE',
+                headers,
+            });
+
+            if (!res.ok) {
+                const errorData = await res.json().catch(() => ({}));
+                throw new Error(`[${res.status}] ${errorData.message || "Permanent delete failed"}`);
+            }
+
+            if (path) revalidatePath(path);
+            return parseStringify({ status: "success" });
+        } catch (error) {
+            this.handleError(error, "PermanentDeleteFile");
         }
     }
 }

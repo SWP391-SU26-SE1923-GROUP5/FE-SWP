@@ -186,8 +186,8 @@ export interface IFileStorage {
     updateFileUsers(props: UpdateFileUsersProps): Promise<File_ | undefined>;
     updateEditedFile(props: UpdateEditedFileProps): Promise<UploadFileResponse | undefined>;
     deleteFile(props: DeleteFileProps): Promise<{ status: string } | undefined>;
-    downloadFile(props: DownloadFileProps): Promise<{ data: string }>;
-    previewFile(props: DownloadFileProps): Promise<{ data: string; contentType: string }>;
+    downloadFile(props: DownloadFileProps): Promise<{ data: string; contentType?: string }>;
+    previewFile(props: DownloadFileProps): Promise<{ data: string; contentType?: string }>;
     getTotalSpaceUsed(): Promise<{
         image: StorageCategoryStats;
         document: StorageCategoryStats;
@@ -199,6 +199,9 @@ export interface IFileStorage {
     }>;
     getFileStatus(fileId: string): Promise<{ id: string; status: number; errorMessage?: string } | null>;
     reprocessFile(fileId: string): Promise<{ documentId: string; status: string; message: string } | null>;
+    getTrashFiles(): Promise<{ documents: File_[] }>;
+    restoreFile(props: { fileId: string; path?: string }): Promise<{ status: string } | undefined>;
+    permanentDeleteFile(props: { fileId: string; path?: string }): Promise<{ status: string } | undefined>;
 }
 
 export interface Flashcard {
@@ -255,6 +258,11 @@ export interface QuizQuestion {
 }
 
 export interface QuizResponse {
+    id?: string;
+    quizId?: string;
+    documentId?: string;
+    title?: string;
+    documentName?: string;
     quizTitle: string;
     questions: QuizQuestion[];
 }

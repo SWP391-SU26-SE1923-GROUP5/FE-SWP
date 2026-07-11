@@ -58,46 +58,46 @@ const Dashboard = async ({ searchParams }: DashboardProps) => {
                             const subjectName = (file as any).subjectName || (file as any).subject?.subjectName || fileSubject?.subjectName || fileSubject?.subjectCode || "General";
 
                             return (
-                                <li key={file.id} className="flex items-center justify-between gap-3">
-                                <FilePreviewWrapper file={file} className="flex items-center gap-3 flex-1">
-                                    <Thumbnail type={file.fileType} extension={file.fileExtension} url={file.fileLink} />
-                                    <div className="recent-file-details">
-                                        <div className="flex flex-col gap-1">
-                                            <p className="recent-file-name">{file.fileName}</p>
+                                <li key={file.id} className="flex items-center justify-between gap-2 sm:gap-3 py-2 border-b border-light-400/30 last:border-0">
+                                    <FilePreviewWrapper file={file} className="flex items-center gap-3 flex-1 min-w-0">
+                                        <Thumbnail type={file.fileType} extension={file.fileExtension} url={file.fileLink} />
+                                        <div className="flex flex-col gap-1 min-w-0 flex-1">
+                                            <p className="subtitle-2 line-clamp-1 truncate w-full text-light-100">{file.fileName}</p>
                                             <FormattedDateTime date={file.createdAt || ""} className="caption" />
                                         </div>
+                                    </FilePreviewWrapper>
+
+                                    <StatusPoller fileId={file.id} status={file.status} />
+
+                                    <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 ml-2">
+                                        <div className="flex flex-col sm:flex-row items-end sm:items-center gap-1 sm:gap-1.5">
+                                            <span className="px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-indigo-50 text-indigo-600 border border-indigo-200 flex items-center gap-1 shadow-xs max-w-[110px] sm:max-w-[130px]">
+                                                <BookOpen className="w-3 h-3 text-indigo-500 shrink-0" />
+                                                <span className="truncate">{subjectName}</span>
+                                            </span>
+                                            {(file.status === 5 || String(file.status).toLowerCase() === "processing") && (
+                                                <span className="px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-amber-50 text-amber-600 border border-amber-200 flex items-center gap-1 shadow-xs whitespace-nowrap">
+                                                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping shrink-0" />
+                                                    AI Processing...
+                                                </span>
+                                            )}
+                                            {(file.status === 2 || String(file.status).toLowerCase() === "done") && (
+                                                <span className="px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-emerald-50 text-brand border border-brand/30 shadow-xs whitespace-nowrap">
+                                                    ✓ AI Completed
+                                                </span>
+                                            )}
+                                            {(file.status === 6 || String(file.status).toLowerCase() === "failed") && (
+                                                <span className="px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-rose-50 text-rose-600 border border-rose-200 shadow-xs whitespace-nowrap">
+                                                    ⚠ Failed
+                                                </span>
+                                            )}
+                                        </div>
+
+                                        <div className="shrink-0 flex items-center">
+                                            <ActionDropdown file={file} />
+                                        </div>
                                     </div>
-                                </FilePreviewWrapper>
-
-                                <StatusPoller fileId={file.id} status={file.status} />
-
-                                <div className="flex items-center gap-2 mr-2 flex-wrap justify-end">
-                                    <span className="px-3 py-1 rounded-[20px] text-[11px] font-medium bg-indigo-50 text-indigo-600 border border-indigo-200 flex items-center gap-1.5 shadow-drop-3">
-                                        <BookOpen className="w-3 h-3 text-indigo-500 shrink-0" />
-                                        <span className="line-clamp-1 max-w-[120px]">{subjectName}</span>
-                                    </span>
-                                    {(file.status === 5 || String(file.status).toLowerCase() === "processing") && (
-                                        <span className="px-3 py-1 rounded-[20px] text-[11px] font-medium bg-amber-50 text-amber-600 border border-amber-200 flex items-center gap-1.5 shadow-drop-3">
-                                            <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping" />
-                                            AI Processing...
-                                        </span>
-                                    )}
-                                    {(file.status === 2 || String(file.status).toLowerCase() === "done") && (
-                                        <span className="px-3 py-1 rounded-[20px] text-[11px] font-medium bg-emerald-50 text-brand border border-brand/30 shadow-drop-3">
-                                            ✓ AI Completed
-                                        </span>
-                                    )}
-                                    {(file.status === 6 || String(file.status).toLowerCase() === "failed") && (
-                                        <span className="px-3 py-1 rounded-[20px] text-[11px] font-medium bg-rose-50 text-rose-600 border border-rose-200 shadow-drop-3">
-                                            ⚠ Failed
-                                        </span>
-                                    )}
-                                </div>
-
-                                <div className="shrink-0">
-                                    <ActionDropdown file={file} />
-                                </div>
-                            </li>
+                                </li>
                             );
                         })}
                     </ul>

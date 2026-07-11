@@ -41,7 +41,7 @@ export default function ApryseViewer({ file, path, closeModals, readOnly = false
                                 initialDoc: blobUrlRef.current ?? "",
                                 extension: ext,
                                 enableOfficeEditing: !readOnly,
-                                enableReadOnlyMode: readOnly,
+                                isReadOnly: readOnly,
                                 licenseKey: "demo:1782432031639:63f292a203000000006bfbfd2dedd818a75a9704b35fedfc1b98df0080",
                                 ...(isSpreadsheet && !readOnly && {
                                     initialMode: 'spreadsheetEditor',
@@ -49,7 +49,7 @@ export default function ApryseViewer({ file, path, closeModals, readOnly = false
                                         initialEditMode: 'editing'
                                     }
                                 })
-                            },
+                            } as any,
                             viewer.current
                         ).then((instance) => {
                             instanceRef.current = instance;
