@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo } from "react";
 import Link from "next/link";
-import { BrainCircuit, Clock, ArrowLeft, Trash2, Search, ArrowUpDown, History, Play, Filter } from "lucide-react";
+import { BrainCircuit, Clock, ArrowLeft, Trash2, Search, ArrowUpDown, History, Play, Filter, X, Calendar, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react";
 import { QuizRecord } from "@/types";
 import { deleteQuiz } from "@/lib/actions/ai.actions";
 
@@ -14,18 +14,31 @@ export default function QuizzesDashboardClient({ initialQuizzes }: Props) {
     const [quizzes, setQuizzes] = useState<QuizRecord[]>(initialQuizzes);
     const [searchQuery, setSearchQuery] = useState("");
     const [sortBy, setSortBy] = useState<"newest" | "oldest" | "title-asc" | "title-desc">("newest");
+    const [timeFilter, setTimeFilter] = useState<"all" | "7d" | "30d">("all");
     const [currentPage, setCurrentPage] = useState(1);
+    const [pageSize, setPageSize] = useState<number>(9);
     const [isDeleting, setIsDeleting] = useState<string | null>(null);
-    const pageSize = 9;
 
     const filteredAndSortedQuizzes = useMemo(() => {
         let result = [...quizzes];
 
+        // Search Filter
         if (searchQuery.trim()) {
             const query = searchQuery.toLowerCase();
             result = result.filter((q) => q.title?.toLowerCase().includes(query));
         }
 
+        // Time Range Filter
+        if (timeFilter !== "all") {
+            const now = new Date().getTime();
+            const daysMs = timeFilter === "7d" ? 7 * 24 * 60 * 60 * 1000 : 30 * 24 * 60 * 60 * 1000;
+            result = result.filter((q) => {
+                const createdTime = new Date(q.createdAt).getTime();
+                return now - createdTime <= daysMs;
+            });
+        }
+
+        // Sorting
         result.sort((a, b) => {
             if (sortBy === "newest") {
                 return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
@@ -40,13 +53,26 @@ export default function QuizzesDashboardClient({ initialQuizzes }: Props) {
         });
 
         return result;
-    }, [quizzes, searchQuery, sortBy]);
+    }, [quizzes, searchQuery, timeFilter, sortBy]);
 
     const totalPages = Math.max(1, Math.ceil(filteredAndSortedQuizzes.length / pageSize));
+    
+    // Ensure activePage remains valid if filter results shrink
+    const activePage = Math.min(currentPage, totalPages);
+
     const paginatedQuizzes = useMemo(() => {
-        const start = (currentPage - 1) * pageSize;
+        const start = (activePage - 1) * pageSize;
         return filteredAndSortedQuizzes.slice(start, start + pageSize);
-    }, [filteredAndSortedQuizzes, currentPage]);
+    }, [filteredAndSortedQuizzes, activePage, pageSize]);
+
+    const hasActiveFilters = searchQuery.trim() !== "" || timeFilter !== "all" || sortBy !== "newest";
+
+    const resetFilters = () => {
+        setSearchQuery("");
+        setTimeFilter("all");
+        setSortBy("newest");
+        setCurrentPage(1);
+    };
 
     const handleDelete = async (e: React.MouseEvent, id: string) => {
         e.preventDefault();
@@ -65,7 +91,7 @@ export default function QuizzesDashboardClient({ initialQuizzes }: Props) {
     };
 
     return (
-        <div className="flex flex-col gap-8 pb-20 pt-6 max-w-5xl mx-auto w-full px-5 sm:px-6 animate-in fade-in duration-500">
+        <div className="flex flex-col gap-8 pb-20 pt-6 max-w-7xl mx-auto w-full px-5 sm:px-6 animate-in fade-in duration-500">
             {/* Top Navigation & Header Banner */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-light-700 dark:border-dark-400 pb-5">
                 <div className="flex items-center gap-3.5">
@@ -84,76 +110,166 @@ export default function QuizzesDashboardClient({ initialQuizzes }: Props) {
                             </span>
                         </div>
                         <p className="body-2 text-dark500_light400 mt-0.5">
-                            Review, search, and retake your previously generated quizzes or check attempt logs.
+                            Search, filter, sort, and retake your previously generated quizzes or check attempt logs.
                         </p>
                     </div>
                 </div>
             </div>
 
-            {/* Search & Sort Controls */}
+            {/* Search, Filter & Sort Controls Bar */}
             {quizzes.length > 0 && (
-                <div className="flex flex-col sm:flex-row gap-4 items-center justify-between bg-white dark:bg-dark-200 border border-slate-200 dark:border-dark-300 p-4 rounded-2xl shadow-xs">
-                    <div className="relative w-full sm:w-80">
-                        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                        <input
-                            type="text"
-                            placeholder="Search quizzes by title..."
-                            value={searchQuery}
-                            onChange={(e) => {
-                                setSearchQuery(e.target.value);
-                                setCurrentPage(1);
-                            }}
-                            className="w-full pl-10 pr-4 py-2 text-sm bg-slate-50 dark:bg-dark-300 border border-slate-200 dark:border-dark-400 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-brand/40 text-dark-100 placeholder:text-slate-400 transition-all"
-                        />
-                    </div>
+                <div className="flex flex-col gap-4 bg-white dark:bg-dark-200 border border-light-700 dark:border-dark-400 p-5 rounded-3xl shadow-drop-1">
+                    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                        {/* Search Bar */}
+                        <div className="relative w-full lg:w-96">
+                            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-light-200 dark:text-dark-400" />
+                            <input
+                                type="text"
+                                placeholder="Search quizzes by title..."
+                                value={searchQuery}
+                                onChange={(e) => {
+                                    setSearchQuery(e.target.value);
+                                    setCurrentPage(1);
+                                }}
+                                className="w-full pl-10 pr-9 py-2.5 text-sm bg-light-800 dark:bg-dark-300 border border-light-700 dark:border-dark-400 rounded-xl focus:outline-hidden focus:ring-2 focus:ring-brand/40 text-dark100_light900 placeholder:text-light-200 dark:placeholder:text-dark-400 transition-all font-medium"
+                            />
+                            {searchQuery && (
+                                <button
+                                    onClick={() => {
+                                        setSearchQuery("");
+                                        setCurrentPage(1);
+                                    }}
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-light-200 hover:text-dark-100 dark:text-dark-400 dark:hover:text-dark-100 cursor-pointer"
+                                    title="Clear search"
+                                >
+                                    <X className="h-4 w-4" />
+                                </button>
+                            )}
+                        </div>
 
-                    <div className="flex items-center gap-2 w-full sm:w-auto">
-                        <div className="flex items-center gap-2 px-3 py-2 bg-slate-50 dark:bg-dark-300 border border-slate-200 dark:border-dark-400 rounded-xl text-sm font-medium text-dark-200 w-full sm:w-auto">
-                            <ArrowUpDown className="h-4 w-4 text-brand shrink-0" />
-                            <span className="text-xs text-slate-400 font-bold uppercase tracking-wider shrink-0">Sort By:</span>
-                            <select
-                                value={sortBy}
-                                onChange={(e) => setSortBy(e.target.value as any)}
-                                className="bg-transparent border-none focus:outline-hidden text-sm font-bold text-dark-100 cursor-pointer pr-2"
-                            >
-                                <option value="newest">Newest First</option>
-                                <option value="oldest">Oldest First</option>
-                                <option value="title-asc">Title (A-Z)</option>
-                                <option value="title-desc">Title (Z-A)</option>
-                            </select>
+                        {/* Filter & Sort Dropdowns */}
+                        <div className="flex flex-wrap items-center gap-3">
+                            {/* Time Filter */}
+                            <div className="flex items-center gap-2 px-3.5 py-2 bg-light-800 dark:bg-dark-300 border border-light-700 dark:border-dark-400 rounded-xl text-sm font-medium text-dark200_light800">
+                                <Calendar className="h-4 w-4 text-brand shrink-0" />
+                                <span className="text-xs text-light-200 dark:text-dark-400 font-bold uppercase tracking-wider shrink-0">Time:</span>
+                                <select
+                                    value={timeFilter}
+                                    onChange={(e) => {
+                                        setTimeFilter(e.target.value as any);
+                                        setCurrentPage(1);
+                                    }}
+                                    className="bg-transparent border-none focus:outline-hidden text-sm font-bold text-dark100_light900 cursor-pointer pr-2"
+                                >
+                                    <option value="all">All Time</option>
+                                    <option value="7d">Last 7 Days</option>
+                                    <option value="30d">Last 30 Days</option>
+                                </select>
+                            </div>
+
+                            {/* Sort By */}
+                            <div className="flex items-center gap-2 px-3.5 py-2 bg-light-800 dark:bg-dark-300 border border-light-700 dark:border-dark-400 rounded-xl text-sm font-medium text-dark200_light800">
+                                <ArrowUpDown className="h-4 w-4 text-brand shrink-0" />
+                                <span className="text-xs text-light-200 dark:text-dark-400 font-bold uppercase tracking-wider shrink-0">Sort:</span>
+                                <select
+                                    value={sortBy}
+                                    onChange={(e) => {
+                                        setSortBy(e.target.value as any);
+                                        setCurrentPage(1);
+                                    }}
+                                    className="bg-transparent border-none focus:outline-hidden text-sm font-bold text-dark100_light900 cursor-pointer pr-2"
+                                >
+                                    <option value="newest">Newest First</option>
+                                    <option value="oldest">Oldest First</option>
+                                    <option value="title-asc">Title (A-Z)</option>
+                                    <option value="title-desc">Title (Z-A)</option>
+                                </select>
+                            </div>
+
+                            {/* Page Size Selector */}
+                            <div className="flex items-center gap-2 px-3.5 py-2 bg-light-800 dark:bg-dark-300 border border-light-700 dark:border-dark-400 rounded-xl text-sm font-medium text-dark200_light800">
+                                <span className="text-xs text-light-200 dark:text-dark-400 font-bold uppercase tracking-wider shrink-0">Show:</span>
+                                <select
+                                    value={pageSize}
+                                    onChange={(e) => {
+                                        setPageSize(Number(e.target.value));
+                                        setCurrentPage(1);
+                                    }}
+                                    className="bg-transparent border-none focus:outline-hidden text-sm font-bold text-dark100_light900 cursor-pointer pr-1"
+                                >
+                                    <option value={6}>6</option>
+                                    <option value={9}>9</option>
+                                    <option value={12}>12</option>
+                                    <option value={24}>24</option>
+                                </select>
+                            </div>
                         </div>
                     </div>
+
+                    {/* Active Filter Chips */}
+                    {hasActiveFilters && (
+                        <div className="flex items-center gap-2 flex-wrap pt-3 border-t border-light-700 dark:border-dark-400">
+                            <span className="text-xs font-bold text-light-200 dark:text-dark-400">Active Filters:</span>
+                            {searchQuery && (
+                                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-brand/10 text-brand dark:bg-brand/20 text-xs font-bold border border-brand/20">
+                                    Search: &quot;{searchQuery}&quot;
+                                    <button onClick={() => { setSearchQuery(""); setCurrentPage(1); }} className="hover:text-dark-100 cursor-pointer">
+                                        <X className="h-3 w-3" />
+                                    </button>
+                                </span>
+                            )}
+                            {timeFilter !== "all" && (
+                                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-brand/10 text-brand dark:bg-brand/20 text-xs font-bold border border-brand/20">
+                                    Time: {timeFilter === "7d" ? "Last 7 Days" : "Last 30 Days"}
+                                    <button onClick={() => { setTimeFilter("all"); setCurrentPage(1); }} className="hover:text-dark-100 cursor-pointer">
+                                        <X className="h-3 w-3" />
+                                    </button>
+                                </span>
+                            )}
+                            {sortBy !== "newest" && (
+                                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-light-800 dark:bg-dark-300 text-dark100_light900 text-xs font-bold border border-light-700 dark:border-dark-400">
+                                    Sorted: {sortBy === "oldest" ? "Oldest First" : sortBy === "title-asc" ? "Title (A-Z)" : "Title (Z-A)"}
+                                </span>
+                            )}
+                            <button
+                                onClick={resetFilters}
+                                className="text-xs font-bold text-light-200 dark:text-dark-400 hover:text-red transition-colors ml-auto underline cursor-pointer"
+                            >
+                                Reset All
+                            </button>
+                        </div>
+                    )}
                 </div>
             )}
 
             {!quizzes || quizzes.length === 0 ? (
-                <div className="flex flex-col items-center justify-center flex-1 py-20 px-6 text-center bg-slate-50/50 dark:bg-dark-200/50 border-2 border-dashed border-slate-200 dark:border-dark-300 rounded-3xl w-full">
-                    <div className="h-16 w-16 bg-white dark:bg-dark-300 rounded-full flex items-center justify-center shadow-sm mb-4">
-                        <BrainCircuit className="h-8 w-8 text-slate-300 dark:text-slate-500" />
+                <div className="flex flex-col items-center justify-center flex-1 py-20 px-6 text-center bg-white dark:bg-dark-200 border-2 border-dashed border-light-700 dark:border-dark-400 rounded-3xl w-full">
+                    <div className="h-16 w-16 bg-light-800 dark:bg-dark-300 rounded-full flex items-center justify-center shadow-xs mb-4">
+                        <BrainCircuit className="h-8 w-8 text-light-200 dark:text-dark-400" />
                     </div>
-                    <h3 className="text-xl font-bold text-dark-100 mb-2">No quizzes yet</h3>
-                    <p className="text-slate-500 dark:text-dark-400 max-w-sm mb-6">
+                    <h3 className="text-xl font-bold text-dark100_light900 mb-2">No quizzes yet</h3>
+                    <p className="body-2 text-light-200 dark:text-dark-400 max-w-sm mb-6">
                         You haven&#39;t generated any quizzes. Select a document from your home dashboard to test your knowledge!
                     </p>
                     <Link
                         href="/home"
-                        className="px-6 py-3 bg-brand text-white rounded-full font-medium transition-all shadow-sm [&:hover]:bg-emerald-400 [&:hover]:shadow-md cursor-pointer"
+                        className="px-6 py-3 bg-brand text-white rounded-full font-medium transition-all shadow-sm hover:bg-emerald-500 hover:shadow-md cursor-pointer"
                     >
                         Go to Home to Select a Document
                     </Link>
                 </div>
             ) : filteredAndSortedQuizzes.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-16 px-6 text-center bg-white dark:bg-dark-200 border border-slate-200 dark:border-dark-300 rounded-3xl w-full">
-                    <Filter className="h-10 w-10 text-slate-300 mb-3" />
-                    <h3 className="text-lg font-bold text-dark-100">No matching quizzes found</h3>
-                    <p className="text-sm text-slate-500 max-w-xs mt-1">
-                        No quizzes match your search query &quot;{searchQuery}&quot;. Try adjusting your filters.
+                <div className="flex flex-col items-center justify-center py-16 px-6 text-center bg-white dark:bg-dark-200 border border-light-700 dark:border-dark-400 rounded-3xl w-full shadow-drop-1">
+                    <Filter className="h-10 w-10 text-light-200 dark:text-dark-400 mb-3" />
+                    <h3 className="text-lg font-bold text-dark100_light900">No matching quizzes found</h3>
+                    <p className="text-sm text-light-200 dark:text-dark-400 max-w-xs mt-1">
+                        No quizzes match your active filters or search query &quot;{searchQuery}&quot;.
                     </p>
                     <button
-                        onClick={() => setSearchQuery("")}
-                        className="mt-4 px-4 py-2 bg-slate-100 dark:bg-dark-300 hover:bg-slate-200 text-dark-100 text-xs font-bold rounded-xl transition-colors cursor-pointer"
+                        onClick={resetFilters}
+                        className="mt-4 px-5 py-2.5 bg-brand text-white text-xs font-bold rounded-xl shadow-xs hover:bg-emerald-500 transition-colors cursor-pointer"
                     >
-                        Clear Search
+                        Reset All Filters
                     </button>
                 </div>
             ) : (
@@ -162,19 +278,19 @@ export default function QuizzesDashboardClient({ initialQuizzes }: Props) {
                         {paginatedQuizzes.map((quiz) => (
                             <div
                                 key={quiz.id}
-                                className="relative group flex flex-col h-full border border-slate-200 dark:border-dark-300 rounded-2xl bg-white dark:bg-dark-200 hover:border-brand dark:hover:border-brand hover:shadow-lg hover:-translate-y-1 transition-all duration-300"
+                                className="relative group flex flex-col h-full border border-light-700 dark:border-dark-400 rounded-3xl bg-white dark:bg-dark-200 hover:border-brand/40 dark:hover:border-brand/40 shadow-drop-1 hover:shadow-drop-3 transition-all duration-300"
                             >
                                 <Link href={`/quizzes/${quiz.id}`} className="flex flex-col flex-1 p-6">
                                     <div className="flex items-start gap-4 mb-4 pr-10">
-                                        <div className="p-3 bg-brand/10 rounded-xl text-brand group-hover:bg-brand group-hover:text-white transition-colors duration-300">
+                                        <div className="p-3 bg-brand/10 dark:bg-brand/20 rounded-2xl text-brand group-hover:bg-brand group-hover:text-white transition-colors duration-300 shrink-0">
                                             <BrainCircuit className="h-6 w-6" />
                                         </div>
-                                        <h3 className="font-bold text-lg text-dark-200 dark:text-dark-100 leading-snug line-clamp-2 mt-1">
+                                        <h3 className="font-bold text-lg text-dark100_light900 leading-snug line-clamp-2 mt-0.5">
                                             {quiz.title}
                                         </h3>
                                     </div>
 
-                                    <div className="mt-auto pt-4 flex items-center gap-2 text-xs font-medium text-slate-500 dark:text-dark-400">
+                                    <div className="mt-auto pt-4 flex items-center gap-2 text-xs font-medium text-light-200 dark:text-dark-400">
                                         <Clock className="h-3.5 w-3.5" />
                                         <span>
                                             Created:{" "}
@@ -188,10 +304,10 @@ export default function QuizzesDashboardClient({ initialQuizzes }: Props) {
                                 </Link>
 
                                 {/* Bottom Action Strip: Start & History */}
-                                <div className="px-6 pb-5 pt-3 border-t border-slate-100 dark:border-dark-300 flex items-center justify-between gap-3">
+                                <div className="px-6 pb-5 pt-4 border-t border-light-700/60 dark:border-dark-400/60 flex items-center justify-between gap-3">
                                     <Link
                                         href={`/quizzes/${quiz.id}/history`}
-                                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-dark-300 hover:bg-slate-200 dark:hover:bg-dark-400 text-xs font-bold text-dark-200 dark:text-dark-100 transition-colors cursor-pointer"
+                                        className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-light-800 dark:bg-dark-300 hover:bg-light-700 dark:hover:bg-dark-400 text-xs font-bold text-dark200_light800 transition-colors cursor-pointer border border-light-700 dark:border-dark-400"
                                         title="View Attempt History"
                                     >
                                         <History className="h-3.5 w-3.5 text-brand" />
@@ -200,7 +316,7 @@ export default function QuizzesDashboardClient({ initialQuizzes }: Props) {
 
                                     <Link
                                         href={`/quizzes/${quiz.id}`}
-                                        className="inline-flex items-center gap-1.5 text-sm font-bold text-brand hover:text-emerald-600 transition-colors cursor-pointer"
+                                        className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-brand/10 dark:bg-brand/20 hover:bg-brand text-xs font-bold text-brand hover:text-white transition-all cursor-pointer border border-brand/20"
                                     >
                                         <span>Start Quiz</span>
                                         <Play className="h-3.5 w-3.5 fill-current" />
@@ -210,7 +326,7 @@ export default function QuizzesDashboardClient({ initialQuizzes }: Props) {
                                 <button
                                     onClick={(e) => handleDelete(e, quiz.id)}
                                     disabled={isDeleting === quiz.id}
-                                    className="absolute top-4 right-4 z-20 flex items-center justify-center h-8 w-8 text-slate-400 bg-slate-100 dark:bg-dark-300 [&:hover]:text-white [&:hover]:bg-red rounded-full transition-all cursor-pointer shadow-sm [&:hover]:shadow-md disabled:opacity-50"
+                                    className="absolute top-5 right-5 z-20 flex items-center justify-center h-8 w-8 text-light-200 dark:text-dark-400 bg-light-800 dark:bg-dark-300 hover:text-white hover:bg-red dark:hover:bg-red rounded-full transition-all cursor-pointer shadow-xs disabled:opacity-50 border border-light-700 dark:border-dark-400"
                                     title="Delete Quiz"
                                 >
                                     <Trash2 className="h-4 w-4" />
@@ -219,31 +335,78 @@ export default function QuizzesDashboardClient({ initialQuizzes }: Props) {
                         ))}
                     </div>
 
-                    {/* Pagination Controls */}
+                    {/* Advanced Pagination Controls */}
                     {totalPages > 1 && (
-                        <div className="flex items-center justify-between border-t border-slate-200 dark:border-dark-300 pt-6 mt-4">
-                            <span className="text-xs font-bold text-slate-500 dark:text-dark-400">
-                                Showing {(currentPage - 1) * pageSize + 1} to{" "}
-                                {Math.min(currentPage * pageSize, filteredAndSortedQuizzes.length)} of{" "}
-                                {filteredAndSortedQuizzes.length} Quizzes
+                        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-white dark:bg-dark-200 border border-light-700 dark:border-dark-400 p-4 sm:px-6 rounded-3xl shadow-drop-1">
+                            <span className="text-xs font-bold text-light-200 dark:text-dark-400">
+                                Showing <span className="text-dark100_light900 font-extrabold">{(activePage - 1) * pageSize + 1}</span> to{" "}
+                                <span className="text-dark100_light900 font-extrabold">{Math.min(activePage * pageSize, filteredAndSortedQuizzes.length)}</span> of{" "}
+                                <span className="text-dark100_light900 font-extrabold">{filteredAndSortedQuizzes.length}</span> Quizzes
                             </span>
-                            <div className="flex items-center gap-2">
+
+                            <div className="flex items-center gap-1.5 flex-wrap justify-center">
+                                {/* First Page */}
+                                <button
+                                    onClick={() => setCurrentPage(1)}
+                                    disabled={activePage === 1}
+                                    className="flex h-9 w-9 items-center justify-center rounded-xl bg-light-800 dark:bg-dark-300 border border-light-700 dark:border-dark-400 text-dark200_light800 disabled:opacity-30 hover:bg-light-700 dark:hover:bg-dark-400 transition-colors cursor-pointer"
+                                    title="First Page"
+                                >
+                                    <ChevronsLeft className="h-4 w-4" />
+                                </button>
+
+                                {/* Previous Page */}
                                 <button
                                     onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
-                                    disabled={currentPage === 1}
-                                    className="px-4 py-2 rounded-xl bg-white dark:bg-dark-200 border border-slate-200 dark:border-dark-300 text-xs font-bold text-dark-100 disabled:opacity-40 hover:bg-slate-50 transition-colors cursor-pointer"
+                                    disabled={activePage === 1}
+                                    className="flex h-9 px-3 items-center justify-center gap-1 rounded-xl bg-light-800 dark:bg-dark-300 border border-light-700 dark:border-dark-400 text-xs font-bold text-dark200_light800 disabled:opacity-30 hover:bg-light-700 dark:hover:bg-dark-400 transition-colors cursor-pointer"
                                 >
-                                    Previous
+                                    <ChevronLeft className="h-4 w-4" />
+                                    <span className="hidden sm:inline">Prev</span>
                                 </button>
-                                <span className="text-xs font-extrabold text-dark-100 px-3 py-2 bg-slate-100 dark:bg-dark-300 rounded-xl">
-                                    {currentPage} / {totalPages}
-                                </span>
+
+                                {/* Numbered Page Pills */}
+                                {Array.from({ length: totalPages }, (_, i) => i + 1)
+                                    .filter((p) => p === 1 || p === totalPages || Math.abs(p - activePage) <= 1)
+                                    .map((p, idx, arr) => {
+                                        const showEllipsisBefore = idx > 0 && p - arr[idx - 1] > 1;
+                                        return (
+                                            <React.Fragment key={p}>
+                                                {showEllipsisBefore && (
+                                                    <span className="px-1 text-xs font-bold text-light-200 dark:text-dark-400">...</span>
+                                                )}
+                                                <button
+                                                    onClick={() => setCurrentPage(p)}
+                                                    className={`flex h-9 w-9 items-center justify-center rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                                                        activePage === p
+                                                            ? "bg-brand text-white shadow-sm"
+                                                            : "bg-light-800 dark:bg-dark-300 border border-light-700 dark:border-dark-400 text-dark200_light800 hover:bg-light-700 dark:hover:bg-dark-400"
+                                                    }`}
+                                                >
+                                                    {p}
+                                                </button>
+                                            </React.Fragment>
+                                        );
+                                    })}
+
+                                {/* Next Page */}
                                 <button
                                     onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
-                                    disabled={currentPage === totalPages}
-                                    className="px-4 py-2 rounded-xl bg-white dark:bg-dark-200 border border-slate-200 dark:border-dark-300 text-xs font-bold text-dark-100 disabled:opacity-40 hover:bg-slate-50 transition-colors cursor-pointer"
+                                    disabled={activePage === totalPages}
+                                    className="flex h-9 px-3 items-center justify-center gap-1 rounded-xl bg-light-800 dark:bg-dark-300 border border-light-700 dark:border-dark-400 text-xs font-bold text-dark200_light800 disabled:opacity-30 hover:bg-light-700 dark:hover:bg-dark-400 transition-colors cursor-pointer"
                                 >
-                                    Next
+                                    <span className="hidden sm:inline">Next</span>
+                                    <ChevronRight className="h-4 w-4" />
+                                </button>
+
+                                {/* Last Page */}
+                                <button
+                                    onClick={() => setCurrentPage(totalPages)}
+                                    disabled={activePage === totalPages}
+                                    className="flex h-9 w-9 items-center justify-center rounded-xl bg-light-800 dark:bg-dark-300 border border-light-700 dark:border-dark-400 text-dark200_light800 disabled:opacity-30 hover:bg-light-700 dark:hover:bg-dark-400 transition-colors cursor-pointer"
+                                    title="Last Page"
+                                >
+                                    <ChevronsRight className="h-4 w-4" />
                                 </button>
                             </div>
                         </div>
