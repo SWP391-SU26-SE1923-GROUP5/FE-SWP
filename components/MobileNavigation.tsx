@@ -17,7 +17,7 @@ import {cn} from "@/lib/utils";
 import {Button} from "@/components/ui/button";
 import FileUploader from "@/components/FileUploader";
 import {signOutUser} from "@/lib/actions/user.actions";
-import { BarChart3, Bell, Trophy } from "lucide-react";
+import { BarChart3, Bell, Trophy, Trash2 } from "lucide-react";
 
 interface Props {
     fullName: string;
@@ -27,13 +27,16 @@ interface Props {
 
 const renderNavIcon = (name: string, icon: string, isActive: boolean) => {
     if (name === "Analytics") {
-        return <BarChart3 className={cn("w-[24px] h-[24px] text-slate-400 transition-colors shrink-0", isActive && "text-brand")} />;
+        return <BarChart3 className={cn("w-[24px] h-[24px] text-slate-400 transition-colors shrink-0", isActive && "text-white")} />;
     }
     if (name === "Notifications") {
-        return <Bell className={cn("w-[24px] h-[24px] text-slate-400 transition-colors shrink-0", isActive && "text-brand")} />;
+        return <Bell className={cn("w-[24px] h-[24px] text-slate-400 transition-colors shrink-0", isActive && "text-white")} />;
     }
     if (name === "Leaderboard") {
-        return <Trophy className={cn("w-[24px] h-[24px] text-amber-500 transition-colors shrink-0", isActive && "text-brand")} />;
+        return <Trophy className={cn("w-[24px] h-[24px] text-amber-500 transition-colors shrink-0", isActive && "text-white")} />;
+    }
+    if (name === "Trash Bin" || name === "Trash") {
+        return <Trash2 className={cn("w-[24px] h-[24px] text-red-500/80 transition-colors shrink-0", isActive && "text-white")} />;
     }
     return (
         <Image

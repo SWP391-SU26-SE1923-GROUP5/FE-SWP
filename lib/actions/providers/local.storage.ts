@@ -146,9 +146,15 @@ export class LocalStorage implements IFileStorage {
                 headers,
                 cache: 'no-store',
             });
-            return res.ok ? await res.json() : null;
+
+            if (!res.ok) {
+                const errorData = await res.json().catch(() => ({}));
+                throw new Error(`[${res.status}] ${errorData.message || "Failed to get file status"}`);
+            }
+
+            return await res.json();
         } catch (error) {
-            return null;
+            this.handleError(error, "GetFileStatus");
         }
     }
 
@@ -308,18 +314,19 @@ export class LocalStorage implements IFileStorage {
         try {
             const headers = await this.getHeaders();
             let subjectId = "";
-            try {
-                const getRes = await fetch(`${connection_url}/api/Document/${fileId}`, {
-                    method: 'GET',
-                    headers,
-                });
-                if (getRes.ok) {
-                    const currentFile = await getRes.json();
-                    subjectId = currentFile?.subjectId || "";
-                }
-            } catch (e) {
-                console.error("Failed to fetch existing file subjectId:", e);
+
+            const getRes = await fetch(`${connection_url}/api/Document/${fileId}`, {
+                method: 'GET',
+                headers,
+            });
+
+            if (!getRes.ok) {
+                const errorData = await getRes.json().catch(() => ({}));
+                throw new Error(`[${getRes.status}] ${errorData.message || "Failed to fetch existing file for editing"}`);
             }
+
+            const currentFile = await getRes.json();
+            subjectId = currentFile?.subjectId || "";
 
             await this.deleteFile({ fileId, path });
 

@@ -54,7 +54,7 @@ const Page = async ({ searchParams, params }: SearchParamProps) => {
                         ))}
                     </section>
 
-                    <div className="mt-auto pt-6">
+                    <div className="w-full mt-auto pt-6">
                         <Pagination
                             page={page}
                             totalPages={totalPages}
@@ -64,7 +64,7 @@ const Page = async ({ searchParams, params }: SearchParamProps) => {
                     </div>
                 </div>
             ) : (
-                <div className="flex flex-col items-center justify-center flex-1 py-16 text-center bg-slate-50/50 border border-dashed border-slate-200 rounded-3xl mt-4">
+                <div className="w-full flex flex-col items-center justify-center flex-1 py-16 text-center bg-slate-50/50 border border-dashed border-slate-200 rounded-3xl mt-4">
                     <p className="text-base font-semibold text-slate-600 mb-1">No {type} found</p>
                     <p className="text-xs text-slate-400">Upload new documents using the upload button above.</p>
                 </div>

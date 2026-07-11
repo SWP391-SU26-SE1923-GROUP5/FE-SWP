@@ -261,10 +261,10 @@ export default function TrashPage() {
                         </AlertDialogTrigger>
                         <AlertDialogContent className="rounded-3xl bg-white dark:bg-dark-200 border border-light-700 dark:border-dark-400 shadow-2xl p-6 sm:p-8">
                             <AlertDialogHeader className="space-y-2">
-                                <div className="flex items-center gap-2.5 text-red-600 font-bold text-lg">
+                                <AlertDialogTitle className="flex items-center gap-2.5 text-red-600 font-bold text-lg">
                                     <AlertTriangle className="h-5 w-5" />
                                     <span>Purge entire trash bin permanently?</span>
-                                </div>
+                                </AlertDialogTitle>
                                 <AlertDialogDescription className="text-dark500_light400 text-sm">
                                     You are about to permanently delete <span className="font-semibold text-dark100_light900">{trashFiles.length} files</span> ({totalRecoverableMB} MB total). All AI vector embeddings in Qdrant and cloud storage items will be purged forever and cannot be undone.
                                 </AlertDialogDescription>
@@ -523,10 +523,10 @@ export default function TrashPage() {
                                             </AlertDialogTrigger>
                                             <AlertDialogContent className="rounded-3xl bg-white dark:bg-dark-200 border border-light-700 dark:border-dark-400 shadow-2xl p-6 sm:p-8">
                                                 <AlertDialogHeader className="space-y-2">
-                                                    <div className="flex items-center gap-2 text-red-600 font-bold text-lg">
+                                                    <AlertDialogTitle className="flex items-center gap-2 text-red-600 font-bold text-lg">
                                                         <AlertTriangle className="h-5 w-5" />
                                                         <span>Permanently delete file?</span>
-                                                    </div>
+                                                    </AlertDialogTitle>
                                                     <AlertDialogDescription className="text-dark500_light400 text-sm">
                                                         Are you sure you want to permanently delete <span className="font-semibold text-dark100_light900">"{file.name}"</span>? This will immediately remove all AI vector embeddings from Qdrant and cloud storage items. This action cannot be undone.
                                                     </AlertDialogDescription>
@@ -638,10 +638,10 @@ export default function TrashPage() {
                                             </AlertDialogTrigger>
                                             <AlertDialogContent className="rounded-3xl bg-white dark:bg-dark-200 border border-light-700 dark:border-dark-400 shadow-2xl p-6 sm:p-8">
                                                 <AlertDialogHeader className="space-y-2">
-                                                    <div className="flex items-center gap-2 text-red-600 font-bold text-lg">
+                                                    <AlertDialogTitle className="flex items-center gap-2 text-red-600 font-bold text-lg">
                                                         <AlertTriangle className="h-5 w-5" />
                                                         <span>Permanently delete file?</span>
-                                                    </div>
+                                                    </AlertDialogTitle>
                                                     <AlertDialogDescription className="text-dark500_light400 text-sm">
                                                         Are you sure you want to permanently delete <span className="font-semibold text-dark100_light900">"{file.name}"</span>? This will immediately remove all AI vector embeddings from Qdrant and cloud storage items. This action cannot be undone.
                                                     </AlertDialogDescription>

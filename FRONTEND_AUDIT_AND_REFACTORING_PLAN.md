@@ -151,3 +151,11 @@ To deliver an elegant, complete, premium AI Study Hub web application, two criti
 - **Restricted Empty State Container Width (`max-w-2xl mx-auto`)**:
   On `http://localhost:3000/trash`, when the trash bin was clean (`trashFiles.length === 0`), the empty state white card (`Your Trash Bin is Clean`) was constrained to `max-w-2xl` (`672px`). Because the top search/filter header bar spans the full container width (`w-full`), having a narrow box in the center created massive uncoordinated horizontal margins and looked unbalanced on desktop screens.
   - **Resolution**: Replaced `max-w-2xl mx-auto` with `w-full` across both `trashFiles.length === 0` and `filteredAndSortedFiles.length === 0` in `app/trash/page.tsx`, and ensured `w-full` on `flashcards` and `quizzes` empty states (`app/flashcards/page.tsx`, `app/quizzes/page.tsx`). The empty state containers now expand to the full width (`w-full`) of the page grid, perfectly matching the header bar and data table.
+
+### E. Trash Page Sidebar Navigation Integration (`constants/nav.ts`, `Sidebar.tsx`, `MobileNavigation.tsx`)
+- **Missing Direct Navigation to Trash Bin**:
+  Users had no easy way to navigate to `/trash` directly from the sidebar storage links.
+  - **Resolution**:
+    1. Added `Trash Bin` (`url: "/trash", section: "main"`) directly to `navItems` in `constants/nav.ts` under the Storage section right below `Others`.
+    2. Updated `renderNavIcon` in both `components/Sidebar.tsx` and `components/MobileNavigation.tsx` to render `Trash2` (`lucide-react`) with a soft red icon (`text-red-500/80`) when idle and clean white (`text-white`) when active (`shad-active`).
+    3. Fixed active icon contrast for all `lucide-react` nav icons (`BarChart3`, `Bell`, `Trophy`) by replacing `text-brand` with `text-white` when `isActive === true`, preventing dark-green-on-light-green color blending.

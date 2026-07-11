@@ -14,62 +14,70 @@ export class LocalAuth implements IAuthService {
     }
 
     async createAccount({ fullName, email, password, dateOfBirth }: CreateAccountProps) {
-        const res = await fetch(`${connection_url}/api/Auth/register`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                fullName,
-                email,
-                password,
-                dateOfBirth
-            })
-        });
+        try {
+            const res = await fetch(`${connection_url}/api/Auth/register`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    fullName,
+                    email,
+                    password,
+                    dateOfBirth
+                })
+            });
 
-        const data = await res.json().catch(() => ({}));
+            const data = await res.json().catch(() => ({}));
 
-        if (!res.ok) {
-            throw new Error(`[${res.status}] ${data.message || "Failed to register account"}`);
+            if (!res.ok) {
+                throw new Error(`[${res.status}] ${data.message || "Failed to register account"}`);
+            }
+
+            return parseStringify({ email: data.email });
+        } catch (error) {
+            this.handleError(error, "createAccount");
         }
-
-        return parseStringify({ email: data.email });
     }
 
     async signInUser({ email, password }: SignInProps) {
-        const res = await fetch(`${connection_url}/api/Auth/login`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                email,
-                password
-            })
-        });
+        try {
+            const res = await fetch(`${connection_url}/api/Auth/login`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    email,
+                    password
+                })
+            });
 
-        const data = await res.json().catch(() => ({}));
+            const data = await res.json().catch(() => ({}));
 
-        if (!res.ok) {
-            throw new Error(`[${res.status}] ${data.message || "Invalid email or password"}`);
+            if (!res.ok) {
+                throw new Error(`[${res.status}] ${data.message || "Invalid email or password"}`);
+            }
+
+            const sessionData = {
+                user: {
+                    id: data.user.id,
+                    fullName: data.user.fullName,
+                    email: data.user.email,
+                    role: data.user.role,
+                    dateOfBirth: data.user.dateOfBirth,
+                    currentStorageCapacity: data.user.currentStorageCapacity,
+                    currentAiTokenUsage: data.user.currentAiTokenUsage,
+                    status: data.user.status,
+                    createdAt: data.user.createdAt,
+                    updatedAt: data.user.updatedAt,
+                },
+                accessToken: data.accessToken,
+                accessTokenExpiresAt: data.accessTokenExpiresAt,
+                refreshToken: data.refreshToken,
+                refreshTokenExpiresAt: data.refreshTokenExpiresAt
+            };
+
+            return parseStringify(sessionData);
+        } catch (error) {
+            this.handleError(error, "signInUser");
         }
-
-        const sessionData = {
-            user: {
-                id: data.user.id,
-                fullName: data.user.fullName,
-                email: data.user.email,
-                role: data.user.role,
-                dateOfBirth: data.user.dateOfBirth,
-                currentStorageCapacity: data.user.currentStorageCapacity,
-                currentAiTokenUsage: data.user.currentAiTokenUsage,
-                status: data.user.status,
-                createdAt: data.user.createdAt,
-                updatedAt: data.user.updatedAt,
-            },
-            accessToken: data.accessToken,
-            accessTokenExpiresAt: data.accessTokenExpiresAt,
-            refreshToken: data.refreshToken,
-            refreshTokenExpiresAt: data.refreshTokenExpiresAt
-        };
-
-        return parseStringify(sessionData);
     }
 
     async getCurrentUser(): Promise<User | null> {
@@ -144,22 +152,26 @@ export class LocalAuth implements IAuthService {
     }
 
     async refreshSessionToken(refreshToken: string, accessToken: string) {
-        const res = await fetch(`${connection_url}/api/Auth/refresh-token`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${accessToken}`
-            },
-            body: JSON.stringify({ refreshToken })
-        });
+        try {
+            const res = await fetch(`${connection_url}/api/Auth/refresh-token`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${accessToken}`
+                },
+                body: JSON.stringify({ refreshToken })
+            });
 
-        const data = await res.json().catch(() => ({}));
+            const data = await res.json().catch(() => ({}));
 
-        if (!res.ok) {
-            throw new Error(`[${res.status}] ${data.message || "Failed to refresh token"}`);
+            if (!res.ok) {
+                throw new Error(`[${res.status}] ${data.message || "Failed to refresh token"}`);
+            }
+
+            return parseStringify(data);
+        } catch (error) {
+            this.handleError(error, "refreshSessionToken");
         }
-
-        return parseStringify(data);
     }
 
     async verifyOtp({ email, otp }: { email: string; otp: string }): Promise<string> {

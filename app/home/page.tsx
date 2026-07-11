@@ -102,7 +102,10 @@ const Dashboard = async ({ searchParams }: DashboardProps) => {
                         })}
                     </ul>
                 ) : (
-                    <p className="empty-list">No files uploaded</p>
+                    <div className="w-full flex flex-col items-center justify-center py-16 text-center bg-slate-50/50 border border-dashed border-slate-200 rounded-3xl mt-5">
+                        <p className="text-base font-semibold text-slate-600 mb-1">No files uploaded yet</p>
+                        <p className="text-xs text-slate-400 max-w-sm">Upload your first study document or media using the upload button above to start generating AI quizzes and flashcards!</p>
+                    </div>
                 )}
             </section>
         </div>

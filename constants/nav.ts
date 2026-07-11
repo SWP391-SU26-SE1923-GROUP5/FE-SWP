@@ -37,6 +37,12 @@ export const navItems: NavItem[] = [
         section: "main",
     },
     {
+        name: "Trash Bin",
+        icon: "/assets/icons/others.svg",
+        url: "/trash",
+        section: "main",
+    },
+    {
         name: "Analytics",
         icon: "/assets/icons/others.svg",
         url: "/analytics",
