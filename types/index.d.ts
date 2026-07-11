@@ -279,6 +279,26 @@ export interface QuizRecord {
     updatedAt: string;
 }
 
+export interface QuizSubmissionResponse {
+    id: string;
+    userId: string;
+    quizId: string;
+    answers: string;
+    score: number;
+    maxScore: number;
+    totalCorrect: number;
+    gradedAt?: string | null;
+    submittedAt: string;
+    createdAt: string;
+    updatedAt?: string | null;
+}
+
+export interface LevelUpToast {
+    newLevel: number;
+    title?: string;
+    message?: string;
+}
+
 export interface SummaryResponse {
     summary: string;
 }

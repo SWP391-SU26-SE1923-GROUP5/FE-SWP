@@ -23,6 +23,7 @@ export default function QuizQuestions({ quizData, quizId }: Props) {
     const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
     const [xpEarned, setXpEarned] = useState<number>(0);
     const [newAchievements, setNewAchievements] = useState<any[]>([]);
+    const [levelUpToast, setLevelUpToast] = useState<any | null>(null);
     const [startTime] = useState<number>(Date.now());
     const [elapsedSeconds, setElapsedSeconds] = useState<number>(0);
 
@@ -68,15 +69,21 @@ export default function QuizQuestions({ quizData, quizId }: Props) {
                     const durationSeconds = Math.max(1, elapsedSeconds || Math.round((Date.now() - startTime) / 1000));
                     const result = await submitQuiz(quizId, formattedAnswers, durationSeconds);
                     if (result) {
-                        if (result.submission) {
-                            if (result.submission.score !== undefined) {
-                                setScore(result.submission.score);
-                            } else if (result.submission.totalCorrect !== undefined) {
-                                setScore(result.submission.totalCorrect);
+                        const subData = result.data || result.submission;
+                        if (subData) {
+                            if (subData.score !== undefined) {
+                                setScore(subData.score);
+                            } else if (subData.totalCorrect !== undefined) {
+                                setScore(subData.totalCorrect);
                             }
                         }
                         if (result.xpEarned !== undefined) setXpEarned(result.xpEarned);
                         if (result.newAchievements !== undefined) setNewAchievements(result.newAchievements);
+                        if (result.levelUpToast || subData?.levelUpToast) {
+                            setLevelUpToast(result.levelUpToast || subData.levelUpToast);
+                        } else if (result.currentLevel && result.currentLevel > 0 && result.xpEarned > 0 && result.levelUpToast !== null) {
+                            if (result.levelUpToast) setLevelUpToast(result.levelUpToast);
+                        }
                     }
                 }
             } catch (error) {
@@ -116,11 +123,13 @@ export default function QuizQuestions({ quizData, quizId }: Props) {
 
         return (
             <QuizSubmission
+                quizId={quizId}
                 score={score}
                 scorePercentage={scorePercentage}
                 totalQuestions={questions.length}
                 xpEarned={xpEarned}
                 newAchievements={newAchievements}
+                levelUpToast={levelUpToast}
             />
         );
     }

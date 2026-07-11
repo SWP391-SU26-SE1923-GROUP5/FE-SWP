@@ -6,6 +6,7 @@ import {
     Flashcard,
     QuizResponse,
     QuizRecord,
+    QuizSubmissionResponse,
     ReviewFlashcardResult,
     DueFlashcard,
     FlashcardReviewStats
@@ -341,11 +342,24 @@ export const getFlashcardReviewStats = async (userId?: string): Promise<Flashcar
     return await response.json();
 };
 
-export const getCreatedQuizzes = async (): Promise<QuizRecord[]> => {
+export const getCreatedQuizzes = async (params?: {
+    offset?: number;
+    limit?: number;
+    searchTerm?: string;
+    sortBy?: string;
+    isDescending?: boolean;
+}): Promise<QuizRecord[]> => {
     const session = await auth();
     if (!session?.accessToken) throw new Error("Unauthorized. Please log in.");
 
-    const response = await fetch(`${connection_url}/api/Quiz?limit=100`, {
+    const searchParams = new URLSearchParams();
+    searchParams.set("limit", (params?.limit ?? 100).toString());
+    if (params?.offset !== undefined) searchParams.set("offset", params.offset.toString());
+    if (params?.searchTerm) searchParams.set("searchTerm", params.searchTerm);
+    if (params?.sortBy) searchParams.set("sortBy", params.sortBy);
+    if (params?.isDescending !== undefined) searchParams.set("isDescending", params.isDescending.toString());
+
+    const response = await fetch(`${connection_url}/api/Quiz?${searchParams.toString()}`, {
         method: 'GET',
         headers: {
             'Authorization': `Bearer ${session.accessToken}`,
@@ -436,6 +450,25 @@ export const submitQuiz = async (
     if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         throw new Error(`[${response.status}] ${errorData.message || "Failed to submit quiz."}`);
+    }
+
+    return await response.json();
+};
+
+export const getQuizHistory = async (quizId: string): Promise<QuizSubmissionResponse[]> => {
+    const session = await auth();
+    if (!session?.accessToken) throw new Error("Unauthorized. Please log in.");
+
+    const response = await fetch(`${connection_url}/api/Quiz/${quizId}/history`, {
+        method: 'GET',
+        headers: {
+            'Authorization': `Bearer ${session.accessToken}`,
+            'Content-Type': 'application/json',
+        },
+    });
+
+    if (!response.ok) {
+        return [];
     }
 
     return await response.json();
