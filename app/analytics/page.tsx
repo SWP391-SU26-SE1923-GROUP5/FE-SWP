@@ -102,7 +102,7 @@ export default function AnalyticsPage() {
                                 AI Insights
                             </span>
                         </div>
-                        <p className="body-2 text-light-200 dark:text-dark-400">Track your progress and get AI-powered coaching insights from your study sessions.</p>
+                        <p className="body-2 text-dark500_light400 mt-0.5">Track your progress and get AI-powered coaching insights from your study sessions.</p>
                     </div>
                 </div>
             </div>

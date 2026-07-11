@@ -45,31 +45,33 @@ export default function AIInsightsPage() {
     }
 
     return (
-        <div className="w-full min-h-screen pb-16 pt-4 sm:pt-6 animate-in fade-in duration-500">
-            <div className="max-w-4xl mx-auto px-4 sm:px-6">
-                <div className="mb-8 pb-4 border-b border-light-700">
+        <div className="flex flex-col gap-8 pb-20 pt-6 max-w-5xl mx-auto w-full px-5 sm:px-6 animate-in fade-in duration-500">
+            {/* Top Navigation & Header Banner (Matching Trash/Analytics Pattern) */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-light-700 dark:border-dark-400 pb-5">
+                <div className="flex items-center gap-3.5">
                     <Link
                         href="/analytics"
-                        className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-white border border-light-700 text-dark-200 hover:text-[#10b981] hover:border-[#10b981] shadow-drop-3 font-semibold text-sm transition-all duration-200"
+                        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white dark:bg-dark-300 border border-light-700 dark:border-dark-400 shadow-xs hover:bg-light-800 dark:hover:bg-dark-400 text-dark300_light700 transition-all"
+                        title="Back to Analytics"
                     >
-                        <ArrowLeft className="w-4 h-4" />
-                        <span>Back to Analytics</span>
+                        <ArrowLeft className="h-5 w-5" />
                     </Link>
-                </div>
-
-                <div className="mb-8">
-                    <div className="flex items-center gap-2 mb-2">
-                        <Rocket className="w-7 h-7 text-[#10b981]" />
-                        <h1 className="h1 text-dark-200 tracking-tight">
-                            All AI Recommendations
-                        </h1>
+                    <div>
+                        <div className="flex items-center gap-2.5 flex-wrap">
+                            <h1 className="h2 text-dark100_light900 font-bold">All AI Recommendations</h1>
+                            <span className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-xs font-semibold bg-brand/10 text-brand dark:bg-brand/20 border border-brand/20">
+                                <Rocket className="w-3.5 h-3.5" />
+                                SM-2 Engine
+                            </span>
+                        </div>
+                        <p className="body-2 text-dark500_light400 mt-0.5">
+                            AI-generated analysis and Spaced Repetition scheduling designed to optimize your study performance and quiz scores.
+                        </p>
                     </div>
-                    <p className="body-1 text-slate-500 mt-1">
-                        AI-generated analysis and Spaced Repetition scheduling designed to optimize your study performance and quiz scores.
-                    </p>
                 </div>
+            </div>
 
-                <div className="space-y-4">
+            <div className="w-full space-y-4">
                     {tips.length > 0 ? (
                         tips.map((tip, index) => {
                             const sev = tip.severity?.toLowerCase() || '';
@@ -144,6 +146,5 @@ export default function AIInsightsPage() {
                     )}
                 </div>
             </div>
-        </div>
     );
 }

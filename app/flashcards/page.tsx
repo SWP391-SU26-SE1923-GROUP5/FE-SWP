@@ -2,7 +2,7 @@ import { getCreatedFlashcards, getDueFlashcardsCount, getFlashcardReviewStats } 
 import { getFiles } from "@/lib/actions/file.actions";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Layers, ChevronLeft, Sparkles, Clock, Flame, Award, BrainCircuit } from "lucide-react";
+import { Layers, ChevronLeft, ArrowLeft, Sparkles, Clock, Flame, Award, BrainCircuit } from "lucide-react";
 
 export default async function FlashcardsPage() {
     const [flashcards, filesData, dueCount, stats] = await Promise.all([
@@ -33,20 +33,26 @@ export default async function FlashcardsPage() {
     const decks = Object.values(groupedDecks);
 
     return (
-        <div className="p-6 md:p-10 max-w-7xl mx-auto w-full flex flex-col flex-1 h-full">
-            <div className="mb-8">
-                <Link
-                    href="/home"
-                    className="inline-flex items-center gap-2 text-sm font-medium text-slate-500 hover:text-brand transition-colors mb-4"
-                >
-                    <ChevronLeft className="h-4 w-4" /> Back to Home
-                </Link>
-                <h1 className="text-3xl font-bold text-dark-200 tracking-tight">
-                    Your Flashcards
-                </h1>
-                <p className="text-slate-500 mt-2">
-                    Review and study your generated flashcard collections powered by SM-2 Spaced Repetition.
-                </p>
+        <div className="flex flex-col gap-8 pb-20 pt-6 max-w-7xl mx-auto w-full px-5 sm:px-6 animate-in fade-in duration-500">
+            {/* Top Navigation & Header Banner (Matching Trash/Analytics Pattern) */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-light-700 dark:border-dark-400 pb-5">
+                <div className="flex items-center gap-3.5">
+                    <Link
+                        href="/home"
+                        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white dark:bg-dark-300 border border-light-700 dark:border-dark-400 shadow-xs hover:bg-light-800 dark:hover:bg-dark-400 text-dark300_light700 transition-all"
+                        title="Back to Dashboard"
+                    >
+                        <ArrowLeft className="h-5 w-5" />
+                    </Link>
+                    <div>
+                        <div className="flex items-center gap-2.5 flex-wrap">
+                            <h1 className="h2 text-dark100_light900 font-bold">Your Flashcards</h1>
+                        </div>
+                        <p className="body-2 text-dark500_light400 mt-0.5">
+                            Review and study your generated flashcard collections powered by SM-2 Spaced Repetition.
+                        </p>
+                    </div>
+                </div>
             </div>
 
             {/* SM-2 Spaced Repetition Banner & Stats */}

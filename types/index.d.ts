@@ -57,6 +57,10 @@ export interface User extends BaseDocument {
     currentStorageCapacity?: number;
     currentAiTokenUsage?: number;
     status?: string;
+    avatar?: string;
+    username?: string;
+    accountId?: string;
+    $id?: string;
 }
 
 export interface LoginResponse {

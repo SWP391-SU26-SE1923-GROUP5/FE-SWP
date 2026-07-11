@@ -93,19 +93,26 @@ export default function ProfilePage() {
   const tokenPercent = Math.min(Math.round((currentTokens / tokenLimit) * 100), 100);
 
   return (
-      <div className="w-full min-h-screen pb-16 pt-4 sm:pt-6 animate-in fade-in duration-500">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6">
-          <div className="flex items-center justify-between mb-8 pb-4 border-b border-light-700">
-            <Link
-                href="/home"
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-white border border-light-700 text-dark-200 hover:text-[#10b981] hover:border-[#10b981] shadow-drop-3 font-semibold text-sm transition-all duration-200"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              <span>Back to Home</span>
-            </Link>
+      <div className="flex flex-col gap-8 pb-20 pt-6 max-w-7xl mx-auto w-full px-5 sm:px-6 animate-in fade-in duration-500">
+        <div className="max-w-6xl mx-auto w-full">
+          {/* Top Navigation & Header Banner (Matching Trash/Analytics Pattern) */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-light-700 dark:border-dark-400 pb-5 mb-8">
+            <div className="flex items-center gap-3.5">
+              <Link
+                  href="/home"
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white dark:bg-dark-300 border border-light-700 dark:border-dark-400 shadow-xs hover:bg-light-800 dark:hover:bg-dark-400 text-dark300_light700 transition-all"
+                  title="Back to Dashboard"
+              >
+                <ArrowLeft className="h-5 w-5" />
+              </Link>
+              <div>
+                <h1 className="h2 text-dark100_light900 font-bold">Profile & Billing</h1>
+                <p className="body-2 text-dark500_light400 mt-0.5">Manage your subscription, storage quotas, AI token usage, and earned badges.</p>
+              </div>
+            </div>
 
-            <div className="flex items-center gap-2 text-xs font-bold text-slate-500 uppercase tracking-wider">
-              <Settings className="w-4 h-4 text-[#10b981] animate-spin-slow" />
+            <div className="flex items-center gap-2 text-xs font-bold text-dark500_light400 uppercase tracking-wider bg-light-800 dark:bg-dark-300 px-3.5 py-2 rounded-xl border border-light-700 dark:border-dark-400">
+              <Settings className="w-4 h-4 text-brand animate-spin-slow" />
               <span>Account Settings</span>
             </div>
           </div>
