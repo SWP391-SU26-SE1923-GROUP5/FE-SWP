@@ -15,3 +15,5 @@ export const verifyOtp = async (props: VerifyOtpProps) => getAuthProvider().veri
 export const resendOtp = async (props: { email: string }) => getAuthProvider().resendOtp(props);
 export const getUserById = async (id: string) => getAuthProvider().getUserById(id);
 export const refreshSessionToken = async (refreshToken: string, accessToken: string) => getAuthProvider().refreshSessionToken(refreshToken, accessToken);
+export const forgotPassword = async (props: { email: string }) => getAuthProvider().forgotPassword(props);
+export const resetPassword = async (props: { email: string; otp: string; newPassword: string }) => getAuthProvider().resetPassword(props);

@@ -24,6 +24,7 @@ import {
     ResetPasswordSchema,
 } from "@/lib/validations";
 import ROUTES from "@/constants/routes";
+import { forgotPassword, resetPassword } from "@/lib/actions/user.actions";
 
 type StepType = "EMAIL" | "OTP" | "RESET" | "SUCCESS";
 
@@ -51,43 +52,49 @@ const ForgotPasswordForm = () => {
 
     const handleEmailSubmit = async (data: z.infer<typeof ForgotPasswordEmailSchema>) => {
         setIsLoading(true);
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-        setIsLoading(false);
-
-        setEmail(data.email);
-        setStep("OTP");
-        toast.success("If the email exists, an OTP has been sent.");
+        try {
+            await forgotPassword({ email: data.email });
+            setEmail(data.email);
+            setStep("OTP");
+            toast.success("If the email exists, an OTP has been sent.");
+        } catch (error: any) {
+            toast.error(error?.message || "Failed to send verification code. Please try again.");
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     const handleOtpSubmit = async (data: z.infer<typeof ForgotPasswordOtpSchema>) => {
-        setIsLoading(true);
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-        setIsLoading(false);
-
         setOtp(data.otp);
         setStep("RESET");
-        toast.success("OTP verified successfully.");
+        toast.success("Please enter your new password.");
     };
 
     const handleResetSubmit = async (data: z.infer<typeof ResetPasswordSchema>) => {
         setIsLoading(true);
-        await new Promise((resolve) => setTimeout(resolve, 1200));
-        setIsLoading(false);
-
-        const payload = {
-            email: email,
-            otp: otp,
-            newPassword: data.newPassword
-        };
-
-        console.log("Submitting payload to /api/Auth/reset-password:", payload);
-
-        setStep("SUCCESS");
-        toast.success("Password reset successfully.");
+        try {
+            await resetPassword({
+                email,
+                otp,
+                newPassword: data.newPassword
+            });
+            setStep("SUCCESS");
+            toast.success("Password reset successfully.");
+        } catch (error: any) {
+            toast.error(error?.message || "Failed to reset password. Please verify your OTP or try again.");
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     const handleResendOtp = async () => {
-        toast.success("OTP sent successfully.");
+        if (!email) return;
+        try {
+            await forgotPassword({ email });
+            toast.success("OTP sent successfully to your email.");
+        } catch (error: any) {
+            toast.error(error?.message || "Failed to resend OTP.");
+        }
     };
 
     if (step === "EMAIL") {

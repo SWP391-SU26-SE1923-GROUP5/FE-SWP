@@ -213,4 +213,44 @@ export class LocalAuth implements IAuthService {
             this.handleError(error, "resendOtp");
         }
     }
+
+    async forgotPassword({ email }: { email: string }): Promise<string> {
+        try {
+            const res = await fetch(`${connection_url}/api/Auth/forgot-password`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email })
+            });
+
+            const data = await res.json().catch(() => ({}));
+
+            if (!res.ok) {
+                throw new Error(`[${res.status}] ${data.message || "Forgot password request failed"}`);
+            }
+
+            return parseStringify(data.message || "If the email exists, an OTP has been sent.");
+        } catch (error) {
+            this.handleError(error, "forgotPassword");
+        }
+    }
+
+    async resetPassword({ email, otp, newPassword }: { email: string; otp: string; newPassword: string }): Promise<string> {
+        try {
+            const res = await fetch(`${connection_url}/api/Auth/reset-password`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, otp, newPassword })
+            });
+
+            const data = await res.json().catch(() => ({}));
+
+            if (!res.ok) {
+                throw new Error(`[${res.status}] ${data.message || "Password reset failed"}`);
+            }
+
+            return parseStringify(data.message || "Password reset successfully.");
+        } catch (error) {
+            this.handleError(error, "resetPassword");
+        }
+    }
 }

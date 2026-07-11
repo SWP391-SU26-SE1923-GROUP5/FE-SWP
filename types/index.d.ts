@@ -94,6 +94,8 @@ export interface IAuthService {
     signOutUser(): Promise<void>;
     verifyOtp(props: VerifyOtpProps): Promise<string>;
     resendOtp(props: { email: string }): Promise<string>;
+    forgotPassword(props: { email: string }): Promise<string>;
+    resetPassword(props: { email: string; otp: string; newPassword: string }): Promise<string>;
     refreshSessionToken(refreshToken: string, accessToken: string): Promise<{
         accessToken: string;
         refreshToken: string;
