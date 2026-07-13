@@ -593,7 +593,7 @@ export class LocalStorage implements IFileStorage {
     async permanentDeleteFile({ fileId, path }: { fileId: string; path?: string }) {
         try {
             const headers = await this.getHeaders();
-            const res = await fetch(`${connection_url}/api/Document/${fileId}`, {
+            const res = await fetch(`${connection_url}/api/Document/${fileId}/purge`, {
                 method: 'DELETE',
                 headers,
             });
