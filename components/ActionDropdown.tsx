@@ -405,16 +405,25 @@ export default function ActionDropdown({ file }: { file: File_ }) {
                         className={
                             value === "edit" || isAiAction
                                 ? "sr-only"
-                                : value === "share"
+                                : ["share", "rename", "delete"].includes(value)
                                 ? "text-left text-xl font-bold text-slate-800 tracking-tight"
                                 : "text-center text-light-100"
                         }
                     >
-                        {value === "share" ? "Share Document" : label}
+                        {value === "share" ? "Share Document" : value === "rename" ? "Rename Document" : value === "delete" ? "Delete Document" : label}
                     </DialogTitle>
 
                     {value === "rename" && (
-                        <Input type="text" value={name} onChange={(e) => setName(e.target.value)} />
+                        <div className="flex flex-col gap-2 pt-2">
+                            <label className="text-sm font-semibold text-slate-600">New Name</label>
+                            <Input
+                                type="text"
+                                value={name}
+                                onChange={(e) => setName(e.target.value)}
+                                className="!h-[46px] !rounded-xl !border-slate-200 !bg-slate-50/70 text-sm font-medium text-slate-800 focus:!bg-white focus:!border-brand focus:!ring-4 focus:!ring-brand/15 transition-all shadow-2xs w-full"
+                                placeholder="Enter document name..."
+                            />
+                        </div>
                     )}
                     {value === "details" && <FileDetails file={file} />}
                     {value === "share" && (
@@ -646,18 +655,25 @@ export default function ActionDropdown({ file }: { file: File_ }) {
                 </DialogHeader>
 
                 {["rename", "delete"].includes(value) && (
-                    <DialogFooter className="flex flex-col gap-3 md:flex-row mt-4">
+                    <DialogFooter className="flex flex-col gap-3 sm:flex-row justify-end mt-6 pt-4 border-t border-slate-100">
                         <Button
+                            type="button"
                             onClick={closeAllModals}
-                            className="modal-cancel-button cursor-pointer bg-red py-2 rounded-full"
+                            className="px-5 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-semibold text-sm transition-all shadow-2xs cursor-pointer h-10"
                         >
                             Cancel
                         </Button>
                         <Button
+                            type="button"
                             onClick={handleAction}
-                            className="modal-submit-button cursor-pointer py-2 rounded-full"
+                            disabled={isLoading}
+                            className={`px-6 py-2.5 rounded-xl text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer h-10 ${
+                                value === "delete"
+                                    ? "bg-gradient-to-r from-rose-500 to-rose-600 hover:from-rose-500/90 hover:to-rose-600/90"
+                                    : "bg-gradient-to-r from-brand to-indigo-600 hover:from-brand/90 hover:to-indigo-600/90"
+                            }`}
                         >
-                            <p className="capitalize">{value}</p>
+                            <span className="capitalize">{value === "rename" ? "Save Changes" : value}</span>
                         </Button>
                     </DialogFooter>
                 )}
