@@ -77,11 +77,7 @@ export default function AIChatPage() {
     const [isMessagesLoading, setIsMessagesLoading] = useState<boolean>(false);
 
     const [isAddModalOpen, setIsAddModalOpen] = useState<boolean>(false);
-    const [modalTab, setModalTab] = useState<'library' | 'upload'>('library');
-    const [libraryFiles, setLibraryFiles] = useState<LibraryFile[]>([]);
-    const [selectedLibraryFileIds, setSelectedLibraryFileIds] = useState<Set<string>>(new Set());
-    const [isLibraryLoading, setIsLibraryLoading] = useState<boolean>(false);
-    const [isAttaching, setIsAttaching] = useState<boolean>(false);
+    const [isRefetchingLibrary, setIsRefetchingLibrary] = useState<boolean>(false);
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -312,90 +308,9 @@ export default function AIChatPage() {
         }
     };
 
-    // Open add modal & load library
-    const handleOpenAddModal = async () => {
+    // Open add modal
+    const handleOpenAddModal = () => {
         setIsAddModalOpen(true);
-        setModalTab('library');
-        setSelectedLibraryFileIds(new Set());
-        setIsLibraryLoading(true);
-        try {
-            const [res, trashRes] = await Promise.all([
-                getFiles({ types: ["document"], limit: 50 }),
-                getTrashFiles().catch(() => ({ documents: [] }))
-            ]);
-            const trashedIds = new Set<string>((trashRes.documents || []).map((d: any) => d.id || d.Id || d.documentId));
-            // Filter out files already attached or trashed
-            const attachedIds = new Set(attachedSources.map(s => s.documentId));
-            const available = (res.documents || []).filter((f: any) => 
-                !attachedIds.has(f.id) && isDocumentValid(f.id, f, trashedIds)
-            );
-            setLibraryFiles(available);
-        } catch (error: unknown) {
-            toast.error("Failed to load library documents.");
-        } finally {
-            setIsLibraryLoading(false);
-        }
-    };
-
-    const toggleLibrarySelection = (fileId: string) => {
-        setSelectedLibraryFileIds(prev => {
-            const next = new Set(prev);
-            if (next.has(fileId)) {
-                next.delete(fileId);
-            } else {
-                next.add(fileId);
-            }
-            return next;
-        });
-    };
-
-    const handleAttachSelectedFiles = async () => {
-        if (selectedLibraryFileIds.size === 0) return;
-        setIsAttaching(true);
-        try {
-            const ids = Array.from(selectedLibraryFileIds);
-            if (currentSessionId) {
-                for (const id of ids) {
-                    await addDocumentToSession(currentSessionId, id).catch(() => {});
-                }
-                const [updatedDocs, trashRes] = await Promise.all([
-                    getSessionDocuments(currentSessionId),
-                    getTrashFiles().catch(() => ({ documents: [] }))
-                ]);
-                const trashedIds = new Set<string>((trashRes.documents || []).map((d: any) => d.id || d.Id || d.documentId));
-                const validDocs = updatedDocs.filter(d => isDocumentValid(d.documentId, d, trashedIds));
-                setAttachedSources(prev => {
-                    const map = new Map(prev.map(p => [p.documentId, p]));
-                    validDocs.forEach(d => map.set(d.documentId, d));
-                    return Array.from(map.values()).filter(d => isDocumentValid(d.documentId, d, trashedIds));
-                });
-                setActiveSourceIds(prev => new Set([...Array.from(prev), ...validDocs.map(d => d.documentId)]));
-                setSessionDocsMap(prev => ({
-                    ...prev,
-                    [currentSessionId]: validDocs.map(d => d.documentId)
-                }));
-            } else {
-                const selectedFiles = libraryFiles.filter(f => selectedLibraryFileIds.has(f.id)).map(f => ({
-                    chatSessionId: '',
-                    documentId: f.id,
-                    title: f.fileName,
-                    fileName: f.fileName,
-                    addedAt: new Date().toISOString()
-                }));
-                setAttachedSources(prev => {
-                    const existingMap = new Map(prev.map(p => [p.documentId, p]));
-                    selectedFiles.forEach(sf => existingMap.set(sf.documentId, sf));
-                    return Array.from(existingMap.values());
-                });
-                setActiveSourceIds(prev => new Set([...Array.from(prev), ...ids]));
-            }
-            toast.success(`Attached ${ids.length} source(s) successfully!`);
-            setIsAddModalOpen(false);
-        } catch (error: unknown) {
-            toast.error("Failed to attach some sources.");
-        } finally {
-            setIsAttaching(false);
-        }
     };
 
     // Send chat message
@@ -525,7 +440,7 @@ export default function AIChatPage() {
 
                 {/* Sources List */}
                 <div className="flex-1 overflow-y-auto p-3 space-y-2 custom-scrollbar">
-                    {isSourcesLoading ? (
+                    {isSourcesLoading || isSessionsLoading ? (
                         <div className="flex items-center justify-center h-40">
                             <Loader2 className="w-6 h-6 animate-spin text-brand" />
                         </div>
@@ -621,7 +536,7 @@ export default function AIChatPage() {
 
                 {/* Chat Messages Area */}
                 <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
-                    {isMessagesLoading ? (
+                    {isMessagesLoading || isSessionsLoading ? (
                         <div className="flex items-center justify-center h-full">
                             <Loader2 className="w-8 h-8 animate-spin text-brand" />
                         </div>
@@ -688,6 +603,18 @@ export default function AIChatPage() {
                             );
                         })
                     )}
+                    {isSending && (
+                        <div className="flex gap-3 max-w-3xl animate-in fade-in duration-300 mr-auto justify-start">
+                            <div className="w-8 h-8 rounded-xl bg-brand text-white flex items-center justify-center shrink-0 mt-1 shadow-2xs">
+                                <Sparkles className="w-4 h-4" />
+                            </div>
+                            <div className="px-4 py-3 rounded-2xl bg-white dark:bg-dark-200 border border-light-700 dark:border-dark-400 rounded-tl-xs flex items-center gap-1.5 h-[42px] shadow-xs">
+                                <span className="w-1.5 h-1.5 rounded-full bg-slate-400/70 animate-bounce" style={{ animationDelay: '0ms' }} />
+                                <span className="w-1.5 h-1.5 rounded-full bg-slate-400/70 animate-bounce" style={{ animationDelay: '150ms' }} />
+                                <span className="w-1.5 h-1.5 rounded-full bg-slate-400/70 animate-bounce" style={{ animationDelay: '300ms' }} />
+                            </div>
+                        </div>
+                    )}
                     <div ref={messagesEndRef} />
                 </div>
 
@@ -746,127 +673,71 @@ export default function AIChatPage() {
                             <span>Add Sources to Notebook</span>
                         </DialogTitle>
                         <DialogDescription className="text-xs text-slate-400">
-                            Select documents from your existing library or upload new files.
+                            Upload new documents to add them directly to your library and notebook.
                         </DialogDescription>
                     </DialogHeader>
 
-                    {/* Modal Tabs */}
-                    <div className="flex border-b border-light-700 dark:border-dark-400 mt-2">
-                        <button
-                            onClick={() => setModalTab('library')}
-                            className={cn(
-                                "flex-1 py-2.5 text-xs font-extrabold border-b-2 transition-colors cursor-pointer",
-                                modalTab === 'library'
-                                    ? "border-brand text-brand"
-                                    : "border-transparent text-slate-400 hover:text-dark-200 dark:hover:text-light-100"
-                            )}
-                        >
-                            From Library
-                        </button>
-                        <button
-                            onClick={() => setModalTab('upload')}
-                            className={cn(
-                                "flex-1 py-2.5 text-xs font-extrabold border-b-2 transition-colors cursor-pointer",
-                                modalTab === 'upload'
-                                    ? "border-brand text-brand"
-                                    : "border-transparent text-slate-400 hover:text-dark-200 dark:hover:text-light-100"
-                            )}
-                        >
-                            Upload New Document
-                        </button>
-                    </div>
-
-                    {/* Tab 1: Library Documents */}
-                    {modalTab === 'library' && (
-                        <div className="mt-4">
-                            <div className="max-h-60 overflow-y-auto space-y-2 pr-1 custom-scrollbar">
-                                {isLibraryLoading ? (
-                                    <div className="flex items-center justify-center h-40">
-                                        <Loader2 className="w-6 h-6 animate-spin text-brand" />
-                                    </div>
-                                ) : libraryFiles.length === 0 ? (
-                                    <div className="text-center py-12 text-slate-400 text-xs">
-                                        No available documents in library to attach.
-                                    </div>
-                                ) : (
-                                    libraryFiles.map(file => {
-                                        const isChecked = selectedLibraryFileIds.has(file.id);
-                                        return (
-                                            <div
-                                                key={file.id}
-                                                onClick={() => toggleLibrarySelection(file.id)}
-                                                className={cn(
-                                                    "flex items-center justify-between p-3 rounded-xl border cursor-pointer transition-all",
-                                                    isChecked
-                                                        ? "border-brand bg-brand/5 dark:bg-brand/10"
-                                                        : "border-light-700 dark:border-dark-400 hover:border-slate-300 dark:hover:border-slate-600"
-                                                )}
-                                            >
-                                                <div className="flex items-center gap-3 min-w-0">
-                                                    <div className="text-brand shrink-0">
-                                                        {isChecked ? (
-                                                            <CheckSquare className="w-4 h-4 fill-brand text-white" />
-                                                        ) : (
-                                                            <Square className="w-4 h-4 text-slate-400" />
-                                                        )}
-                                                    </div>
-                                                    <div className="min-w-0">
-                                                        <p className="text-xs font-bold text-dark-200 dark:text-light-100 truncate">
-                                                            {file.fileName}
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        );
-                                    })
-                                )}
-                            </div>
-
-                            <div className="flex items-center justify-between pt-4 mt-4 border-t border-light-700 dark:border-dark-400">
-                                <span className="text-xs text-slate-400 font-medium">
-                                    {selectedLibraryFileIds.size} file(s) selected
-                                </span>
-                                <div className="flex items-center gap-2">
-                                    <button
-                                        onClick={() => setIsAddModalOpen(false)}
-                                        className="px-4 py-2 text-xs font-bold text-slate-500 hover:text-dark-200 dark:hover:text-light-100 rounded-xl transition-colors cursor-pointer"
-                                    >
-                                        Cancel
-                                    </button>
-                                    <button
-                                        onClick={handleAttachSelectedFiles}
-                                        disabled={selectedLibraryFileIds.size === 0 || isAttaching}
-                                        className="bg-brand hover:bg-brand/90 text-white px-5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-xs cursor-pointer disabled:opacity-50"
-                                    >
-                                        {isAttaching ? (
-                                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                                        ) : (
-                                            <Check className="w-3.5 h-3.5" />
-                                        )}
-                                        <span>Attach ({selectedLibraryFileIds.size})</span>
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Tab 2: Upload New Document */}
-                    {modalTab === 'upload' && (
-                        <div className="mt-4 py-2">
-                            <FileUploader className="w-full" />
-                            <div className="mt-4 pt-3 border-t border-light-700 dark:border-dark-400 flex justify-end">
-                                <button
-                                    onClick={() => {
+                    <div className="mt-4 py-4">
+                        <FileUploader className="w-full" />
+                        <div className="mt-6 pt-4 border-t border-light-700 dark:border-dark-400 flex justify-end">
+                            <button
+                                onClick={async () => {
+                                    setIsRefetchingLibrary(true);
+                                    try {
+                                        const [res, trashRes] = await Promise.all([
+                                            getFiles({ types: ["document"], limit: 50 }),
+                                            getTrashFiles().catch(() => ({ documents: [] }))
+                                        ]);
+                                        const trashedIds = new Set<string>((trashRes.documents || []).map((d: any) => d.id || d.Id || d.documentId));
+                                        
+                                        const newDocs = (res.documents || []).filter((f: any) => isDocumentValid(f.id || f.Id, f, trashedIds));
+                                        
+                                        setAttachedSources(prev => {
+                                            const map = new Map(prev.map(p => [p.documentId, p]));
+                                            let addedNew = false;
+                                            newDocs.forEach((f: any) => {
+                                                const id = f.id || f.Id;
+                                                if (!map.has(id)) {
+                                                    map.set(id, {
+                                                        chatSessionId: '',
+                                                        documentId: id,
+                                                        title: f.fileName || f.title,
+                                                        fileName: f.fileName || f.title,
+                                                        addedAt: new Date().toISOString()
+                                                    });
+                                                    addedNew = true;
+                                                }
+                                            });
+                                            
+                                            if (addedNew) {
+                                                toast.success("Library refreshed and new files added to sidebar!");
+                                            }
+                                            return Array.from(map.values()).sort((a, b) => new Date(b.addedAt).getTime() - new Date(a.addedAt).getTime());
+                                        });
+                                    } catch (e) {
+                                        toast.error("Failed to refresh library");
+                                    } finally {
+                                        setIsRefetchingLibrary(false);
                                         setIsAddModalOpen(false);
-                                        if (currentSessionId) loadAttachedSources(currentSessionId);
-                                    }}
-                                    className="px-4 py-2 bg-light-800 dark:bg-dark-300 hover:bg-light-700 dark:hover:bg-dark-400 text-xs font-bold text-dark-200 dark:text-light-100 rounded-xl transition-colors cursor-pointer"
-                                >
-                                    Done Uploading & Refresh
-                                </button>
-                            </div>
+                                    }
+                                }}
+                                disabled={isRefetchingLibrary}
+                                className="px-5 py-2.5 bg-brand text-white hover:bg-brand/90 font-bold rounded-xl transition-colors cursor-pointer flex items-center gap-2 shadow-sm"
+                            >
+                                {isRefetchingLibrary ? (
+                                    <>
+                                        <Loader2 className="w-4 h-4 animate-spin" />
+                                        <span>Refreshing...</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <Check className="w-4 h-4" />
+                                        <span>Done Uploading</span>
+                                    </>
+                                )}
+                            </button>
                         </div>
-                    )}
+                    </div>
                 </DialogContent>
             </Dialog>
         </div>
