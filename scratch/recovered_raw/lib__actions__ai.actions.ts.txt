@@ -1,0 +1,6 @@
+125: export const deleteFlashcard = async (flashcardId: string): Promise<void> => {
+130:         method: 'DELETE',
+139:         throw new Error(`[${response.status}] ${errorData.message || "Failed to delete 
+145: export const deleteQuiz = async (quizId: string): Promise<void> => {
+150:         method: 'DELETE',
+159:         throw new Error(`[${response.status}] ${errorData.message || "Failed to delete 

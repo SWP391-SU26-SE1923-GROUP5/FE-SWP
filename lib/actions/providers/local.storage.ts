@@ -278,12 +278,44 @@ export class LocalStorage implements IFileStorage {
         }
     }
 
-    async updateFileUsers({ fileId, emails, path }: UpdateFileUsersProps) {
+    async updateFileUsers({ fileId, emails, path, levels }: UpdateFileUsersProps) {
         try {
             const headers = await this.getHeaders();
+            const targetUserIds = (emails || []).filter(id => id && id.trim() !== "");
 
+            // 1. Fetch current shares to see if any user was removed from the list
+            try {
+                const getRes = await fetch(`${connection_url}/api/Document/${fileId}/shares`, {
+                    method: 'GET',
+                    headers,
+                });
+                if (getRes.ok) {
+                    const getData = await getRes.json().catch(() => null);
+                    const currentShares = getData?.shares || (Array.isArray(getData) ? getData : []);
+                    for (const share of currentShares) {
+                        const existingUserId = share.userId || share.UserId;
+                        if (existingUserId && !targetUserIds.includes(existingUserId)) {
+                            // Revoke user who is no longer in the shared list
+                            await fetch(`${connection_url}/api/Document/${fileId}/shares/${existingUserId}`, {
+                                method: 'DELETE',
+                                headers,
+                            }).catch(() => null);
+                        }
+                    }
+                }
+            } catch (diffError) {
+                console.warn("[updateFileUsers] Warning during diff revoke:", diffError);
+            }
+
+            if (targetUserIds.length === 0) {
+                if (path) revalidatePath(path);
+                return parseStringify({ documentId: fileId, sharedUserIds: [], levels: [] });
+            }
+
+            // 2. Post new or updated shares with access levels
             const payload = {
-                sharedUserIds: emails || [],
+                sharedUserIds: targetUserIds,
+                levels: levels || [],
             };
 
             const shareRes = await fetch(`${connection_url}/api/Document/${fileId}/share`, {
@@ -304,9 +336,46 @@ export class LocalStorage implements IFileStorage {
             }
 
             return parseStringify(data);
-
         } catch (error) {
             this.handleError(error, "UpdateFileUsers");
+        }
+    }
+
+    async getDocumentShares(fileId: string): Promise<any[]> {
+        try {
+            const headers = await this.getHeaders();
+            const res = await fetch(`${connection_url}/api/Document/${fileId}/shares`, {
+                method: 'GET',
+                headers,
+            });
+            if (!res.ok) {
+                const errorData = await res.json().catch(() => ({}));
+                throw new Error(`[${res.status}] ${errorData.message || "Failed to get document shares"}`);
+            }
+            const data = await res.json();
+            return parseStringify(data?.shares || (Array.isArray(data) ? data : []));
+        } catch (error) {
+            this.handleError(error, "GetDocumentShares");
+        }
+    }
+
+    async revokeDocumentShare(fileId: string, targetUserId: string, path?: string): Promise<boolean> {
+        try {
+            const headers = await this.getHeaders();
+            const res = await fetch(`${connection_url}/api/Document/${fileId}/shares/${targetUserId}`, {
+                method: 'DELETE',
+                headers,
+            });
+            if (!res.ok) {
+                const errorData = await res.json().catch(() => ({}));
+                throw new Error(`[${res.status}] ${errorData.message || "Failed to revoke share"}`);
+            }
+            if (path) {
+                revalidatePath(path);
+            }
+            return true;
+        } catch (error) {
+            this.handleError(error, "RevokeDocumentShare");
         }
     }
 

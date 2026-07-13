@@ -1,0 +1,10 @@
+1: export const actionsDropdownItems = [
+3:         label: "Rename",
+4:         icon: "/assets/icons/rename.svg",
+5:         value: "rename",
+18:         label: "Share",
+19:         icon: "/assets/icons/share.svg",
+20:         value: "share",
+28:         label: "Delete",
+29:         icon: "/assets/icons/delete.svg",
+30:         value: "delete",

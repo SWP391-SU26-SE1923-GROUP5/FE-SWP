@@ -147,6 +147,30 @@ export class LocalAuth implements IAuthService {
         }
     }
 
+    async getShareableUsers(keyword?: string): Promise<User[]> {
+        try {
+            const session = await auth();
+            const headers: Record<string, string> = {
+                'Content-Type': 'application/json',
+            };
+            if (session?.accessToken) {
+                headers['Authorization'] = `Bearer ${session.accessToken}`;
+            }
+            const url = keyword && keyword.trim()
+                ? `${connection_url}/api/User/shareable?keyword=${encodeURIComponent(keyword.trim())}`
+                : `${connection_url}/api/User/shareable`;
+            const res = await fetch(url, { method: 'GET', headers });
+            if (!res.ok) {
+                const errorData = await res.json().catch(() => ({}));
+                throw new Error(`[${res.status}] ${errorData.message || "Failed to fetch shareable users"}`);
+            }
+            const data: User[] = await res.json();
+            return parseStringify(data || []);
+        } catch (error) {
+            this.handleError(error, "getShareableUsers");
+        }
+    }
+
     async signOutUser() {
         await signOut({ redirectTo: "/sign-in" });
     }

@@ -55,6 +55,12 @@ export const navItems: NavItem[] = [
         section: "insights",
     },
     {
+        name: "AI Notebook",
+        icon: "/assets/icons/others.svg",
+        url: "/chat",
+        section: "insights",
+    },
+    {
         name: "Leaderboard",
         icon: "/assets/icons/others.svg",
         url: "/leaderboard",

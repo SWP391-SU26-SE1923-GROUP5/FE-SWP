@@ -1,0 +1,3 @@
+7:     AdminPermissionError,
+10: } from "@/lib/actions/admin.actions";
+30:     if (error instanceof AdminPermissionError) {

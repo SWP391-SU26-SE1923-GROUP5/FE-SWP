@@ -37,8 +37,8 @@ import { Button } from "@/components/ui/button";
 
 import { ActionType, AiResultState, File_, Flashcard, QuizQuestion } from "@/types";
 import { actionsDropdownItems } from "@/constants/actionsDropdownItems";
-import { triggerDownload } from "@/lib/utils";
-import { deleteFile, renameFile, updateFileUsers } from "@/lib/actions/file.actions";
+import { triggerDownload, parseSharedUsers } from "@/lib/utils";
+import { deleteFile, renameFile, updateFileUsers, revokeDocumentShare } from "@/lib/actions/file.actions";
 import {
     generateQuiz,
     generateFlashcards,
@@ -47,6 +47,8 @@ import {
     sendChatMessage,
     getSessionMessages,
     getUserSessions,
+    getSessionDocuments,
+    addDocumentToSession,
     ChatSession,
     ChatMessage
 } from "@/lib/actions/ai.actions";
@@ -90,11 +92,8 @@ export default function ActionDropdown({ file }: { file: File_ }) {
     const [action, setAction] = useState<ActionType | null>(null);
     const [name, setName] = useState(file.fileName);
 
-    const [emails, setEmails] = useState<string[]>(
-        file.sharedUsers && file.sharedUsers.trim() !== ""
-            ? file.sharedUsers.split(",")
-            : []
-    );
+    const [emails, setEmails] = useState<string[]>(parseSharedUsers(file.sharedUsers));
+    const [userLevels, setUserLevels] = useState<Record<string, number>>({});
 
     const [aiResult, setAiResult] = useState<AiResultState | null>(null);
     const [userAnswers, setUserAnswers] = useState<Record<number, string>>({});
@@ -112,11 +111,8 @@ export default function ActionDropdown({ file }: { file: File_ }) {
         setIsDropdownOpen(false);
         setAction(null);
         setName(file.fileName);
-        setEmails(
-            file.sharedUsers && file.sharedUsers.trim() !== ""
-                ? file.sharedUsers.split(",")
-                : []
-        );
+        setEmails(parseSharedUsers(file.sharedUsers));
+        setUserLevels({});
         setAiResult(null);
         setUserAnswers({});
         setFlippedCards({});
@@ -135,7 +131,12 @@ export default function ActionDropdown({ file }: { file: File_ }) {
         try {
             const actions = {
                 rename: () => renameFile({ fileId: file.id, name, extension: file.fileExtension.replace('.', ''), path }),
-                share: () => updateFileUsers({ fileId: file.id, emails, path }),
+                share: () => updateFileUsers({
+                    fileId: file.id,
+                    emails,
+                    path,
+                    levels: emails.map(id => userLevels[id] || 1)
+                }),
                 delete: () => deleteFile({ fileId: file.id, path }),
                 edit: () => Promise.resolve(true),
             };
@@ -160,10 +161,16 @@ export default function ActionDropdown({ file }: { file: File_ }) {
 
     const handleRemoveUser = async (email: string) => {
         const updatedEmails = emails.filter((e) => e !== email);
-        const toastId = toast.loading(`Removing ${email}...`);
+        const toastId = toast.loading(`Removing user...`);
 
         try {
-            const success = await updateFileUsers({ fileId: file.id, emails: updatedEmails, path });
+            const revoked = await revokeDocumentShare(file.id, email, path).catch(() => false);
+            const success = revoked || await updateFileUsers({
+                fileId: file.id,
+                emails: updatedEmails,
+                path,
+                levels: updatedEmails.map(id => userLevels[id] || 1)
+            });
             if (success) {
                 setEmails(updatedEmails);
                 toast.success(`User removed successfully!`, { id: toastId });
@@ -212,7 +219,23 @@ export default function ActionDropdown({ file }: { file: File_ }) {
                 data = { summary: res.summary };
             } else if (endpoint === "ask-ai") {
                 const sessions = await getUserSessions();
-                const docSessions = sessions.filter(s => s.documentId === file.id);
+                let docSessions = sessions.filter(s => s.documentId === file.id);
+
+                if (docSessions.length === 0 && sessions.length > 0) {
+                    const matchedSessions: ChatSession[] = [];
+                    for (const s of sessions) {
+                        try {
+                            const docs = await getSessionDocuments(s.id);
+                            if (docs.some(d => d.documentId === file.id || d.id === file.id)) {
+                                matchedSessions.push({ ...s, documentId: file.id });
+                            }
+                        } catch (e) {}
+                    }
+                    if (matchedSessions.length > 0) {
+                        docSessions = matchedSessions;
+                    }
+                }
+
                 setChatSessions(docSessions);
 
                 if (docSessions.length > 0) {
@@ -241,7 +264,15 @@ export default function ActionDropdown({ file }: { file: File_ }) {
     const handleCreateSession = async () => {
         setIsChatLoading(true);
         try {
-            const newSession = await createChatSession(`Chat about ${file.fileName}`);
+            const newSession = await createChatSession(`Chat about ${file.fileName}`, file.id);
+            if (file.id && !newSession.documentId) {
+                try {
+                    await addDocumentToSession(newSession.id, file.id);
+                    newSession.documentId = file.id;
+                } catch (e) {
+                    console.error("Link document to session error:", e);
+                }
+            }
             setChatSessions((prev) => [newSession, ...prev]);
             setSelectedSessionId(newSession.id);
             setChatMessages([]);
@@ -288,7 +319,7 @@ export default function ActionDropdown({ file }: { file: File_ }) {
         const tempMessage: ChatMessage = {
             id: Date.now().toString(),
             chatSessionId: currentSessionId,
-            sender: "User",
+            sender: "user",
             content: chatInput,
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString()
@@ -329,6 +360,8 @@ export default function ActionDropdown({ file }: { file: File_ }) {
                 className={`p-6 sm:p-8 ${
                     value === "edit" || isAiAction
                         ? "max-w-5xl! w-full max-h-[90vh] overflow-y-auto custom-scrollbar"
+                        : value === "share"
+                        ? "rounded-[28px] w-[95%] sm:max-w-[540px] p-6 sm:p-8 bg-white shadow-2xl border border-slate-100 max-h-[90vh] overflow-visible"
                         : "shad-dialog sm:max-w-[460px] w-full max-h-[90vh] overflow-hidden"
                 }`}
                 aria-describedby={undefined}
@@ -336,10 +369,14 @@ export default function ActionDropdown({ file }: { file: File_ }) {
                 <DialogHeader className="flex flex-col gap-3">
                     <DialogTitle
                         className={
-                            value === "edit" || isAiAction ? "sr-only" : "text-center text-light-100"
+                            value === "edit" || isAiAction
+                                ? "sr-only"
+                                : value === "share"
+                                ? "text-left text-xl font-bold text-slate-800 tracking-tight"
+                                : "text-center text-light-100"
                         }
                     >
-                        {label}
+                        {value === "share" ? "Share Document" : label}
                     </DialogTitle>
 
                     {value === "rename" && (
@@ -347,7 +384,7 @@ export default function ActionDropdown({ file }: { file: File_ }) {
                     )}
                     {value === "details" && <FileDetails file={file} />}
                     {value === "share" && (
-                        <ShareInput file={file} onInputChange={setEmails} onRemove={handleRemoveUser} />
+                        <ShareInput file={file} emails={emails} onInputChange={setEmails} onRemove={handleRemoveUser} userLevels={userLevels} onLevelsChange={setUserLevels} />
                     )}
                     {value === "edit" && (
                         <ApryseViewer file={file} path={path} closeModals={closeAllModals} />
@@ -402,18 +439,21 @@ export default function ActionDropdown({ file }: { file: File_ }) {
                                                 Start asking questions about this document.
                                             </div>
                                         ) : (
-                                            chatMessages.map((msg) => (
-                                                <div
-                                                    key={msg.id}
-                                                    className={`p-3 rounded-xl max-w-[85%] text-sm ${
-                                                        msg.sender === "User"
-                                                            ? "bg-brand text-white self-end ml-auto rounded-tr-sm"
-                                                            : "bg-white text-dark-200 border light-border self-start mr-auto rounded-tl-sm whitespace-pre-wrap"
-                                                    }`}
-                                                >
-                                                    {msg.content}
-                                                </div>
-                                            ))
+                                            chatMessages.map((msg) => {
+                                                const isUserMsg = msg.sender?.toLowerCase() === "user" || (msg as any).role?.toLowerCase() === "user" || (msg as any).isUser === true || (msg.sender && msg.sender.toLowerCase() !== "ai" && msg.sender.toLowerCase() !== "assistant" && msg.sender.toLowerCase() !== "system");
+                                                return (
+                                                    <div
+                                                        key={msg.id}
+                                                        className={`p-3 rounded-xl max-w-[85%] text-sm ${
+                                                            isUserMsg
+                                                                ? "bg-brand text-white self-end ml-auto rounded-tr-sm"
+                                                                : "bg-white text-dark-200 border light-border self-start mr-auto rounded-tl-sm whitespace-pre-wrap"
+                                                        }`}
+                                                    >
+                                                        {msg.content}
+                                                    </div>
+                                                );
+                                            })
                                         )}
                                         {isSending && (
                                             <div className="bg-white border light-border p-3 rounded-xl max-w-[85%] self-start mr-auto rounded-tl-sm flex items-center gap-2">
@@ -571,7 +611,7 @@ export default function ActionDropdown({ file }: { file: File_ }) {
                     )}
                 </DialogHeader>
 
-                {["rename", "delete", "share"].includes(value) && (
+                {["rename", "delete"].includes(value) && (
                     <DialogFooter className="flex flex-col gap-3 md:flex-row mt-4">
                         <Button
                             onClick={closeAllModals}
@@ -584,6 +624,26 @@ export default function ActionDropdown({ file }: { file: File_ }) {
                             className="modal-submit-button cursor-pointer py-2 rounded-full"
                         >
                             <p className="capitalize">{value}</p>
+                        </Button>
+                    </DialogFooter>
+                )}
+
+                {value === "share" && (
+                    <DialogFooter className="flex flex-col gap-3 sm:flex-row justify-end mt-6 pt-4 border-t border-slate-100">
+                        <Button
+                            type="button"
+                            onClick={closeAllModals}
+                            className="px-5 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-semibold text-sm transition-all shadow-2xs cursor-pointer h-10"
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            type="button"
+                            onClick={handleAction}
+                            disabled={isLoading}
+                            className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-brand to-indigo-600 hover:from-brand/90 hover:to-indigo-600/90 text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer h-10"
+                        >
+                            <span>Confirm & Save</span>
                         </Button>
                     </DialogFooter>
                 )}

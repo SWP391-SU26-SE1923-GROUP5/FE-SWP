@@ -1,0 +1,18 @@
+7: import { S3Client, DeleteObjectCommand } from "@aws-sdk/client-s3";
+9: import { getCurrentUser } from "@/lib/actions/user.actions";
+46: export class AdminPermissionError extends Error {
+48:         super("You do not have permission to perform this action.");
+49:         this.name = "AdminPermissionError";
+62:     if (!user) throw new AdminPermissionError();
+63:     if (!isAdmin(user)) throw new AdminPermissionError();
+252: export const deleteAdminUser = async (id: string): Promise<{ status: string; deleted: 
+255:     if (id === me.$id) throw new AdminValidationError("You cannot delete your own 
+265:                     .send(new DeleteObjectCommand({ Bucket: BUCKET_NAME, Key: 
+267:                         console.error("[Admin] Failed to delete object:", 
+273:     const userDelete = await pool.query("DELETE FROM users WHERE id = $1 RETURNING 
+274:     if (!userDelete.rows.length) {
+283:         deleted: { users: userDelete.rowCount ?? 0, files: fileIds.length },
+335: export const deleteAdminFile = async (fileId: string): Promise<{ status: string }> => 
+343:     await pool.query("DELETE FROM files WHERE id = $1", [fileId]);
+347:             .send(new DeleteObjectCommand({ Bucket: BUCKET_NAME, Key: bucketFileId }))
+348:             .catch((err) => console.error("[Admin] Failed to delete file object:", 

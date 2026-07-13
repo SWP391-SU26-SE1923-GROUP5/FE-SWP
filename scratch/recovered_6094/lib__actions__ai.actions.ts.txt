@@ -1,0 +1,3 @@
+77:     const response = await fetch(`${connection_url}/api/Chat/sessions`, {
+481:     const response = await 
+501:     const response = await fetch(`${connection_url}/api/Chat/sessions`, {

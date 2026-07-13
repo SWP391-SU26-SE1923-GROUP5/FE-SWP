@@ -67,12 +67,16 @@ export interface SemanticSearchResponse {
 }
 
 export const createChatSession = async (
-    sessionTitle: string = "New Chat Session"
+    sessionTitle: string = "New Chat Session",
+    documentId?: string | null
 ): Promise<ChatSession> => {
     const session = await auth();
     if (!session?.accessToken) {
         throw new Error("Unauthorized. Please log in.");
     }
+
+    const payload: Record<string, unknown> = { sessionTitle };
+    if (documentId) payload.documentId = documentId;
 
     const response = await fetch(`${connection_url}/api/Chat/sessions`, {
         method: 'POST',
@@ -80,9 +84,7 @@ export const createChatSession = async (
             'Authorization': `Bearer ${session.accessToken}`,
             'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-            sessionTitle: sessionTitle
-        })
+        body: JSON.stringify(payload)
     });
 
     if (!response.ok) {
@@ -90,7 +92,11 @@ export const createChatSession = async (
         throw new Error(`[${response.status}] ${errorData.message || errorData.title || "Failed to create chat session."}`);
     }
 
-    return await response.json();
+    const data = await response.json();
+    if (documentId && !data.documentId) {
+        data.documentId = documentId;
+    }
+    return data;
 };
 
 export const sendChatMessage = async (
@@ -491,7 +497,17 @@ export const getSessionMessages = async (sessionId: string): Promise<ChatMessage
         throw new Error(`[${response.status}] ${errorData.message || errorData.title || "Failed to fetch chat messages."}`);
     }
 
-    return await response.json();
+    const data = await response.json();
+    const arr = Array.isArray(data) ? data : (data?.messages || data?.data || data?.items || []);
+    return arr.map((msg: any) => {
+        const rawSender = (msg.sender || msg.Sender || msg.role || msg.Role || "").toString().toLowerCase();
+        const isUser = rawSender === "user" || msg.isUser === true || (rawSender !== "" && rawSender !== "ai" && rawSender !== "assistant" && rawSender !== "system" && rawSender !== "bot");
+        return {
+            ...msg,
+            sender: isUser ? "user" : "ai",
+            content: msg.content || msg.Content || msg.text || msg.Text || ""
+        };
+    });
 };
 
 export const getUserSessions = async (): Promise<ChatSession[]> => {
@@ -560,4 +576,73 @@ export const summarizeRagDocument = async (documentId: string): Promise<SummaryR
     }
 
     return await response.json();
+};
+
+export interface ChatSessionDocument {
+    id?: string;
+    chatSessionId: string;
+    documentId: string;
+    title: string;
+    fileName: string;
+    addedAt: string;
+}
+
+export const getSessionDocuments = async (sessionId: string): Promise<ChatSessionDocument[]> => {
+    const session = await auth();
+    if (!session?.accessToken) throw new Error("Unauthorized. Please log in.");
+
+    const response = await fetch(`${connection_url}/api/Chat/sessions/${sessionId}/documents`, {
+        method: 'GET',
+        headers: {
+            'Authorization': `Bearer ${session.accessToken}`,
+            'Content-Type': 'application/json',
+        },
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(`[${response.status}] ${errorData.message || errorData.title || "Failed to fetch session documents."}`);
+    }
+
+    const data = await response.json();
+    return Array.isArray(data) ? data : (data?.items || []);
+};
+
+export const addDocumentToSession = async (sessionId: string, documentId: string): Promise<ChatSessionDocument> => {
+    const session = await auth();
+    if (!session?.accessToken) throw new Error("Unauthorized. Please log in.");
+
+    const response = await fetch(`${connection_url}/api/Chat/sessions/${sessionId}/documents?documentId=${documentId}`, {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${session.accessToken}`,
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ documentId }),
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(`[${response.status}] ${errorData.message || errorData.title || "Failed to add document to session."}`);
+    }
+
+    return await response.json();
+};
+
+export const removeDocumentFromSession = async (sessionId: string, documentId: string): Promise<void> => {
+    const session = await auth();
+    if (!session?.accessToken) throw new Error("Unauthorized. Please log in.");
+
+    const response = await fetch(`${connection_url}/api/Chat/sessions/${sessionId}/documents/${documentId}`, {
+        method: 'DELETE',
+        headers: {
+            'Authorization': `Bearer ${session.accessToken}`,
+            'Content-Type': 'application/json',
+        },
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(`[${response.status}] ${errorData.message || errorData.title || "Failed to remove document from session."}`);
+    }
 };

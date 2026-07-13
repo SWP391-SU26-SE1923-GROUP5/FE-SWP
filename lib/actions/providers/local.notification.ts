@@ -30,31 +30,56 @@ export class LocalNotification implements INotificationService {
     async getMyNotifications(): Promise<NotificationResponseDto[]> {
         try {
             const headers = await this.getHeaders();
-            const res = await fetch(`${connection_url}/api/Notification/my`, {
+            let res = await fetch(`${connection_url}/api/Notification/my`, {
                 method: 'GET',
                 headers,
                 cache: 'no-store',
             });
 
+            if (!res.ok && (res.status === 404 || res.status === 405)) {
+                res = await fetch(`${connection_url}/api/notifications`, {
+                    method: 'GET',
+                    headers,
+                    cache: 'no-store',
+                });
+            }
+
+            if (!res.ok && (res.status === 404 || res.status === 405)) {
+                res = await fetch(`${connection_url}/api/Notification`, {
+                    method: 'GET',
+                    headers,
+                    cache: 'no-store',
+                });
+            }
+
             if (!res.ok) {
-                if (res.status === 404) return [];
-                throw new Error(`[${res.status}] Failed to fetch notifications`);
+                console.warn(`[GetMyNotifications] API returned status ${res.status}`);
+                return [];
             }
 
             const data = await res.json();
-            return parseStringify(data || []);
+            const arr = Array.isArray(data) ? data : (data?.notifications || data?.data || data?.items || []);
+            return parseStringify(arr);
         } catch (error) {
-            this.handleError(error, "GetMyNotifications");
+            console.warn("[GetMyNotifications] Failed to fetch notifications:", error);
+            return [];
         }
     }
 
     async markAsRead(id: string): Promise<boolean> {
         try {
             const headers = await this.getHeaders();
-            const res = await fetch(`${connection_url}/api/Notification/${id}/read`, {
+            let res = await fetch(`${connection_url}/api/Notification/${id}/read`, {
                 method: 'PUT',
                 headers,
             });
+
+            if (!res.ok && res.status === 404) {
+                res = await fetch(`${connection_url}/api/notifications/${id}/read`, {
+                    method: 'PUT',
+                    headers,
+                });
+            }
 
             return res.ok || res.status === 204;
         } catch (error) {
@@ -65,10 +90,17 @@ export class LocalNotification implements INotificationService {
     async markAllAsRead(): Promise<boolean> {
         try {
             const headers = await this.getHeaders();
-            const res = await fetch(`${connection_url}/api/Notification/read-all`, {
+            let res = await fetch(`${connection_url}/api/Notification/read-all`, {
                 method: 'PUT',
                 headers,
             });
+
+            if (!res.ok && res.status === 404) {
+                res = await fetch(`${connection_url}/api/notifications/read-all`, {
+                    method: 'PUT',
+                    headers,
+                });
+            }
 
             return res.ok || res.status === 204;
         } catch (error) {

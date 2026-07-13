@@ -1,0 +1,6 @@
+71:             next.delete(key);
+75:         if (key !== "page") next.delete("page");
+81:         if (nextPage <= 1) params.delete("page");
+86:     const handleFileDeleted = (id: string) => {
+139:                             <th className="text-right">Actions</th>
+144:                             files.map((f) => <AdminFileRow key={f.$id} 

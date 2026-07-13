@@ -252,3 +252,19 @@ export const getFileTypesParams = (type: string) => {
       return ["document"];
   }
 };
+
+export const parseSharedUsers = (sharedUsers?: string | null): string[] => {
+  if (!sharedUsers || typeof sharedUsers !== 'string' || sharedUsers.trim() === "") return [];
+  try {
+    if (sharedUsers.trim().startsWith("[")) {
+      const parsed = JSON.parse(sharedUsers);
+      if (Array.isArray(parsed)) return parsed.map(String).filter(Boolean);
+    }
+  } catch (e) {}
+  return sharedUsers
+    .replace(/^[\[\]"]/g, '')
+    .replace(/[\[\]"]/g, '')
+    .split(",")
+    .map(e => e.trim().replace(/^"/, '').replace(/"$/, ''))
+    .filter(Boolean);
+};

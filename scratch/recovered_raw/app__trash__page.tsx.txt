@@ -1,0 +1,58 @@
+31:     AlertDialogAction,
+40: import { getTrashFiles, restoreFile, permanentDeleteFile } from '@/lib/actions/file.actions';
+49:     deletedAt: string;
+50:     deletedTimestamp: number;
+55: type SortField = 'name' | 'subject' | 'size' | 'deletedAt' | 'daysRemaining';
+62:     const [selectedFileToDelete, setSelectedFileToDelete] = useState<TrashItemView | null>(null);
+64:     const [actionLoading, setActionLoading] = useState<string | null>(null);
+79:                 const deletedTimestamp = doc.updatedAt ? new Date(doc.updatedAt).getTime() : 
+81:                 const remainingMs = Math.max(0, (deletedTimestamp + thirtyDaysMs) - Date.now());
+89:                     deletedAt: doc.updatedAt
+92:                     deletedTimestamp,
+100:             toast.error('Could not fetch deleted documents from trash.');
+133:                 case 'deletedAt':
+134:                     comp = a.deletedTimestamp - b.deletedTimestamp;
+170:         setActionLoading(id);
+178:             setActionLoading(null);
+182:     const handleDeletePermanently = async (id: string, name: string) => {
+183:         setActionLoading(id);
+185:             await permanentDeleteFile({ fileId: id, path: '/trash' });
+187:             setSelectedFileToDelete(null);
+190:             toast.error(error?.message || `Failed to permanently delete "${name}".`);
+192:             setActionLoading(null);
+201:                 await permanentDeleteFile({ fileId: f.id, path: '/trash' }).catch(() => null);
+244:                             Deleted documents automatically purge after 30 days. Restore files 
+255:                                 disabled={loading || actionLoading !== null}
+269:                                     You are about to permanently delete <span 
+276:                                 <AlertDialogAction
+281:                                 </AlertDialogAction>
+288:             {/* Action Toolbar (Search, Sort Selector, View Mode & Stats) */}
+333:                             <option value="deletedAt">Date Deleted</option>
+380:                         There are no deleted documents occupying your storage quota. When you 
+393:                         No deleted documents matched "{searchQuery}"
+425:                             onClick={() => handleSort('deletedAt')}
+428:                             <span>Deleted On</span>
+429:                             {renderSortIcon('deletedAt')}
+439:                             Actions
+449:                             const isRowBusy = actionLoading === file.id;
+482:                                     {/* Col 3 (Span 2): Deleted Date */}
+484:                                         {file.deletedAt}
+499:                                     {/* Col 5 (Span 1): Action Buttons (Restore & Delete) */}
+517:                                                     onClick={() => 
+519:                                                     title="Permanently Delete"
+528:                                                         <span>Permanently delete file?</span>
+531:                                                         Are you sure you want to permanently 
+538:                                                     <AlertDialogAction
+539:                                                         onClick={() => 
+542:                                                         Delete Permanently
+543:                                                     </AlertDialogAction>
+575:                             const isRowBusy = actionLoading === file.id;
+610:                                                     {sizeMB} MB  Deleted {file.deletedAt}
+632:                                                     onClick={() => 
+634:                                                     title="Permanently Delete"
+643:                                                         <span>Permanently delete file?</span>
+646:                                                         Are you sure you want to permanently 
+653:                                                     <AlertDialogAction
+654:                                                         onClick={() => 
+657:                                                         Delete Permanently
+658:                                                     </AlertDialogAction>

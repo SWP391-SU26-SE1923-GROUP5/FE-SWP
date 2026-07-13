@@ -1,0 +1,5 @@
+150: function AlertDialogAction({
+155: }: React.ComponentProps<typeof AlertDialogPrimitive.Action> &
+159:       <AlertDialogPrimitive.Action
+160:         data-slot="alert-dialog-action"
+188:   AlertDialogAction,

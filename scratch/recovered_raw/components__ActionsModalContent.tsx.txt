@@ -1,0 +1,38 @@
+6: import { convertFileSize, formatDateTime, parseSharedUsers } from "@/lib/utils";
+11: import { getUserById, getShareableUsers } from "@/lib/actions/user.actions";
+12: import { getDocumentShares } from "@/lib/actions/file.actions";
+50:     onInputChange: React.Dispatch<React.SetStateAction<string[]>>;
+53:     onLevelsChange?: React.Dispatch<React.SetStateAction<Record<string, 
+56: export const ShareInput = ({ file, emails, onInputChange, onRemove, userLevels, 
+59:     const [shareableUsers, setShareableUsers] = useState<User[]>([]);
+61:     const [selectedAccessLevel, setSelectedAccessLevel] = useState<number>(1);
+63:     const existingUsers = emails || parseSharedUsers(file.sharedUsers);
+83:                 const users = await getShareableUsers();
+84:                 setShareableUsers(users || []);
+86:                 console.error("Failed to fetch shareable users:", error);
+90:                 const shares = await getDocumentShares(file.id);
+91:                 if (shares && shares.length > 0 && onLevelsChange) {
+94:                         shares.forEach(s => {
+101:                 console.error("Failed to fetch document shares:", error);
+121:                     newLevels[item] = levelToAdd || selectedAccessLevel;
+128:             let matched = shareableUsers.find(
+139:                     const lookup = await getShareableUsers(item);
+144:                         setShareableUsers(prev => prev.some(u => u.id === 
+157:                 toast.error("You cannot share a file with its owner.");
+164:                 toast.info(`"${matched.fullName || matched.email}" is already 
+169:             newLevels[userKey] = levelToAdd || selectedAccessLevel;
+171:             toast.success(`Added ${matched.fullName || matched.email} to share 
+182:         ? shareableUsers.filter(u =>
+193:             <div className="share-wrapper min-w-0 relative">
+194:                 <p className="subtitle-2 pl-1 text-light-100">Share file with 
+208:                         className="share-input-field flex-1 min-w-0"
+211:                         value={selectedAccessLevel}
+212:                         onChange={(e) => 
+215:                         <option value={1}>Can view</option>
+216:                         <option value={2}>Can edit</option>
+234:                                         handleAddUser(u.id || u.email, 
+249:                         <p className="subtitle-2 text-light-100">Shared with</p>
+267:                             const matched = shareableUsers.find(u => u.id === 
+291:                                             <option value={1}>Can view</option>
+292:                                             <option value={2}>Can edit</option>
+294:                                         <Button type="button" variant="ghost" 

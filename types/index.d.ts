@@ -91,6 +91,7 @@ export interface IAuthService {
     signInUser(props: SignInProps): Promise<LoginResponse | null>;
     getCurrentUser(): Promise<User | null>;
     getUserById(id: string): Promise<User>;
+    getShareableUsers(keyword?: string): Promise<User[]>;
     signOutUser(): Promise<void>;
     verifyOtp(props: VerifyOtpProps): Promise<string>;
     resendOtp(props: { email: string }): Promise<string>;
@@ -167,6 +168,7 @@ export interface UpdateFileUsersProps {
     fileId: string;
     emails: string[];
     path: string;
+    levels?: number[];
 }
 
 export interface DeleteFileProps {
@@ -190,6 +192,8 @@ export interface IFileStorage {
     getFiles(props: GetFilesProps): Promise<{ documents: File_[]; total: number }>;
     renameFile(props: RenameFileProps): Promise<File_ | undefined>;
     updateFileUsers(props: UpdateFileUsersProps): Promise<File_ | undefined>;
+    getDocumentShares(fileId: string): Promise<any[]>;
+    revokeDocumentShare(fileId: string, targetUserId: string, path?: string): Promise<boolean>;
     updateEditedFile(props: UpdateEditedFileProps): Promise<UploadFileResponse | undefined>;
     deleteFile(props: DeleteFileProps): Promise<{ status: string } | undefined>;
     downloadFile(props: DownloadFileProps): Promise<{ data: string; contentType?: string }>;

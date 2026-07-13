@@ -1,0 +1,4 @@
+28:         "group/card-header @container/card-header grid auto-rows-min items-start gap-1 
+59: function CardAction({ className, ...props }: React.ComponentProps<"div">) {
+62:       data-slot="card-action"
+100:   CardAction,

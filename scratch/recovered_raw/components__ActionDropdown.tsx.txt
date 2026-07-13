@@ -1,0 +1,46 @@
+38: import { ActionType, AiResultState, File_, Flashcard, QuizQuestion } from "@/types";
+39: import { actionsDropdownItems } from "@/constants/actionsDropdownItems";
+40: import { triggerDownload, parseSharedUsers } from "@/lib/utils";
+41: import { deleteFile, renameFile, updateFileUsers } from "@/lib/actions/file.actions";
+52: } from "@/lib/actions/ai.actions";
+54: import { FileDetails, ShareInput } from "@/components/ActionsModalContent";
+78: const AI_ACTIONS = ["quiz", "flashcards", "summarize", "ask-ai"];
+80: export default function ActionDropdown({ file }: { file: File_ }) {
+90:     const [action, setAction] = useState<ActionType | null>(null);
+94:         parseSharedUsers(file.sharedUsers)
+112:         setAction(null);
+115:             parseSharedUsers(file.sharedUsers)
+127:     const handleAction = async () => {
+128:         if (!action) return null;
+131:         const toastId = toast.loading(`Processing ${action.label}...`);
+134:             const actions = {
+135:                 rename: () => renameFile({ fileId: file.id, name, extension: 
+136:                 share: () => {
+140:                 delete: () => deleteFile({ fileId: file.id, path }),
+144:             const actionKey = action.value as keyof typeof actions;
+145:             const success = await actions[actionKey]();
+148:                 toast.success(`${action.label} completed successfully!`, { id: 
+155:                 toast.error(`Failed to execute ${action.label}.`, { id: toastId });
+172:         setAction({ value: endpoint, label, icon: "" } as ActionType);
+310:         if (!action) return null;
+311:         const { value, label } = action;
+312:         const isAiAction = AI_ACTIONS.includes(value);
+317:                     value === "edit" || isAiAction
+326:                             value === "edit" || isAiAction ? "sr-only" : 
+332:                     {value === "rename" && (
+336:                     {value === "share" && (
+337:                         <ShareInput
+349:                     {value === "delete" && (
+350:                         <p className="delete-confirmation">
+351:                             Are you sure you want to delete{" "}
+352:                             <span 
+356:                     {isAiAction && !isLoading && aiResult && (
+568:                 {["rename", "delete", "share"].includes(value) && (
+577:                             onClick={handleAction}
+580:                             <p className="capitalize">{value === "share" ? "Confirm" 
+585:                 {isAiAction && !isLoading && (
+623:                         {isAiAction && (
+643:                         aria-label="File actions"
+660:                     {actionsDropdownItems
+670:                                     setAction(item);
+672:                                         ["rename", "share", "delete", "details", 

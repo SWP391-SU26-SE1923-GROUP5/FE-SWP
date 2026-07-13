@@ -1,0 +1,3 @@
+7: import { getFiles } from "@/lib/actions/file.actions";
+8: import { semanticSearch } from "@/lib/actions/ai.actions";
+58:                     newSearchParams.delete("query");

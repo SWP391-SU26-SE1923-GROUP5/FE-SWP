@@ -1,0 +1,1 @@
+2: import { getCreatedQuizzes } from "@/lib/actions/ai.actions";
