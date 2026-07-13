@@ -52,7 +52,8 @@ export default function FilePreviewWrapper({ file, children, className = "" }: P
   const path = usePathname();
   const [isOpen, setIsOpen] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
-  
+  const [previewPosition, setPreviewPosition] = useState<"above" | "below" | "right">("above");
+
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isLoadingPreview, setIsLoadingPreview] = useState(false);
 
@@ -62,6 +63,7 @@ export default function FilePreviewWrapper({ file, children, className = "" }: P
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const previewBlobRef = useRef<string | null>(null);
   const realBlobRef = useRef<string | null>(null);
+  const cardRef = useRef<HTMLDivElement | null>(null);
 
   const fileExt = file.fileExtension?.toLowerCase().replace(".", "") || "";
   const isImage = ["jpg", "jpeg", "png", "gif", "webp", "svg", "bmp"].includes(fileExt) || file.fileType === "image";
@@ -81,8 +83,26 @@ export default function FilePreviewWrapper({ file, children, className = "" }: P
     };
   }, []);
 
+  const computePreviewPosition = () => {
+    if (!cardRef.current) return "above" as const;
+    const rect = cardRef.current.getBoundingClientRect();
+    const previewH = 280;
+    const previewW = 300;
+    const gap = 12;
+
+    // Prefer below if there's space
+    if (rect.bottom + gap + previewH < window.innerHeight) return "below" as const;
+    // Then try above
+    if (rect.top - gap - previewH > 0) return "above" as const;
+    // Fallback: show to the right
+    if (rect.right + gap + previewW < window.innerWidth) return "right" as const;
+    // Last resort: below anyway
+    return "below" as const;
+  };
+
   const handleMouseEnter = () => {
     hoverTimeoutRef.current = setTimeout(() => {
+      setPreviewPosition(computePreviewPosition());
       setIsHovered(true);
       if (!previewUrl && !isOffice) {
         setIsLoadingPreview(true);
@@ -98,7 +118,7 @@ export default function FilePreviewWrapper({ file, children, className = "" }: P
           .catch((err) => console.error("Preview document fetch failed", err))
           .finally(() => setIsLoadingPreview(false));
       }
-    }, 250);
+    }, 300);
   };
 
   const handleMouseLeave = () => {
@@ -133,9 +153,34 @@ export default function FilePreviewWrapper({ file, children, className = "" }: P
     }
   };
 
+  const positionClasses = {
+    above: "bottom-full left-1/2 -translate-x-1/2",
+    below: "top-full left-1/2 -translate-x-1/2",
+    right: "left-full top-0",
+  };
+
+  const bridgePadding = {
+    above: "pb-3",
+    below: "pt-3",
+    right: "pl-3",
+  };
+
+  const arrowClasses = {
+    above: "absolute left-1/2 -translate-x-1/2 top-full w-0 h-0 border-l-[8px] border-r-[8px] border-t-[8px] border-l-transparent border-r-transparent border-t-white",
+    below: "absolute left-1/2 -translate-x-1/2 bottom-full w-0 h-0 border-l-[8px] border-r-[8px] border-b-[8px] border-l-transparent border-r-transparent border-b-white",
+    right: "absolute right-full top-6 w-0 h-0 border-t-[8px] border-b-[8px] border-r-[8px] border-t-transparent border-b-transparent border-r-white",
+  };
+
+  const slideAnim = {
+    above: "animate-in fade-in-0 slide-in-from-bottom-2 duration-200",
+    below: "animate-in fade-in-0 slide-in-from-top-2 duration-200",
+    right: "animate-in fade-in-0 slide-in-from-left-2 duration-200",
+  };
+
   return (
     <>
       <div
+        ref={cardRef}
         onClick={handleOpenRealDoc}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
@@ -144,38 +189,42 @@ export default function FilePreviewWrapper({ file, children, className = "" }: P
         {children}
 
         {isHovered && (
-          <div className="absolute z-50 left-1/2 -translate-x-1/2 bottom-full mb-3 w-80 h-80 p-2 bg-white rounded-2xl shadow-drop-3 border border-light-700 animate-in fade-in slide-in-from-bottom-2 duration-200 pointer-events-none flex flex-col items-center justify-center overflow-hidden">
-            {isLoadingPreview ? (
-              <div className="flex flex-col items-center justify-center gap-2 text-slate-500 w-full h-full bg-slate-50 rounded-xl">
-                <Loader2 className="w-8 h-8 animate-spin text-[#10b981]" />
-                <span className="text-xs font-semibold">Loading document preview...</span>
-              </div>
-            ) : previewUrl ? (
-              isImage ? (
-                <img src={previewUrl} alt={file.fileName} className="w-full h-full object-contain rounded-xl bg-slate-50" />
-              ) : isVideo ? (
-                <video src={previewUrl} muted autoPlay loop className="w-full h-full object-cover rounded-xl bg-black" />
-              ) : isAudio ? (
-                <div className="w-full h-full flex flex-col items-center justify-center gap-4 bg-slate-50 rounded-xl p-4">
-                  <Thumbnail type="audio" extension={fileExt} url={file.fileLink} className="!size-16" />
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className={`absolute z-50 ${positionClasses[previewPosition]} ${bridgePadding[previewPosition]}`}
+          >
+            <div className={`w-[300px] h-[280px] p-2 bg-white/95 backdrop-blur-sm rounded-2xl shadow-2xl border border-slate-200/80 flex flex-col items-center justify-center overflow-hidden relative ${slideAnim[previewPosition]}`}>
+              {isLoadingPreview ? (
+                <div className="flex flex-col items-center justify-center gap-2.5 text-slate-500 w-full h-full bg-slate-50/80 rounded-xl">
+                  <Loader2 className="w-7 h-7 animate-spin text-brand" />
+                  <span className="text-[11px] font-semibold text-slate-500">Loading preview…</span>
+                </div>
+              ) : previewUrl ? (
+                isImage ? (
+                  <img src={previewUrl} alt={file.fileName} className="w-full h-full object-contain rounded-xl bg-slate-50" />
+                ) : isVideo ? (
+                  <video src={previewUrl} muted autoPlay loop className="w-full h-full object-cover rounded-xl bg-black" />
+                ) : isAudio ? (
+                  <div className="w-full h-full flex flex-col items-center justify-center gap-4 bg-slate-50 rounded-xl p-4">
+                    <Thumbnail type="audio" extension={fileExt} url={file.fileLink} className="!size-14" />
+                    <span className="text-xs font-bold text-dark-200 text-center line-clamp-2">{file.fileName}</span>
+                  </div>
+                ) : (
+                  <iframe src={`${previewUrl}#toolbar=0&navpanes=0&scrollbar=0`} className="w-full h-full border-0 rounded-xl bg-white pointer-events-none" />
+                )
+              ) : isOffice ? (
+                <div className="w-full h-full flex flex-col items-center justify-center gap-3 bg-slate-50 rounded-xl p-4">
+                  <Thumbnail type={file.fileType} extension={fileExt} url={file.fileLink} className="!size-14" />
                   <span className="text-xs font-bold text-dark-200 text-center line-clamp-2">{file.fileName}</span>
+                  <span className="text-[10px] text-brand font-semibold">Click to open document</span>
                 </div>
               ) : (
-                <iframe src={`${previewUrl}#toolbar=0&navpanes=0&scrollbar=0`} className="w-full h-full border-0 rounded-xl bg-white pointer-events-none" />
-              )
-            ) : isOffice ? (
-              <div className="w-full h-full flex flex-col items-center justify-center gap-3 bg-slate-50 rounded-xl p-4">
-                <Thumbnail type={file.fileType} extension={fileExt} url={file.fileLink} className="!size-16" />
-                <span className="text-xs font-bold text-dark-200 text-center line-clamp-2">{file.fileName}</span>
-                <span className="text-[10px] text-[#10b981] font-semibold">Click to view full real document</span>
-              </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center gap-2 text-slate-400 w-full h-full bg-slate-50 rounded-xl">
-                <AlertCircle className="w-8 h-8 text-amber-500" />
-                <span className="text-xs font-semibold">Preview unavailable</span>
-              </div>
-            )}
-            <div className="absolute left-1/2 -translate-x-1/2 top-full w-0 h-0 border-l-8 border-r-8 border-t-8 border-l-transparent border-r-transparent border-t-white drop-shadow-sm" />
+                <div className="flex flex-col items-center justify-center gap-2 text-slate-400 w-full h-full bg-slate-50 rounded-xl">
+                  <AlertCircle className="w-7 h-7 text-amber-400" />
+                  <span className="text-[11px] font-semibold">Preview unavailable</span>
+                </div>
+              )}
+            </div>
           </div>
         )}
       </div>

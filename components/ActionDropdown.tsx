@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback, useRef } from "react";
+import { useSession } from "next-auth/react";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import {
@@ -38,7 +39,7 @@ import { Button } from "@/components/ui/button";
 import { ActionType, AiResultState, File_, Flashcard, QuizQuestion } from "@/types";
 import { actionsDropdownItems } from "@/constants/actionsDropdownItems";
 import { triggerDownload, parseSharedUsers } from "@/lib/utils";
-import { deleteFile, renameFile, updateFileUsers, revokeDocumentShare } from "@/lib/actions/file.actions";
+import { deleteFile, renameFile, updateFileUsers, revokeDocumentShare, getDocumentShares } from "@/lib/actions/file.actions";
 import {
     generateQuiz,
     generateFlashcards,
@@ -82,9 +83,42 @@ const AI_ACTIONS = ["quiz", "flashcards", "summarize", "ask-ai"];
 export default function ActionDropdown({ file }: { file: File_ }) {
     const path = usePathname();
     const router = useRouter();
+    const { data: session } = useSession();
     const fileExt = file.fileExtension?.toLowerCase() || "";
 
     const isAiDocSupported = SUPPORTED_AI_DOC_EXTENSIONS.includes(fileExt);
+
+    // --- Access level logic ---
+    const currentUserId = session?.user?.id;
+    const isOwner = !!currentUserId && file.userId === currentUserId;
+    const [userAccessLevel, setUserAccessLevel] = useState<number | null>(null);
+    const accessLevelFetched = useRef(false);
+
+    // Owner and Edit-level (2) users can do everything; Read-level (1) can only view/download
+    const canEdit = isOwner || userAccessLevel === 2;
+
+    const fetchAccessLevel = useCallback(async () => {
+        if (isOwner || accessLevelFetched.current) return;
+        accessLevelFetched.current = true;
+        try {
+            const shares = await getDocumentShares(file.id);
+            if (shares && Array.isArray(shares)) {
+                // Non-owner sees only their own share entry
+                const myShare = shares.find(
+                    (s: any) => (s.userId || s.UserId) === currentUserId
+                ) || shares[0];
+                if (myShare) {
+                    setUserAccessLevel(Number(myShare.level || myShare.Level || myShare.accessLevel || 1));
+                } else {
+                    setUserAccessLevel(1); // default to read-only if no share found
+                }
+            } else {
+                setUserAccessLevel(1);
+            }
+        } catch {
+            setUserAccessLevel(1); // fail-safe: default to read-only
+        }
+    }, [file.id, currentUserId, isOwner]);
 
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -387,7 +421,7 @@ export default function ActionDropdown({ file }: { file: File_ }) {
                         <ShareInput file={file} emails={emails} onInputChange={setEmails} onRemove={handleRemoveUser} userLevels={userLevels} onLevelsChange={setUserLevels} />
                     )}
                     {value === "edit" && (
-                        <ApryseViewer file={file} path={path} closeModals={closeAllModals} />
+                        <ApryseViewer file={file} path={path} closeModals={closeAllModals} readOnly={!canEdit} />
                     )}
                     {value === "delete" && (
                         <p className="delete-confirmation">
@@ -697,7 +731,10 @@ export default function ActionDropdown({ file }: { file: File_ }) {
 
     return (
         <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-            <DropdownMenu open={isDropdownOpen} onOpenChange={setIsDropdownOpen}>
+            <DropdownMenu open={isDropdownOpen} onOpenChange={(open) => {
+                setIsDropdownOpen(open);
+                if (open && !isOwner) fetchAccessLevel();
+            }}>
                 <DropdownMenuTrigger asChild className="shad-no-focus">
                     <button
                         type="button"
@@ -723,6 +760,12 @@ export default function ActionDropdown({ file }: { file: File_ }) {
                     {actionsDropdownItems
                         .filter((item) => {
                             if (item.value === "edit") return SUPPORTED_EDIT_EXTENSIONS.includes(fileExt);
+                            // Hide editOnly actions (rename, share, delete) for read-only users
+                            if ((item as any).editOnly && !isOwner) {
+                                // Still loading access level → hide by default (safe)
+                                if (userAccessLevel === null) return false;
+                                if (userAccessLevel < 2) return false;
+                            }
                             return true;
                         })
                         .map((item) => (
