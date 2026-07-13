@@ -324,7 +324,8 @@ export default function ProfilePage() {
                 {achievements.length > 0 ? (
                     achievements.map((item) => {
                       const target = item.targetValue || 1;
-                      const progressPercent = Math.min(Math.round((item.currentProgress / target) * 100), 100);
+                      const displayProgress = item.isUnlocked ? target : item.currentProgress;
+                      const progressPercent = item.isUnlocked ? 100 : Math.min(Math.round((displayProgress / target) * 100), 100);
 
                       return (
                           <div
@@ -386,7 +387,7 @@ export default function ProfilePage() {
                                 />
                               </div>
                               <div className="flex justify-between items-center text-xs font-bold text-slate-400">
-                                <span>{item.currentProgress} / {target}</span>
+                                <span>{displayProgress} / {target}</span>
                                 <span className="text-dark-200 font-semibold">{progressPercent}%</span>
                               </div>
                             </div>
