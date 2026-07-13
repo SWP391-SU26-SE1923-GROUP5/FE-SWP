@@ -22,9 +22,9 @@ const ImageThumbnail = ({ file }: { file: File_ }) => (
             <p className="text-base font-bold text-slate-800 truncate" title={file.fileName}>{file.fileName}</p>
             <div className="flex items-center gap-1.5 mt-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-brand"></span>
-                <p className="text-xs font-medium text-slate-500">
-                    Created on <FormattedDateTime date={file.createdAt || ""} className="inline" />
-                </p>
+                <div className="text-xs font-medium text-slate-500 flex items-center gap-1">
+                    Created on <FormattedDateTime date={file.createdAt || ""} className="!text-xs !text-slate-500 m-0 p-0" />
+                </div>
             </div>
         </div>
     </div>

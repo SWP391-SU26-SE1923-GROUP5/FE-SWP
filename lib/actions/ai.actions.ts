@@ -76,7 +76,6 @@ export const createChatSession = async (
     }
 
     const payload: Record<string, unknown> = { sessionTitle };
-    if (documentId) payload.documentId = documentId;
 
     const response = await fetch(`${connection_url}/api/Chat/sessions`, {
         method: 'POST',
@@ -93,9 +92,15 @@ export const createChatSession = async (
     }
 
     const data = await response.json();
-    if (documentId && !data.documentId) {
-        data.documentId = documentId;
+    
+    if (documentId) {
+        try {
+            await addDocumentToSession(data.id, documentId);
+        } catch (e) {
+            console.error("Failed to automatically link document to session:", e);
+        }
     }
+    
     return data;
 };
 

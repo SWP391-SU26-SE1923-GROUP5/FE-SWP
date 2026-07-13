@@ -257,16 +257,23 @@ export default function ActionDropdown({ file }: { file: File_ }) {
 
                 if (docSessions.length === 0 && sessions.length > 0) {
                     const matchedSessions: ChatSession[] = [];
-                    for (const s of sessions) {
-                        try {
-                            const docs = await getSessionDocuments(s.id);
-                            if (docs.some(d => d.documentId === file.id || d.id === file.id)) {
-                                matchedSessions.push({ ...s, documentId: file.id });
-                            }
-                        } catch (e) {}
-                    }
+                    // Check only the 15 most recent sessions concurrently to prevent N+1 freezing
+                    const recentSessions = sessions.slice(0, 15);
+                    await Promise.all(
+                        recentSessions.map(async (s) => {
+                            try {
+                                const docs = await getSessionDocuments(s.id);
+                                if (docs.some(d => d.documentId === file.id || d.id === file.id)) {
+                                    matchedSessions.push({ ...s, documentId: file.id });
+                                }
+                            } catch (e) {}
+                        })
+                    );
+                    
                     if (matchedSessions.length > 0) {
-                        docSessions = matchedSessions;
+                        docSessions = matchedSessions.sort(
+                            (a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
+                        );
                     }
                 }
 
@@ -299,14 +306,6 @@ export default function ActionDropdown({ file }: { file: File_ }) {
         setIsChatLoading(true);
         try {
             const newSession = await createChatSession(`Chat about ${file.fileName}`, file.id);
-            if (file.id && !newSession.documentId) {
-                try {
-                    await addDocumentToSession(newSession.id, file.id);
-                    newSession.documentId = file.id;
-                } catch (e) {
-                    console.error("Link document to session error:", e);
-                }
-            }
             setChatSessions((prev) => [newSession, ...prev]);
             setSelectedSessionId(newSession.id);
             setChatMessages([]);
@@ -338,7 +337,7 @@ export default function ActionDropdown({ file }: { file: File_ }) {
         if (!currentSessionId) {
             setIsChatLoading(true);
             try {
-                const newSession = await createChatSession(`Chat about ${file.fileName}`);
+                const newSession = await createChatSession(`Chat about ${file.fileName}`, file.id);
                 setChatSessions((prev) => [newSession, ...prev]);
                 currentSessionId = newSession.id;
                 setSelectedSessionId(newSession.id);
@@ -350,7 +349,7 @@ export default function ActionDropdown({ file }: { file: File_ }) {
             setIsChatLoading(false);
         }
 
-        const tempMessage: ChatMessage = {
+        const userMessage = {
             id: Date.now().toString(),
             chatSessionId: currentSessionId,
             sender: "user",
@@ -359,15 +358,21 @@ export default function ActionDropdown({ file }: { file: File_ }) {
             updatedAt: new Date().toISOString()
         };
 
-        setChatMessages((prev) => [...prev, tempMessage]);
+        setChatMessages((prev) => [...prev, userMessage as any]);
         setChatInput("");
         setIsSending(true);
 
         try {
-            const aiResponse = await sendChatMessage(currentSessionId, file.id, tempMessage.content);
+            const aiResponse = await sendChatMessage(currentSessionId, file.id, userMessage.content);
             setChatMessages((prev) => [...prev, aiResponse]);
-        } catch (error) {
-            toast.error("Failed to send message.");
+        } catch (error: unknown) {
+            setChatMessages((prev) => prev.filter(msg => msg.id !== userMessage.id));
+            setChatInput(userMessage.content);
+            if (error instanceof Error) {
+                toast.error(error.message);
+            } else {
+                toast.error("Failed to send message.");
+            }
         } finally {
             setIsSending(false);
         }
