@@ -482,7 +482,8 @@ export const getQuizHistory = async (quizId: string): Promise<QuizSubmissionResp
         return [];
     }
 
-    return await response.json();
+    const data = await response.json();
+    return Array.isArray(data) ? data : (data?.items || data?.Items || []);
 };
 
 export const getSessionMessages = async (sessionId: string): Promise<ChatMessage[]> => {

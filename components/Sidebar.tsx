@@ -8,7 +8,7 @@ import {cn} from "@/lib/utils";
 import {avatarPlaceholderUrl} from "@/constants/avatar";
 import { getMyStats } from "@/lib/actions/gamification.actions";
 import { UserStatsResponseDto } from "@/types";
-import { BarChart3, Bell, Trophy, Trash2 } from "lucide-react";
+import { BarChart3, Bell, Trophy, Trash2, Sparkles } from "lucide-react";
 
 interface Props {
     fullName: string;
@@ -28,6 +28,9 @@ const renderNavIcon = (name: string, icon: string, isActive: boolean) => {
     }
     if (name === "Trash Bin" || name === "Trash") {
         return <Trash2 className={cn("w-[22px] h-[22px] text-red-500/80 transition-colors shrink-0", isActive && "text-white")} />;
+    }
+    if (name === "AI Notebook") {
+        return <Sparkles className={cn("w-[22px] h-[22px] text-brand transition-colors shrink-0", isActive && "text-white")} />;
     }
     return (
         <Image
@@ -61,6 +64,7 @@ const Sidebar = ({fullName, avatar, email}: Props) => {
 
     const mainNavItems = navItems.filter((item) => item.section === "main");
     const insightNavItems = navItems.filter((item) => item.section === "insights");
+    const aiNavItems = navItems.filter((item) => item.section === "ai");
 
     return (
         <aside className="sidebar !py-4">
@@ -116,6 +120,26 @@ const Sidebar = ({fullName, avatar, email}: Props) => {
                         );
                     })}
                 </div>
+
+                {aiNavItems.length > 0 && (
+                    <div className="space-y-1 pt-2 border-t border-slate-200/60">
+                        <div className="hidden lg:block px-3 py-1 text-[10px] font-extrabold uppercase tracking-widest text-brand">
+                            AI Workspace
+                        </div>
+                        {aiNavItems.map(({url, name, icon}) => {
+                            const isActive = pathname === url;
+                            return (
+                                <Link key={name} href={url} className="lg:w-full block">
+                                    <li className={cn("sidebar-nav-item !h-10 border border-transparent", 
+                                        isActive ? "bg-brand shad-active" : "hover:bg-brand/5 hover:border-brand/20")}>
+                                        {renderNavIcon(name, icon, isActive)}
+                                        <p className={cn("hidden lg:block", !isActive && "text-brand font-medium")}>{name}</p>
+                                    </li>
+                                </Link>
+                            );
+                        })}
+                    </div>
+                )}
             </nav>
 
             <div className="shrink-0 mt-auto pt-2 flex flex-col gap-2">
