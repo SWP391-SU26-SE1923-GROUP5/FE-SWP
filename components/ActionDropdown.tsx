@@ -405,12 +405,12 @@ export default function ActionDropdown({ file }: { file: File_ }) {
                         className={
                             value === "edit" || isAiAction
                                 ? "sr-only"
-                                : ["share", "rename", "delete"].includes(value)
+                                : ["share", "rename", "delete", "details"].includes(value)
                                 ? "text-left text-xl font-bold text-slate-800 tracking-tight"
                                 : "text-center text-light-100"
                         }
                     >
-                        {value === "share" ? "Share Document" : value === "rename" ? "Rename Document" : value === "delete" ? "Delete Document" : label}
+                        {value === "share" ? "Share Document" : value === "rename" ? "Rename Document" : value === "delete" ? "Delete Document" : value === "details" ? "Document Details" : label}
                     </DialogTitle>
 
                     {value === "rename" && (
@@ -767,11 +767,11 @@ export default function ActionDropdown({ file }: { file: File_ }) {
                         />
                     </button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent>
-                    <DropdownMenuLabel className="max-w-[200px] truncate">
+                <DropdownMenuContent className="w-56 p-1.5 rounded-xl border border-slate-200/80 bg-white/95 backdrop-blur-md shadow-xl" align="end" sideOffset={8}>
+                    <DropdownMenuLabel className="max-w-[220px] truncate px-3 py-2.5 text-sm font-bold text-slate-800">
                         {file.fileName}
                     </DropdownMenuLabel>
-                    <DropdownMenuSeparator />
+                    <DropdownMenuSeparator className="my-1 bg-slate-100" />
 
                     {actionsDropdownItems
                         .filter((item) => {
@@ -787,7 +787,11 @@ export default function ActionDropdown({ file }: { file: File_ }) {
                         .map((item) => (
                             <DropdownMenuItem
                                 key={item.value}
-                                className="shad-dropdown-item"
+                                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer transition-all duration-150 text-sm font-medium mx-0.5 ${
+                                    item.value === "delete"
+                                        ? "text-rose-600 hover:!bg-rose-50 focus:!bg-rose-50"
+                                        : "text-slate-700 hover:!bg-slate-50 focus:!bg-slate-50"
+                                }`}
                                 onClick={() => {
                                     setAction(item);
                                     if (
@@ -801,14 +805,14 @@ export default function ActionDropdown({ file }: { file: File_ }) {
                                     <button
                                         type="button"
                                         onClick={handleDownload}
-                                        className="flex items-center gap-2 cursor-pointer w-full text-left"
+                                        className="flex items-center gap-3 cursor-pointer w-full text-left"
                                     >
-                                        <Image src={item.icon} alt={item.label} width={30} height={30} />
+                                        <Image src={item.icon} alt={item.label} width={20} height={20} className="opacity-70" />
                                         {item.label}
                                     </button>
                                 ) : (
-                                    <div className="flex items-center gap-2">
-                                        <Image src={item.icon} alt={item.label} width={30} height={30} />{" "}
+                                    <div className="flex items-center gap-3">
+                                        <Image src={item.icon} alt={item.label} width={20} height={20} className="opacity-70" />
                                         {item.label}
                                     </div>
                                 )}
@@ -817,76 +821,76 @@ export default function ActionDropdown({ file }: { file: File_ }) {
 
                     {isAiDocSupported && (
                         <>
-                            <DropdownMenuSeparator className="my-2 bg-light-300" />
-                            <DropdownMenuLabel className="text-brand flex items-center gap-2 subtitle-2">
-                                <Sparkles className="h-4 w-4" /> AI Tools
+                            <DropdownMenuSeparator className="my-1.5 bg-slate-100" />
+                            <DropdownMenuLabel className="px-3 py-2 text-brand flex items-center gap-2 text-xs font-bold uppercase tracking-wider">
+                                <Sparkles className="h-3.5 w-3.5" /> AI Tools
                             </DropdownMenuLabel>
 
                             <DropdownMenuItem
                                 onClick={() => triggerAIFeature("ask-ai", "Ask AI")}
-                                className="shad-dropdown-item gap-2 cursor-pointer"
+                                className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer text-sm font-medium text-slate-700 hover:!bg-brand/5 focus:!bg-brand/5 mx-0.5 transition-all duration-150"
                             >
-                                <MessageSquare className="h-4 w-4 text-brand" /> Ask AI
+                                <MessageSquare className="h-4 w-4 text-brand opacity-80" /> Ask AI
                             </DropdownMenuItem>
 
                             <DropdownMenuItem
                                 onClick={() => triggerAIFeature("summarize", "Document Summary")}
-                                className="shad-dropdown-item gap-2 cursor-pointer"
+                                className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer text-sm font-medium text-slate-700 hover:!bg-brand/5 focus:!bg-brand/5 mx-0.5 transition-all duration-150"
                             >
-                                <AlignLeft className="h-4 w-4 text-brand" /> Summarize Document
+                                <AlignLeft className="h-4 w-4 text-brand opacity-80" /> Summarize
                             </DropdownMenuItem>
 
                             <DropdownMenuSub>
-                                <DropdownMenuSubTrigger className="shad-dropdown-item gap-2">
-                                    <BrainCircuit className="h-4 w-4 text-brand" /> Generate Quiz
+                                <DropdownMenuSubTrigger className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer text-sm font-medium text-slate-700 hover:!bg-brand/5 focus:!bg-brand/5 mx-0.5 transition-all duration-150">
+                                    <BrainCircuit className="h-4 w-4 text-brand opacity-80" /> Generate Quiz
                                 </DropdownMenuSubTrigger>
                                 <DropdownMenuPortal>
-                                    <DropdownMenuSubContent>
+                                    <DropdownMenuSubContent className="p-1.5 rounded-xl border border-slate-200/80 bg-white/95 backdrop-blur-md shadow-xl min-w-[140px]">
                                         <DropdownMenuItem
                                             onClick={() => triggerAIFeature("quiz", "Quiz Engine", { amount: "10" })}
-                                            className="shad-dropdown-item cursor-pointer"
+                                            className="px-3 py-2 rounded-lg cursor-pointer text-sm font-medium text-slate-700 hover:!bg-brand/5 focus:!bg-brand/5 transition-all duration-150"
                                         >
                                             10 Questions
                                         </DropdownMenuItem>
                                         <DropdownMenuItem
-                                            onClick={() => triggerAIFeature("quiz", "Quiz Engine", { amount: "20" })}
-                                            className="shad-dropdown-item cursor-pointer"
-                                        >
-                                            20 Questions
-                                        </DropdownMenuItem>
-                                        <DropdownMenuItem
                                             onClick={() => triggerAIFeature("quiz", "Quiz Engine", { amount: "15" })}
-                                            className="shad-dropdown-item cursor-pointer"
+                                            className="px-3 py-2 rounded-lg cursor-pointer text-sm font-medium text-slate-700 hover:!bg-brand/5 focus:!bg-brand/5 transition-all duration-150"
                                         >
                                             15 Questions
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem
+                                            onClick={() => triggerAIFeature("quiz", "Quiz Engine", { amount: "20" })}
+                                            className="px-3 py-2 rounded-lg cursor-pointer text-sm font-medium text-slate-700 hover:!bg-brand/5 focus:!bg-brand/5 transition-all duration-150"
+                                        >
+                                            20 Questions
                                         </DropdownMenuItem>
                                     </DropdownMenuSubContent>
                                 </DropdownMenuPortal>
                             </DropdownMenuSub>
 
                             <DropdownMenuSub>
-                                <DropdownMenuSubTrigger className="shad-dropdown-item gap-2">
-                                    <FileText className="h-4 w-4 text-brand" /> Extract Flashcards
+                                <DropdownMenuSubTrigger className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer text-sm font-medium text-slate-700 hover:!bg-brand/5 focus:!bg-brand/5 mx-0.5 transition-all duration-150">
+                                    <FileText className="h-4 w-4 text-brand opacity-80" /> Flashcards
                                 </DropdownMenuSubTrigger>
                                 <DropdownMenuPortal>
-                                    <DropdownMenuSubContent>
+                                    <DropdownMenuSubContent className="p-1.5 rounded-xl border border-slate-200/80 bg-white/95 backdrop-blur-md shadow-xl min-w-[140px]">
                                         <DropdownMenuItem
                                             onClick={() => triggerAIFeature("flashcards", "Flashcards", { amount: "10" })}
-                                            className="shad-dropdown-item cursor-pointer"
+                                            className="px-3 py-2 rounded-lg cursor-pointer text-sm font-medium text-slate-700 hover:!bg-brand/5 focus:!bg-brand/5 transition-all duration-150"
                                         >
                                             10 Cards
                                         </DropdownMenuItem>
                                         <DropdownMenuItem
-                                            onClick={() => triggerAIFeature("flashcards", "Flashcards", { amount: "20" })}
-                                            className="shad-dropdown-item cursor-pointer"
-                                        >
-                                            20 Cards
-                                        </DropdownMenuItem>
-                                        <DropdownMenuItem
                                             onClick={() => triggerAIFeature("flashcards", "Flashcards", { amount: "15" })}
-                                            className="shad-dropdown-item cursor-pointer"
+                                            className="px-3 py-2 rounded-lg cursor-pointer text-sm font-medium text-slate-700 hover:!bg-brand/5 focus:!bg-brand/5 transition-all duration-150"
                                         >
                                             15 Cards
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem
+                                            onClick={() => triggerAIFeature("flashcards", "Flashcards", { amount: "20" })}
+                                            className="px-3 py-2 rounded-lg cursor-pointer text-sm font-medium text-slate-700 hover:!bg-brand/5 focus:!bg-brand/5 transition-all duration-150"
+                                        >
+                                            20 Cards
                                         </DropdownMenuItem>
                                     </DropdownMenuSubContent>
                                 </DropdownMenuPortal>

@@ -14,19 +14,26 @@ import { getDocumentShares } from "@/lib/actions/file.actions";
 import { parseSharedUsers } from "@/lib/utils";
 
 const ImageThumbnail = ({ file }: { file: File_ }) => (
-    <div className="file-details-thumbnail min-w-0 w-full overflow-hidden">
-        <Thumbnail type={file.fileType} extension={file.fileExtension.replace('.', '')} url={file.fileLink} className="!size-11 shrink-0" imageClassName="!size-6 shrink-0" />
+    <div className="flex items-center gap-4 bg-slate-50/70 p-4 rounded-2xl border border-slate-100">
+        <div className="bg-white p-2 rounded-xl shadow-2xs border border-slate-100">
+            <Thumbnail type={file.fileType} extension={file.fileExtension.replace('.', '')} url={file.fileLink} className="!size-12 shrink-0" imageClassName="!size-7 shrink-0" />
+        </div>
         <div className="flex flex-col min-w-0 flex-1">
-            <p className="subtitle-2 mb-0.5 truncate w-full text-light-100" title={file.fileName}>{file.fileName}</p>
-            <FormattedDateTime date={file.createdAt || ""} className="caption text-light-200" />
+            <p className="text-base font-bold text-slate-800 truncate" title={file.fileName}>{file.fileName}</p>
+            <div className="flex items-center gap-1.5 mt-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-brand"></span>
+                <p className="text-xs font-medium text-slate-500">
+                    Created on <FormattedDateTime date={file.createdAt || ""} className="inline" />
+                </p>
+            </div>
         </div>
     </div>
 )
 
 const DetailRow = ({ label, value }: { label: string, value: string }) => (
-    <div className="flex">
-        <p className="file-details-label">{label}</p>
-        <p className="file-details-value">{value}</p>
+    <div className="flex flex-col gap-1 py-3 border-b border-slate-100/60 last:border-0">
+        <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">{label}</p>
+        <p className="text-sm font-medium text-slate-700 truncate" title={value}>{value}</p>
     </div>
 )
 
@@ -49,15 +56,15 @@ export const FileDetails = ({ file }: { file: File_ }) => {
     }, [file.userId]);
 
     return (
-        <>
+        <div className="flex flex-col gap-6 pt-2">
             <ImageThumbnail file={file} />
-            <div className="space-y-4 px-2 pt-2">
-                <DetailRow label="Format:" value={file.fileExtension} />
-                <DetailRow label="Size:" value={convertFileSize(file.fileSizeBytes || 0)} />
-                <DetailRow label="Owner:" value={ownerName} />
-                <DetailRow label="Last edit:" value={formatDateTime(file.updatedAt || file.createdAt || "")} />
+            <div className="bg-white rounded-2xl border border-slate-100 shadow-2xs p-4 flex flex-col">
+                <DetailRow label="Format" value={file.fileExtension.toUpperCase()} />
+                <DetailRow label="Size" value={convertFileSize(file.fileSizeBytes || 0)} />
+                <DetailRow label="Owner" value={ownerName} />
+                <DetailRow label="Last edit" value={formatDateTime(file.updatedAt || file.createdAt || "")} />
             </div>
-        </>
+        </div>
     )
 }
 
