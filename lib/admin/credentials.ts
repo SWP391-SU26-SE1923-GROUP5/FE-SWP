@@ -1,13 +1,18 @@
 /**
  * Hardcoded frontend admin account.
  *
- * This account is verified directly in `signInUser` (user.actions.ts) without
- * any backend or database call.  It is intended solely for development /
- * demonstration environments.
+ * Mirrors the Admin seed credentials declared in
+ * `BE-SWP/AIStudyHub.API/appsettings.json` (`AdminSeed` section) so the
+ * FE-side sign-in and the BE-side seeded account share the same email.
  *
- * To change the password, edit USERNAME and PASSWORD below — no other file
- * needs to be updated.
+ * This account is verified directly in `signInUser` (user.actions.ts)
+ * without any backend call — intended for development/demo environments
+ * only. The `ADMIN_EMAILS` env var in `.env.local` must include this
+ * address so `isAdminEmail()` recognises the role.
+ *
+ * To change the password, edit PASSWORD below; the BE-side `AdminSeed`
+ * config must be kept in sync.
  */
-export const ADMIN_USERNAME = "admintest";
-export const ADMIN_PASSWORD = "smarts1123";
-export const ADMIN_EMAIL = `${ADMIN_USERNAME}@smartstore.local`;
+export const ADMIN_EMAIL = "admin@aistudyhub.local";
+export const ADMIN_USERNAME = "admin";
+export const ADMIN_PASSWORD = "AdminTest21@";

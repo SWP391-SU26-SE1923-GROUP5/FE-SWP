@@ -3,10 +3,11 @@ import bcrypt from "bcrypt";
 import { v4 as uuidv4 } from "uuid";
 
 const SALT_ROUNDS = 12;
+// Keep in sync with BE-SWP/AIStudyHub.API/appsettings.json → AdminSeed
 const ADMIN = {
-    email: "admintest@smartstore.local",
-    fullName: "admintest",
-    password: "admintest",
+    email: "admin@aistudyhub.local",
+    fullName: "System Administrator",
+    password: "AdminTest21@",
     role: "admin",
 };
 
