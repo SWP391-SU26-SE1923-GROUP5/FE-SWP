@@ -362,30 +362,39 @@ export default function FlashcardsDashboardClient({ initialDecks, actualDueCount
                     <>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                             {paginatedDecks.map((deck) => (
-                                <Link href={`/flashcards/${deck.documentId}`} key={deck.documentId} className="group">
-                                    <div className="p-6 border border-light-700 dark:border-dark-400 rounded-3xl bg-white dark:bg-dark-200 shadow-drop-1 hover:shadow-drop-3 hover:border-brand/40 dark:hover:border-brand/40 transition-all duration-300 flex flex-col justify-between h-full min-h-[220px]">
-                                        <div>
-                                            <div className="flex items-center justify-between mb-4">
-                                                <div className="p-3 bg-brand/10 dark:bg-brand/20 rounded-2xl text-brand group-hover:bg-brand group-hover:text-white transition-colors shrink-0">
-                                                    <Layers className="h-6 w-6" />
-                                                </div>
-                                                <span className="text-xs font-extrabold text-brand bg-brand/10 dark:bg-brand/20 px-3.5 py-1.5 rounded-full border border-brand/20">
-                                                    {deck.cards.length} {deck.cards.length === 1 ? "Card" : "Cards"}
-                                                </span>
+                                <Link href={`/flashcards/${deck.documentId}`} key={deck.documentId} className="group relative flex flex-col h-full border border-light-700 dark:border-dark-400 rounded-[2rem] bg-white dark:bg-dark-200 hover:border-brand/40 dark:hover:border-brand/40 shadow-drop-1 hover:shadow-drop-3 transition-all duration-300 hover:-translate-y-1 overflow-hidden min-h-[220px]">
+                                    {/* Gradient Top Accent */}
+                                    <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-brand to-emerald-400 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                                    
+                                    <div className="flex flex-col flex-1 p-6 z-10 pt-7">
+                                        <div className="flex items-center justify-between mb-4">
+                                            <div className="p-3.5 bg-brand/10 dark:bg-brand/20 rounded-2xl text-brand group-hover:bg-brand group-hover:text-white transition-colors duration-300 shrink-0 shadow-xs">
+                                                <Layers className="h-6 w-6" />
                                             </div>
-                                            <h3 className="text-lg font-bold text-dark100_light900 mb-2 leading-snug line-clamp-2" title={deck.documentName}>
-                                                {deck.documentName}
-                                            </h3>
-                                            <div className="flex items-center gap-2 text-xs text-light-200 dark:text-dark-400 font-medium mb-4">
-                                                <BookOpen className="h-3.5 w-3.5 shrink-0" />
-                                                <span className="truncate">Document ID: {deck.documentId.split("-")[0]}...</span>
-                                            </div>
+                                            <span className="text-xs font-extrabold text-brand bg-brand/10 dark:bg-brand/20 px-3.5 py-1.5 rounded-full border border-brand/20 shadow-sm">
+                                                {deck.cards.length} Thẻ
+                                            </span>
                                         </div>
+                                        <h3 className="text-lg font-bold text-dark100_light900 mb-2 leading-snug line-clamp-2 group-hover:text-brand transition-colors" title={deck.documentName}>
+                                            {deck.documentName}
+                                        </h3>
+                                        <div className="mt-auto flex items-center gap-2 text-xs font-semibold text-light-200 dark:text-dark-400 mb-4">
+                                            <Clock className="h-3.5 w-3.5 shrink-0" />
+                                            <span>
+                                                Tạo ngày:{" "}
+                                                {new Date(deck.createdAt || deck.cards[0]?.createdAt || Date.now()).toLocaleDateString('vi-VN', {
+                                                    day: "2-digit",
+                                                    month: "2-digit",
+                                                    year: "numeric",
+                                                })}
+                                            </span>
+                                        </div>
+                                    </div>
 
-                                        <div className="pt-4 border-t border-light-700/60 dark:border-dark-400/60">
-                                            <Button className="w-full font-bold shadow-xs group-hover:bg-emerald-500 transition-colors cursor-pointer">
-                                                Study Collection
-                                            </Button>
+                                    <div className="px-6 pb-6 pt-0 relative z-10">
+                                        <div className="w-full flex items-center justify-center gap-2 h-12 rounded-2xl bg-gradient-to-r from-brand to-emerald-500 group-hover:from-emerald-400 group-hover:to-brand text-sm font-bold text-white transition-all shadow-md group-hover:shadow-lg">
+                                            <span>Học ngay</span>
+                                            <Play className="h-4 w-4 fill-current" />
                                         </div>
                                     </div>
                                 </Link>
