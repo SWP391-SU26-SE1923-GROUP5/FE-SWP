@@ -119,7 +119,6 @@ export const createChatSession = async (
 
 export const sendChatMessage = async (
     sessionId: string,
-    documentId: string,
     message: string
 ): Promise<ChatMessage> => {
     const session = await auth();
@@ -133,7 +132,6 @@ export const sendChatMessage = async (
         },
         body: JSON.stringify({
             sessionId: sessionId,
-            documentId: documentId,
             message: message
         })
     });
@@ -663,5 +661,43 @@ export const removeDocumentFromSession = async (sessionId: string, documentId: s
     if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         throw new Error(`[${response.status}] ${errorData.message || errorData.title || "Failed to remove document from session."}`);
+    }
+};
+export const renameChatSession = async (sessionId: string, sessionTitle: string): Promise<ChatSession> => {
+    const session = await auth();
+    if (!session?.accessToken) throw new Error("Unauthorized. Please log in.");
+
+    const response = await fetch(`${connection_url}/api/Chat/sessions/${sessionId}`, {
+        method: 'PUT',
+        headers: {
+            'Authorization': `Bearer ${session.accessToken}`,
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ sessionTitle })
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(`[${response.status}] ${errorData.message || errorData.title || "Failed to rename session."}`);
+    }
+
+    return await response.json();
+};
+
+export const deleteChatSession = async (sessionId: string): Promise<void> => {
+    const session = await auth();
+    if (!session?.accessToken) throw new Error("Unauthorized. Please log in.");
+
+    const response = await fetch(`${connection_url}/api/Chat/sessions/${sessionId}`, {
+        method: 'DELETE',
+        headers: {
+            'Authorization': `Bearer ${session.accessToken}`,
+            'Content-Type': 'application/json',
+        },
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(`[${response.status}] ${errorData.message || errorData.title || "Failed to delete session."}`);
     }
 };

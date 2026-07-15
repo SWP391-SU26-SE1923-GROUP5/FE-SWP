@@ -5,8 +5,6 @@ import {
     Sparkles, 
     Plus, 
     Trash2, 
-    CheckSquare, 
-    Square, 
     MessageSquare, 
     Send, 
     Loader2, 
@@ -15,7 +13,8 @@ import {
     X, 
     RefreshCw,
     FolderPlus,
-    Check
+    Check,
+    Pencil
 } from 'lucide-react';
 import { 
     getUserSessions, 
@@ -25,18 +24,21 @@ import {
     removeDocumentFromSession, 
     getSessionMessages, 
     sendChatMessage, 
+    deleteChatSession,
+    renameChatSession,
     ChatSession, 
     ChatSessionDocument, 
     ChatMessage 
 } from '@/lib/actions/ai.actions';
-import { getFiles, getTrashFiles } from '@/lib/actions/file.actions';
+import { getFiles } from '@/lib/actions/file.actions';
 import { cn } from '@/lib/utils';
 import { 
     Dialog, 
     DialogContent, 
     DialogHeader, 
     DialogTitle, 
-    DialogDescription 
+    DialogDescription,
+    DialogFooter
 } from '@/components/ui/dialog';
 import FileUploader from '@/components/FileUploader';
 import { toast } from 'sonner';
@@ -51,17 +53,6 @@ interface LibraryFile {
     lifecycleStatus?: any;
     status?: any;
 }
-
-const isDocumentValid = (docId: string, docObj?: any, trashedIds?: Set<string>) => {
-    if (!docId) return false;
-    if (trashedIds && trashedIds.has(docId)) return false;
-    if (docObj) {
-        const status = (docObj.lifecycleStatus || docObj.status || '').toString().toLowerCase();
-        if (status === 'trashed' || status === 'purged' || status === 'deleted') return false;
-        if (docObj.isTrashed === true || docObj.isDeleted === true || docObj.isTrash === true) return false;
-    }
-    return true;
-};
 
 const MessageWithCitations = ({ 
     content, 
@@ -106,23 +97,36 @@ const MessageWithCitations = ({
 };
 
 export default function AIChatPage() {
+    // 1. Session State
     const [sessions, setSessions] = useState<ChatSession[]>([]);
     const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
     const [isSessionsLoading, setIsSessionsLoading] = useState<boolean>(true);
-    const [sessionDocsMap, setSessionDocsMap] = useState<Record<string, string[]>>({});
 
-    const [attachedSources, setAttachedSources] = useState<ChatSessionDocument[]>([]);
-    const [activeSourceIds, setActiveSourceIds] = useState<Set<string>>(new Set());
+    // 1.1 Session Edit/Delete State
+    const [isRenameModalOpen, setIsRenameModalOpen] = useState(false);
+    const [renameTitleInput, setRenameTitleInput] = useState('');
+    const [isRenaming, setIsRenaming] = useState(false);
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
+
+    // 2. Documents in CURRENT Session
+    const [sessionDocuments, setSessionDocuments] = useState<ChatSessionDocument[]>([]);
     const [isSourcesLoading, setIsSourcesLoading] = useState<boolean>(false);
 
+    // 3. Messages in CURRENT Session
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [chatInput, setChatInput] = useState<string>('');
     const [isSending, setIsSending] = useState<boolean>(false);
     const [isMessagesLoading, setIsMessagesLoading] = useState<boolean>(false);
 
+    // 4. Library (for Add Sources Modal)
     const [isAddModalOpen, setIsAddModalOpen] = useState<boolean>(false);
+    const [libraryDocs, setLibraryDocs] = useState<LibraryFile[]>([]);
+    const [isLibraryLoading, setIsLibraryLoading] = useState<boolean>(false);
+    const [isAddingDocId, setIsAddingDocId] = useState<string | null>(null);
     const [isRefetchingLibrary, setIsRefetchingLibrary] = useState<boolean>(false);
 
+    // 5. PDF Citation Viewer
     const [activeCitationDocId, setActiveCitationDocId] = useState<string | null>(null);
     const [activeCitationPage, setActiveCitationPage] = useState<number | undefined>(undefined);
     const [activeCitationSnippet, setActiveCitationSnippet] = useState<string | undefined>(undefined);
@@ -144,80 +148,23 @@ export default function AIChatPage() {
     const loadSessions = async () => {
         setIsSessionsLoading(true);
         try {
-            const [data, trashRes] = await Promise.all([
-                getUserSessions(),
-                getTrashFiles().catch(() => ({ documents: [] }))
-            ]);
-            const trashedIds = new Set<string>((trashRes.documents || []).map((d: any) => d.id || d.Id || d.documentId));
-
+            const data = await getUserSessions();
             const sorted = data.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
             setSessions(sorted);
-
-            const docsMap: Record<string, string[]> = {};
-            const allUniqueDocsMap = new Map<string, ChatSessionDocument>();
-            await Promise.all(sorted.map(async (s) => {
-                try {
-                    const docs = await getSessionDocuments(s.id);
-                    const validDocs = docs.filter(d => isDocumentValid(d.documentId, d, trashedIds));
-                    docsMap[s.id] = validDocs.map(d => d.documentId);
-                    validDocs.forEach(d => allUniqueDocsMap.set(d.documentId, d));
-                    if (s.documentId && !docsMap[s.id].includes(s.documentId) && isDocumentValid(s.documentId, undefined, trashedIds)) {
-                        docsMap[s.id].push(s.documentId);
-                    }
-                } catch {
-                    docsMap[s.id] = (s.documentId && isDocumentValid(s.documentId, undefined, trashedIds)) ? [s.documentId] : [];
-                }
-            }));
-            setSessionDocsMap(docsMap);
-
-            try {
-                const res = await getFiles({ types: ["document"], limit: 50 });
-                const libraryDocs: ChatSessionDocument[] = (res.documents || [])
-                    .filter((f: any) => isDocumentValid(f.id || f.Id, f, trashedIds))
-                    .map((f: any) => ({
-                        chatSessionId: '',
-                        documentId: f.id || f.Id,
-                        title: f.fileName || f.title,
-                        fileName: f.fileName || f.title,
-                        addedAt: new Date().toISOString()
-                    }));
-                libraryDocs.forEach(d => {
-                    if (!allUniqueDocsMap.has(d.documentId)) {
-                        allUniqueDocsMap.set(d.documentId, d);
-                    }
-                });
-            } catch {
+            
+            if (sorted.length > 0) {
+                await selectSession(sorted[0].id);
+            } else {
+                setCurrentSessionId(null);
+                setSessionDocuments([]);
+                setMessages([]);
             }
-
-            const allDocs = Array.from(allUniqueDocsMap.values());
-            setAttachedSources(allDocs);
-            setActiveSourceIds(new Set());
-            setCurrentSessionId(null);
-            setMessages([]);
         } catch (error: unknown) {
             toast.error("Failed to load AI Notebook sessions.");
         } finally {
             setIsSessionsLoading(false);
         }
     };
-
-    const filteredSessions = activeSourceIds.size === 0 ? [] : sessions.filter(s => {
-        const docIds = sessionDocsMap[s.id] || (s.documentId ? [s.documentId] : []);
-        return docIds.some(id => activeSourceIds.has(id));
-    });
-
-    useEffect(() => {
-        if (activeSourceIds.size === 0) {
-            setCurrentSessionId(null);
-            setMessages([]);
-        } else if (filteredSessions.length > 0 && (!currentSessionId || !filteredSessions.some(s => s.id === currentSessionId))) {
-            setCurrentSessionId(filteredSessions[0].id);
-            loadMessages(filteredSessions[0].id);
-        } else if (filteredSessions.length === 0) {
-            setCurrentSessionId(null);
-            setMessages([]);
-        }
-    }, [activeSourceIds, sessions, sessionDocsMap]);
 
     const selectSession = async (sessionId: string) => {
         setCurrentSessionId(sessionId);
@@ -230,38 +177,11 @@ export default function AIChatPage() {
     const loadAttachedSources = async (sessionId: string) => {
         setIsSourcesLoading(true);
         try {
-            const [docs, trashRes] = await Promise.all([
-                getSessionDocuments(sessionId),
-                getTrashFiles().catch(() => ({ documents: [] }))
-            ]);
-            const trashedIds = new Set<string>((trashRes.documents || []).map((d: any) => d.id || d.Id || d.documentId));
-            const validDocs = docs.filter(d => isDocumentValid(d.documentId, d, trashedIds));
-
-            setSessionDocsMap(prev => ({
-                ...prev,
-                [sessionId]: validDocs.map(d => d.documentId)
-            }));
-
-            setAttachedSources(prev => {
-                const map = new Map(prev.map(p => [p.documentId, p]));
-                validDocs.forEach(d => map.set(d.documentId, d));
-                return Array.from(map.values()).filter(d => isDocumentValid(d.documentId, d, trashedIds));
-            });
-
-            setActiveSourceIds(prev => {
-                if (prev.size === 0) {
-                    return new Set(validDocs.map(d => d.documentId));
-                }
-                const next = new Set<string>();
-                prev.forEach(id => {
-                    if (isDocumentValid(id, undefined, trashedIds)) next.add(id);
-                });
-                return next;
-            });
+            const docs = await getSessionDocuments(sessionId);
+            setSessionDocuments(docs);
         } catch (error: unknown) {
             toast.error("Failed to load attached sources.");
-            setAttachedSources([]);
-            setActiveSourceIds(new Set());
+            setSessionDocuments([]);
         } finally {
             setIsSourcesLoading(false);
         }
@@ -281,87 +201,112 @@ export default function AIChatPage() {
     };
 
     const handleCreateNewNotebook = async () => {
-        setIsSessionsLoading(true);
         try {
             const newTitle = `AI Notebook ${new Date().toLocaleDateString()}`;
             const newSession = await createChatSession(newTitle);
             
-            // If active sources are currently selected, automatically attach them to this new notebook
-            const activeIds = Array.from(activeSourceIds);
-            const attachedDocsForNewSession: ChatSessionDocument[] = [];
-            if (activeIds.length > 0) {
-                for (const docId of activeIds) {
-                    try {
-                        const addedDoc = await addDocumentToSession(newSession.id, docId);
-                        attachedDocsForNewSession.push(addedDoc);
-                    } catch {
-                        // ignore error for specific doc
-                    }
-                }
-            }
-
             setSessions(prev => [newSession, ...prev]);
-            setSessionDocsMap(prev => ({
-                ...prev,
-                [newSession.id]: activeIds
-            }));
             setCurrentSessionId(newSession.id);
-            if (attachedDocsForNewSession.length > 0) {
-                setAttachedSources(prev => {
-                    const map = new Map(prev.map(p => [p.documentId, p]));
-                    attachedDocsForNewSession.forEach(d => map.set(d.documentId, d));
-                    return Array.from(map.values());
-                });
-            }
+            setSessionDocuments([]);
             setMessages([]);
-            toast.success(activeIds.length > 0 ? `Created new notebook with ${activeIds.length} source(s)!` : "Created new notebook session!");
+            
+            toast.success("Created new notebook session!");
         } catch (error: unknown) {
             toast.error("Failed to create new notebook session.");
-        } finally {
-            setIsSessionsLoading(false);
         }
     };
 
-    // Toggle individual source checkbox
-    const toggleSourceActive = (documentId: string) => {
-        setActiveSourceIds(prev => {
-            const next = new Set(prev);
-            if (next.has(documentId)) {
-                next.delete(documentId);
-            } else {
-                next.add(documentId);
-            }
-            return next;
-        });
+    const handleRenameSession = async () => {
+        if (!currentSessionId || !renameTitleInput.trim()) return;
+        setIsRenaming(true);
+        try {
+            const updatedSession = await renameChatSession(currentSessionId, renameTitleInput.trim());
+            setSessions(prev => prev.map(s => s.id === currentSessionId ? updatedSession : s));
+            setIsRenameModalOpen(false);
+            toast.success("Notebook renamed!");
+        } catch (error: unknown) {
+            toast.error("Failed to rename notebook.");
+        } finally {
+            setIsRenaming(false);
+        }
     };
 
-    // Remove source from session
+    const handleDeleteSession = async () => {
+        if (!currentSessionId) return;
+        setIsDeleting(true);
+        try {
+            await deleteChatSession(currentSessionId);
+            setSessions(prev => prev.filter(s => s.id !== currentSessionId));
+            setIsDeleteModalOpen(false);
+            toast.success("Notebook deleted successfully.");
+            
+            // Auto select another session if available
+            const remaining = sessions.filter(s => s.id !== currentSessionId);
+            if (remaining.length > 0) {
+                selectSession(remaining[0].id);
+            } else {
+                setCurrentSessionId(null);
+                setSessionDocuments([]);
+                setMessages([]);
+            }
+        } catch (error: unknown) {
+            toast.error("Failed to delete notebook.");
+        } finally {
+            setIsDeleting(false);
+        }
+    };
+
     const handleRemoveSource = async (documentId: string) => {
         if (!currentSessionId) return;
         try {
             await removeDocumentFromSession(currentSessionId, documentId);
-            setAttachedSources(prev => prev.filter(s => s.documentId !== documentId));
-            setActiveSourceIds(prev => {
-                const next = new Set(prev);
-                next.delete(documentId);
-                return next;
-            });
-            setSessionDocsMap(prev => ({
-                ...prev,
-                [currentSessionId]: (prev[currentSessionId] || []).filter(id => id !== documentId)
-            }));
+            setSessionDocuments(prev => prev.filter(s => s.documentId !== documentId));
             toast.success("Source removed from notebook.");
         } catch (error: unknown) {
             toast.error("Failed to remove source.");
         }
     };
 
-    // Open add modal
+    const loadLibrary = async () => {
+        setIsLibraryLoading(true);
+        try {
+            const res = await getFiles({ types: ["document"], limit: 50 });
+            setLibraryDocs(res.documents || []);
+        } catch (e) {
+            toast.error("Failed to load library.");
+        } finally {
+            setIsLibraryLoading(false);
+        }
+    };
+
     const handleOpenAddModal = () => {
+        if (!currentSessionId) {
+            toast.error("Please select or create a Notebook first!");
+            return;
+        }
+        if (libraryDocs.length === 0) {
+            loadLibrary();
+        }
         setIsAddModalOpen(true);
     };
 
-    // Send chat message
+    const handleAddSourceToSession = async (docId: string) => {
+        if (!currentSessionId) return;
+        setIsAddingDocId(docId);
+        try {
+            const addedDoc = await addDocumentToSession(currentSessionId, docId);
+            setSessionDocuments(prev => {
+                if (prev.some(d => d.documentId === addedDoc.documentId)) return prev;
+                return [...prev, addedDoc];
+            });
+            toast.success("Document attached to notebook!");
+        } catch (error: unknown) {
+            toast.error("Failed to attach document. It might already be attached.");
+        } finally {
+            setIsAddingDocId(null);
+        }
+    };
+
     const handleSendMessage = async () => {
         if (!chatInput.trim() || !currentSessionId || isSending) return;
 
@@ -380,37 +325,10 @@ export default function AIChatPage() {
         setIsSending(true);
 
         try {
-            // Auto attach all active checked sources to current session if they aren't attached yet
-            const attachedIds = sessionDocsMap[currentSessionId] || [];
-            const activeIdsList = Array.from(activeSourceIds);
-            const newlyAttached: ChatSessionDocument[] = [];
-            for (const docId of activeIdsList) {
-                if (!attachedIds.includes(docId)) {
-                    try {
-                        const added = await addDocumentToSession(currentSessionId, docId);
-                        newlyAttached.push(added);
-                    } catch {
-                        // ignore error for specific doc
-                    }
-                }
+            if (sessionDocuments.length === 0) {
+                toast.warning("No sources in this notebook. AI response will be general.");
             }
-            if (newlyAttached.length > 0) {
-                setSessionDocsMap(prev => ({
-                    ...prev,
-                    [currentSessionId]: Array.from(new Set([...(prev[currentSessionId] || []), ...newlyAttached.map(d => d.documentId)]))
-                }));
-                setAttachedSources(prev => {
-                    const map = new Map(prev.map(p => [p.documentId, p]));
-                    newlyAttached.forEach(d => map.set(d.documentId, d));
-                    return Array.from(map.values());
-                });
-            }
-
-            const activeDocId = activeIdsList[0] || (attachedSources[0]?.documentId || null);
-            if (!activeDocId) {
-                toast.warning("No active source selected. AI response might be general.");
-            }
-            const aiResponse = await sendChatMessage(currentSessionId, activeDocId || '', content);
+            const aiResponse = await sendChatMessage(currentSessionId, content);
             setMessages(prev => [...prev, aiResponse]);
         } catch (error: unknown) {
             toast.error("Failed to get AI response. Please try again.");
@@ -423,133 +341,141 @@ export default function AIChatPage() {
 
     return (
         <div className="flex-1 flex flex-col lg:flex-row h-full w-full overflow-hidden bg-white dark:bg-dark-100 border-t border-light-700 dark:border-dark-400">
-            {/* LEFT COLUMN: SOURCES SIDEBAR */}
+            {/* LEFT COLUMN: SOURCES SIDEBAR (WORKSPACE) */}
             <aside className="w-full lg:w-96 shrink-0 border-b lg:border-b-0 lg:border-r border-light-700 dark:border-dark-400 bg-white dark:bg-dark-200 flex flex-col h-1/3 lg:h-full overflow-hidden">
-                {/* Notebook Session Header & Switcher */}
+                {/* Notebook Session Switcher */}
                 <div className="p-4 border-b border-light-700 dark:border-dark-400 bg-light-800/50 dark:bg-dark-300/40 space-y-2">
                     <div className="flex items-center justify-between gap-2">
                         <div className="flex-1 min-w-0">
                             <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block mb-1">
-                                Current Notebook
+                                Current Workspace
                             </label>
-                            <select
-                                className="w-full bg-white dark:bg-dark-200 border border-light-700 dark:border-dark-400 rounded-xl px-3 py-2 text-sm font-semibold text-dark-200 dark:text-light-100 outline-none focus:border-brand transition-colors truncate cursor-pointer shadow-2xs"
-                                value={currentSessionId || ''}
-                                onChange={(e) => selectSession(e.target.value)}
-                                disabled={isSessionsLoading || activeSourceIds.size === 0 || filteredSessions.length === 0}
-                            >
-                                {activeSourceIds.size === 0 ? (
-                                    <option value="">Select source(s) to view notebook</option>
-                                ) : filteredSessions.length === 0 ? (
-                                    <option value="">No notebook for selected sources</option>
-                                ) : (
-                                    filteredSessions.map(s => (
-                                        <option key={s.id} value={s.id}>{s.sessionTitle}</option>
-                                    ))
-                                )}
-                            </select>
+                            <div className="flex items-center gap-1">
+                                <select
+                                    className="flex-1 min-w-0 bg-white dark:bg-dark-200 border border-light-700 dark:border-dark-400 rounded-xl px-3 py-2 text-sm font-semibold text-dark-200 dark:text-light-100 outline-none focus:border-brand transition-colors truncate cursor-pointer shadow-2xs"
+                                    value={currentSessionId || ''}
+                                    onChange={(e) => selectSession(e.target.value)}
+                                    disabled={isSessionsLoading || sessions.length === 0}
+                                >
+                                    {sessions.length === 0 ? (
+                                        <option value="">No notebooks exist</option>
+                                    ) : (
+                                        sessions.map(s => (
+                                            <option key={s.id} value={s.id}>{s.sessionTitle}</option>
+                                        ))
+                                    )}
+                                </select>
+                            </div>
                         </div>
                         <button
                             onClick={handleCreateNewNotebook}
-                            disabled={isSessionsLoading || activeSourceIds.size === 0}
-                            className={cn(
-                                "h-10 px-3 mt-4 text-white rounded-xl flex items-center gap-1.5 text-xs font-bold transition-all shadow-xs shrink-0",
-                                activeSourceIds.size === 0
-                                    ? "bg-slate-300 dark:bg-slate-700 text-slate-500 cursor-not-allowed"
-                                    : "bg-brand hover:bg-brand/90 cursor-pointer"
-                            )}
+                            className="h-10 px-3 mt-4 bg-brand hover:bg-brand/90 text-white rounded-xl flex items-center gap-1.5 text-xs font-bold transition-all shadow-xs shrink-0 cursor-pointer"
                             title="Create New Notebook"
                         >
                             <Plus className="w-4 h-4" />
                             <span>New</span>
                         </button>
                     </div>
+                    {/* Session Actions (Rename / Delete) */}
+                    {currentSessionId && (
+                        <div className="flex items-center gap-2 pt-1">
+                            <button
+                                onClick={() => {
+                                    setRenameTitleInput(currentSession?.sessionTitle || '');
+                                    setIsRenameModalOpen(true);
+                                }}
+                                className="flex-1 flex items-center justify-center gap-1.5 py-1.5 px-2 bg-white dark:bg-dark-300 hover:bg-slate-100 dark:hover:bg-dark-400 border border-light-700 dark:border-dark-400 rounded-lg text-[11px] font-semibold text-slate-500 transition-colors cursor-pointer"
+                            >
+                                <Pencil className="w-3 h-3" />
+                                Rename
+                            </button>
+                            <button
+                                onClick={() => setIsDeleteModalOpen(true)}
+                                className="flex-1 flex items-center justify-center gap-1.5 py-1.5 px-2 bg-white dark:bg-dark-300 hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-500/10 border border-light-700 dark:border-dark-400 rounded-lg text-[11px] font-semibold text-slate-500 transition-colors cursor-pointer"
+                            >
+                                <Trash2 className="w-3 h-3" />
+                                Delete Workspace
+                            </button>
+                        </div>
+                    )}
                 </div>
 
-                {/* Sources Section Header */}
+                {/* Sources Header */}
                 <div className="p-4 border-b border-light-700 dark:border-dark-400 flex items-center justify-between">
                     <div className="flex items-center gap-2">
                         <BookOpen className="w-4 h-4 text-brand" />
                         <span className="font-extrabold text-sm text-dark-200 dark:text-light-100">
-                            Sources
+                            Notebook Sources
                         </span>
                         <span className="bg-brand/10 text-brand text-[11px] font-bold px-2 py-0.5 rounded-full">
-                            {attachedSources.length}
+                            {sessionDocuments.length}
                         </span>
                     </div>
                     <button
                         onClick={handleOpenAddModal}
-                        className="bg-brand/10 hover:bg-brand/20 text-brand px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1 transition-colors cursor-pointer"
+                        disabled={!currentSessionId}
+                        className="bg-brand/10 hover:bg-brand/20 text-brand px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                         <Plus className="w-3.5 h-3.5" />
-                        <span>Add Sources</span>
+                        <span>Add</span>
                     </button>
                 </div>
 
-                {/* Sources List */}
-                <div className="flex-1 overflow-y-auto p-3 space-y-2 custom-scrollbar">
+                {/* Sources List for Current Session */}
+                <div className="flex-1 overflow-y-auto p-3 space-y-2 custom-scrollbar bg-slate-50/50 dark:bg-dark-300/20">
                     {isSourcesLoading || isSessionsLoading ? (
                         <div className="flex items-center justify-center h-40">
                             <Loader2 className="w-6 h-6 animate-spin text-brand" />
                         </div>
-                    ) : attachedSources.length === 0 ? (
+                    ) : !currentSessionId ? (
                         <div className="flex flex-col items-center justify-center text-center p-6 h-full border-2 border-dashed border-light-700 dark:border-dark-400 rounded-2xl text-slate-400">
-                            <FileText className="w-10 h-10 stroke-1 mb-2 opacity-50" />
-                            <p className="text-xs font-semibold mb-1 text-dark-200 dark:text-light-100">No sources available</p>
+                            <BookOpen className="w-10 h-10 stroke-1 mb-2 opacity-50" />
+                            <p className="text-xs font-semibold mb-1 text-dark-200 dark:text-light-100">No Workspace Active</p>
                             <p className="text-[11px] leading-relaxed max-w-[200px]">
-                                Add documents from your library or upload new files to start studying with AI.
+                                Create a new notebook to start attaching sources.
+                            </p>
+                        </div>
+                    ) : sessionDocuments.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center text-center p-6 h-full border-2 border-dashed border-light-700 dark:border-dark-400 rounded-2xl text-slate-400">
+                            <FolderPlus className="w-10 h-10 stroke-1 mb-2 opacity-50" />
+                            <p className="text-xs font-semibold mb-1 text-dark-200 dark:text-light-100">Workspace is empty</p>
+                            <p className="text-[11px] leading-relaxed max-w-[200px]">
+                                Add documents from your library to start studying with AI.
                             </p>
                             <button
                                 onClick={handleOpenAddModal}
                                 className="mt-4 bg-brand text-white px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-xs transition-transform hover:scale-[1.02] cursor-pointer"
                             >
                                 <Plus className="w-3.5 h-3.5" />
-                                <span>Add Your First Source</span>
+                                <span>Add Documents</span>
                             </button>
                         </div>
                     ) : (
-                        attachedSources.map(doc => {
-                            const isActive = activeSourceIds.has(doc.documentId);
-                            return (
-                                <div
-                                    key={doc.documentId}
-                                    className={cn(
-                                        "flex items-center justify-between p-3 rounded-xl border transition-all duration-200 group",
-                                        isActive 
-                                            ? "border-brand/40 bg-brand/5 dark:bg-brand/10 shadow-2xs" 
-                                            : "border-light-700 dark:border-dark-400 bg-white dark:bg-dark-300 opacity-60 hover:opacity-100"
-                                    )}
-                                >
-                                    <div 
-                                        className="flex items-center gap-2.5 flex-1 min-w-0 cursor-pointer select-none"
-                                        onClick={() => toggleSourceActive(doc.documentId)}
-                                    >
-                                        <button type="button" className="text-brand shrink-0 focus:outline-none">
-                                            {isActive ? (
-                                                <CheckSquare className="w-4 h-4 fill-brand text-white" />
-                                            ) : (
-                                                <Square className="w-4 h-4 text-slate-400" />
-                                            )}
-                                        </button>
-                                        <div className="flex-1 min-w-0">
-                                            <p className="text-xs font-bold text-dark-200 dark:text-light-100 truncate">
-                                                {doc.title || doc.fileName || "Untitled Document"}
-                                            </p>
-                                            <p className="text-[10px] text-slate-400 truncate mt-0.5">
-                                                Added {new Date(doc.addedAt).toLocaleDateString()}
-                                            </p>
-                                        </div>
+                        sessionDocuments.map(doc => (
+                            <div
+                                key={doc.documentId}
+                                className="flex items-center justify-between p-3 rounded-xl border border-light-700 dark:border-dark-400 bg-white dark:bg-dark-300 shadow-2xs group hover:border-brand/40 transition-colors"
+                            >
+                                <div className="flex items-center gap-3 flex-1 min-w-0">
+                                    <FileText className="w-5 h-5 text-brand shrink-0" />
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-xs font-bold text-dark-200 dark:text-light-100 truncate" title={doc.title || doc.fileName}>
+                                            {doc.title || doc.fileName || "Untitled Document"}
+                                        </p>
+                                        <p className="text-[10px] text-slate-400 truncate mt-0.5">
+                                            Added {new Date(doc.addedAt).toLocaleDateString()}
+                                        </p>
                                     </div>
-                                    <button
-                                        onClick={() => handleRemoveSource(doc.documentId)}
-                                        className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100 cursor-pointer shrink-0"
-                                        title="Detach Source"
-                                    >
-                                        <Trash2 className="w-3.5 h-3.5" />
-                                    </button>
                                 </div>
-                            );
-                        })
+                                <button
+                                    onClick={() => handleRemoveSource(doc.documentId)}
+                                    className="p-1.5 ml-2 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100 cursor-pointer shrink-0"
+                                    title="Remove from Workspace"
+                                >
+                                    <Trash2 className="w-4 h-4" />
+                                </button>
+                            </div>
+                        ))
                     )}
                 </div>
             </aside>
@@ -564,10 +490,10 @@ export default function AIChatPage() {
                         </div>
                         <div className="min-w-0">
                             <h1 className="text-sm font-extrabold text-dark-200 dark:text-light-100 truncate">
-                                {currentSession?.sessionTitle || (activeSourceIds.size === 0 ? "Select Sources to Begin" : "AI Notebook Studio")}
+                                {currentSession?.sessionTitle || "AI Notebook Studio"}
                             </h1>
                             <p className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1.5 mt-0.5">
-                                <span>{activeSourceIds.size} of {attachedSources.length} sources selected</span>
+                                <span>{sessionDocuments.length} document(s) in context</span>
                             </p>
                         </div>
                     </div>
@@ -588,25 +514,23 @@ export default function AIChatPage() {
                         <div className="flex items-center justify-center h-full">
                             <Loader2 className="w-8 h-8 animate-spin text-brand" />
                         </div>
-                    ) : activeSourceIds.size === 0 || !currentSessionId ? (
+                    ) : !currentSessionId ? (
                         <div className="flex flex-col items-center justify-center h-full max-w-md mx-auto text-center p-8 animate-in fade-in duration-300">
                             <div className="w-16 h-16 rounded-3xl bg-brand/10 dark:bg-brand/20 flex items-center justify-center text-brand mb-4 shadow-sm animate-bounce-subtle">
                                 <BookOpen className="w-8 h-8" />
                             </div>
                             <h2 className="text-lg font-extrabold text-dark-200 dark:text-light-100 mb-2">
-                                {activeSourceIds.size === 0 ? "No Sources Selected" : "No Notebook for Selected Sources"}
+                                Create a Workspace
                             </h2>
                             <p className="text-xs leading-relaxed text-slate-500 dark:text-slate-400 mb-6">
-                                {activeSourceIds.size === 0 
-                                    ? "Please check at least one source document from the left panel to open its notebook or create a new one."
-                                    : "No notebook session exists for the selected sources yet. Click + New above to create one right away!"}
+                                Click the "+ New" button on the left panel to create a new Notebook Session.
                             </p>
                             <button
-                                onClick={activeSourceIds.size === 0 ? handleOpenAddModal : handleCreateNewNotebook}
+                                onClick={handleCreateNewNotebook}
                                 className="bg-brand text-white px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 shadow-sm hover:bg-brand/90 hover:scale-105 transition-all cursor-pointer"
                             >
                                 <Plus className="w-4 h-4" />
-                                <span>{activeSourceIds.size === 0 ? "Add Sources" : "Create New Notebook"}</span>
+                                <span>Create New Notebook</span>
                             </button>
                         </div>
                     ) : messages.length === 0 ? (
@@ -618,7 +542,7 @@ export default function AIChatPage() {
                                 Start Your Notebook Conversation
                             </h2>
                             <p className="text-xs leading-relaxed text-slate-500 dark:text-slate-400">
-                                Ask questions, request summaries, or generate study notes based on your selected sources on the left panel.
+                                Ask questions, request summaries, or generate study notes based on the {sessionDocuments.length} document(s) in this workspace.
                             </p>
                         </div>
                     ) : (
@@ -648,7 +572,7 @@ export default function AIChatPage() {
                                         {!isUser ? (
                                             <MessageWithCitations 
                                                 content={msg.content} 
-                                                citations={msg.citations || msg.Citations} 
+                                                citations={msg.citations || (msg as any).Citations} 
                                                 onCitationClick={(docId, page, snippet) => {
                                                     setActiveCitationDocId(docId);
                                                     setActiveCitationPage(page);
@@ -684,11 +608,11 @@ export default function AIChatPage() {
                         <textarea
                             rows={1}
                             placeholder={
-                                activeSourceIds.size === 0
-                                    ? "Select at least one source on the left to start chatting..."
-                                    : !currentSessionId
-                                    ? "Click + New above to create a notebook for these sources first..."
-                                    : "Ask anything about your selected sources..."
+                                !currentSessionId
+                                    ? "Create a notebook session first..."
+                                    : sessionDocuments.length === 0
+                                    ? "Add documents to ask specific questions..."
+                                    : "Ask anything about your workspace documents..."
                             }
                             value={chatInput}
                             onChange={(e) => setChatInput(e.target.value)}
@@ -698,15 +622,15 @@ export default function AIChatPage() {
                                     handleSendMessage();
                                 }
                             }}
-                            disabled={isSending || activeSourceIds.size === 0 || !currentSessionId}
+                            disabled={isSending || !currentSessionId}
                             className="flex-1 bg-transparent border-0 outline-none px-3 py-2 text-xs sm:text-sm text-dark-200 dark:text-light-100 placeholder:text-slate-400 resize-none max-h-32 custom-scrollbar disabled:cursor-not-allowed"
                         />
                         <button
                             onClick={handleSendMessage}
-                            disabled={!chatInput.trim() || isSending || activeSourceIds.size === 0 || !currentSessionId}
+                            disabled={!chatInput.trim() || isSending || !currentSessionId}
                             className={cn(
                                 "h-10 w-10 rounded-xl flex items-center justify-center transition-all shrink-0",
-                                chatInput.trim() && !isSending && activeSourceIds.size > 0 && currentSessionId
+                                chatInput.trim() && !isSending && currentSessionId
                                     ? "bg-brand text-white shadow-sm hover:bg-brand/90 hover:scale-105 cursor-pointer"
                                     : "bg-light-700 dark:bg-dark-400 text-slate-400 cursor-not-allowed"
                             )}
@@ -719,14 +643,14 @@ export default function AIChatPage() {
                         </button>
                     </div>
                     <p className="text-[10px] text-center text-slate-400 mt-2">
-                        AI Notebook can make mistakes. Check important info across your attached source files.
+                        AI Notebook can make mistakes. Double-check citations across your workspace documents.
                     </p>
                 </div>
             </main>
 
             {/* FAR RIGHT COLUMN: APRYSE VIEWER */}
             {activeCitationDocId && (() => {
-                const doc = attachedSources.find(s => s.documentId === activeCitationDocId);
+                const doc = sessionDocuments.find(s => s.documentId === activeCitationDocId);
                 if (!doc) return null;
                 const fakeFile: File_ = {
                     id: doc.documentId,
@@ -777,74 +701,154 @@ export default function AIChatPage() {
                     <DialogHeader>
                         <DialogTitle className="text-lg font-extrabold text-dark-200 dark:text-light-100 flex items-center gap-2">
                             <BookOpen className="w-5 h-5 text-brand" />
-                            <span>Add Sources to Notebook</span>
+                            <span>Add Sources to Workspace</span>
                         </DialogTitle>
                         <DialogDescription className="text-xs text-slate-400">
-                            Upload new documents to add them directly to your library and notebook.
+                            Select documents from your library to attach to the current Notebook Session.
                         </DialogDescription>
                     </DialogHeader>
 
-                    <div className="mt-4 py-4">
-                        <FileUploader className="w-full" />
-                        <div className="mt-6 pt-4 border-t border-light-700 dark:border-dark-400 flex justify-end">
+                    <div className="mt-4 flex flex-col gap-4 max-h-[60vh] overflow-hidden">
+                        {isLibraryLoading ? (
+                            <div className="flex items-center justify-center py-10">
+                                <Loader2 className="w-8 h-8 animate-spin text-brand" />
+                            </div>
+                        ) : libraryDocs.length === 0 ? (
+                            <div className="text-center py-8 text-slate-500 text-sm">
+                                No documents in your library. Upload some files first!
+                            </div>
+                        ) : (
+                            <div className="overflow-y-auto space-y-2 pr-2 custom-scrollbar">
+                                {libraryDocs.map(doc => {
+                                    const isAlreadyAttached = sessionDocuments.some(sd => sd.documentId === doc.id);
+                                    const isAdding = isAddingDocId === doc.id;
+                                    
+                                    return (
+                                        <div key={doc.id} className="flex items-center justify-between p-3 border border-light-700 dark:border-dark-400 rounded-xl bg-light-800/50 dark:bg-dark-300/50">
+                                            <div className="flex items-center gap-3 min-w-0">
+                                                <FileText className="w-4 h-4 text-slate-400 shrink-0" />
+                                                <span className="text-sm font-semibold text-dark-200 dark:text-light-100 truncate">
+                                                    {doc.fileName}
+                                                </span>
+                                            </div>
+                                            <button
+                                                onClick={() => handleAddSourceToSession(doc.id)}
+                                                disabled={isAlreadyAttached || isAdding}
+                                                className={cn(
+                                                    "px-3 py-1.5 rounded-lg text-xs font-bold transition-all shrink-0",
+                                                    isAlreadyAttached
+                                                        ? "bg-slate-200 dark:bg-dark-400 text-slate-500 cursor-not-allowed"
+                                                        : isAdding
+                                                        ? "bg-brand/50 text-white cursor-not-allowed flex items-center gap-1"
+                                                        : "bg-brand/10 hover:bg-brand text-brand hover:text-white cursor-pointer"
+                                                )}
+                                            >
+                                                {isAdding ? (
+                                                    <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Adding</>
+                                                ) : isAlreadyAttached ? (
+                                                    "Attached"
+                                                ) : (
+                                                    "Add to Workspace"
+                                                )}
+                                            </button>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+                        
+                        <div className="mt-4 pt-4 border-t border-light-700 dark:border-dark-400 flex flex-col gap-3">
+                            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Or upload new files</span>
+                            <FileUploader className="w-full" />
                             <button
                                 onClick={async () => {
                                     setIsRefetchingLibrary(true);
                                     try {
-                                        const [res, trashRes] = await Promise.all([
-                                            getFiles({ types: ["document"], limit: 50 }),
-                                            getTrashFiles().catch(() => ({ documents: [] }))
-                                        ]);
-                                        const trashedIds = new Set<string>((trashRes.documents || []).map((d: any) => d.id || d.Id || d.documentId));
-                                        
-                                        const newDocs = (res.documents || []).filter((f: any) => isDocumentValid(f.id || f.Id, f, trashedIds));
-                                        
-                                        setAttachedSources(prev => {
-                                            const map = new Map(prev.map(p => [p.documentId, p]));
-                                            let addedNew = false;
-                                            newDocs.forEach((f: any) => {
-                                                const id = f.id || f.Id;
-                                                if (!map.has(id)) {
-                                                    map.set(id, {
-                                                        chatSessionId: '',
-                                                        documentId: id,
-                                                        title: f.fileName || f.title,
-                                                        fileName: f.fileName || f.title,
-                                                        addedAt: new Date().toISOString()
-                                                    });
-                                                    addedNew = true;
-                                                }
-                                            });
-                                            
-                                            if (addedNew) {
-                                                toast.success("Library refreshed and new files added to sidebar!");
-                                            }
-                                            return Array.from(map.values()).sort((a, b) => new Date(b.addedAt).getTime() - new Date(a.addedAt).getTime());
-                                        });
+                                        const res = await getFiles({ types: ["document"], limit: 50 });
+                                        setLibraryDocs(res.documents || []);
+                                        toast.success("Library refreshed!");
                                     } catch (e) {
                                         toast.error("Failed to refresh library");
                                     } finally {
                                         setIsRefetchingLibrary(false);
-                                        setIsAddModalOpen(false);
                                     }
                                 }}
                                 disabled={isRefetchingLibrary}
-                                className="px-5 py-2.5 bg-brand text-white hover:bg-brand/90 font-bold rounded-xl transition-colors cursor-pointer flex items-center gap-2 shadow-sm"
+                                className="w-full py-2 bg-light-700 dark:bg-dark-400 hover:bg-light-600 dark:hover:bg-dark-300 rounded-xl text-xs font-bold text-dark-200 dark:text-light-100 transition-colors flex items-center justify-center gap-2 cursor-pointer"
                             >
-                                {isRefetchingLibrary ? (
-                                    <>
-                                        <Loader2 className="w-4 h-4 animate-spin" />
-                                        <span>Refreshing...</span>
-                                    </>
-                                ) : (
-                                    <>
-                                        <Check className="w-4 h-4" />
-                                        <span>Done Uploading</span>
-                                    </>
-                                )}
+                                <RefreshCw className={cn("w-3.5 h-3.5", isRefetchingLibrary && "animate-spin")} />
+                                Refresh Library after Upload
                             </button>
                         </div>
                     </div>
+                </DialogContent>
+            </Dialog>
+
+            {/* RENAME MODAL */}
+            <Dialog open={isRenameModalOpen} onOpenChange={setIsRenameModalOpen}>
+                <DialogContent className="shad-dialog bg-white dark:bg-dark-200 rounded-3xl border border-light-700 dark:border-dark-400">
+                    <DialogHeader>
+                        <DialogTitle className="text-dark-200 dark:text-light-100">Rename Notebook</DialogTitle>
+                        <DialogDescription className="text-slate-500">
+                            Enter a new title for this notebook session.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="py-4">
+                        <input
+                            type="text"
+                            value={renameTitleInput}
+                            onChange={(e) => setRenameTitleInput(e.target.value)}
+                            placeholder="Notebook Title"
+                            className="w-full bg-light-800 dark:bg-dark-300 border border-light-700 dark:border-dark-400 rounded-xl px-4 py-3 text-sm font-semibold outline-none focus:border-brand transition-colors"
+                        />
+                    </div>
+                    <DialogFooter>
+                        <button
+                            onClick={() => setIsRenameModalOpen(false)}
+                            className="px-4 py-2 rounded-xl text-sm font-bold text-slate-500 hover:bg-slate-100 dark:hover:bg-dark-400 transition-colors cursor-pointer"
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            onClick={handleRenameSession}
+                            disabled={!renameTitleInput.trim() || isRenaming}
+                            className="px-4 py-2 bg-brand text-white rounded-xl text-sm font-bold hover:bg-brand/90 transition-colors flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                        >
+                            {isRenaming && <Loader2 className="w-4 h-4 animate-spin" />}
+                            Save
+                        </button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* DELETE MODAL */}
+            <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
+                <DialogContent className="shad-dialog bg-white dark:bg-dark-200 rounded-3xl border border-red-500/20">
+                    <DialogHeader>
+                        <DialogTitle className="text-red-500 flex items-center gap-2">
+                            <Trash2 className="w-5 h-5" />
+                            Delete Notebook
+                        </DialogTitle>
+                        <DialogDescription className="text-slate-500 pt-2">
+                            Are you sure you want to delete this notebook? All chat history in this session will be permanently deleted. Your source documents in the library will <b>not</b> be affected.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter className="mt-4">
+                        <button
+                            onClick={() => setIsDeleteModalOpen(false)}
+                            className="px-4 py-2 rounded-xl text-sm font-bold text-slate-500 hover:bg-slate-100 dark:hover:bg-dark-400 transition-colors cursor-pointer"
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            onClick={handleDeleteSession}
+                            disabled={isDeleting}
+                            className="px-4 py-2 bg-red-500 text-white rounded-xl text-sm font-bold hover:bg-red-600 transition-colors flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                        >
+                            {isDeleting && <Loader2 className="w-4 h-4 animate-spin" />}
+                            Delete Permanently
+                        </button>
+                    </DialogFooter>
                 </DialogContent>
             </Dialog>
         </div>
