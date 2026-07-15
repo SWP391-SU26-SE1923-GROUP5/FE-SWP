@@ -278,25 +278,28 @@ export default function QuizzesDashboardClient({ initialQuizzes }: Props) {
                         {paginatedQuizzes.map((quiz) => (
                             <div
                                 key={quiz.id}
-                                className="relative group flex flex-col h-full border border-light-700 dark:border-dark-400 rounded-3xl bg-white dark:bg-dark-200 hover:border-brand/40 dark:hover:border-brand/40 shadow-drop-1 hover:shadow-drop-3 transition-all duration-300"
+                                className="relative group flex flex-col h-full border border-light-700 dark:border-dark-400 rounded-[2rem] bg-white dark:bg-dark-200 hover:border-brand/40 dark:hover:border-brand/40 shadow-drop-1 hover:shadow-drop-3 transition-all duration-300 hover:-translate-y-1 overflow-hidden"
                             >
-                                <Link href={`/quizzes/${quiz.id}`} className="flex flex-col flex-1 p-6">
+                                {/* Gradient Top Accent */}
+                                <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-brand to-emerald-400 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                                
+                                <Link href={`/quizzes/${quiz.id}`} className="flex flex-col flex-1 p-6 z-10 pt-7">
                                     <div className="flex items-start gap-4 mb-4 pr-10">
-                                        <div className="p-3 bg-brand/10 dark:bg-brand/20 rounded-2xl text-brand group-hover:bg-brand group-hover:text-white transition-colors duration-300 shrink-0">
+                                        <div className="p-3.5 bg-brand/10 dark:bg-brand/20 rounded-2xl text-brand group-hover:bg-brand group-hover:text-white transition-colors duration-300 shrink-0 shadow-xs">
                                             <BrainCircuit className="h-6 w-6" />
                                         </div>
-                                        <h3 className="font-bold text-lg text-dark100_light900 leading-snug line-clamp-2 mt-0.5">
+                                        <h3 className="font-bold text-lg text-dark100_light900 leading-snug line-clamp-2 mt-1 group-hover:text-brand transition-colors">
                                             {quiz.title}
                                         </h3>
                                     </div>
 
-                                    <div className="mt-auto pt-4 flex items-center gap-2 text-xs font-medium text-light-200 dark:text-dark-400">
+                                    <div className="mt-auto pt-2 flex items-center gap-2 text-xs font-semibold text-light-200 dark:text-dark-400">
                                         <Clock className="h-3.5 w-3.5" />
                                         <span>
-                                            Created:{" "}
-                                            {new Date(quiz.createdAt).toLocaleDateString(undefined, {
-                                                month: "short",
-                                                day: "numeric",
+                                            Tạo ngày:{" "}
+                                            {new Date(quiz.createdAt).toLocaleDateString('vi-VN', {
+                                                day: "2-digit",
+                                                month: "2-digit",
                                                 year: "numeric",
                                             })}
                                         </span>
@@ -304,30 +307,29 @@ export default function QuizzesDashboardClient({ initialQuizzes }: Props) {
                                 </Link>
 
                                 {/* Bottom Action Strip: Start & History */}
-                                <div className="px-6 pb-5 pt-4 border-t border-light-700/60 dark:border-dark-400/60 flex items-center justify-between gap-3">
+                                <div className="px-6 pb-6 pt-4 flex items-center justify-between gap-3 relative z-10">
                                     <Link
                                         href={`/quizzes/${quiz.id}/history`}
-                                        className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-light-800 dark:bg-dark-300 hover:bg-light-700 dark:hover:bg-dark-400 text-xs font-bold text-dark200_light800 transition-colors cursor-pointer border border-light-700 dark:border-dark-400"
-                                        title="View Attempt History"
+                                        className="inline-flex items-center justify-center h-12 w-12 rounded-2xl bg-light-800 dark:bg-dark-300 hover:bg-light-700 dark:hover:bg-dark-400 text-dark500_light400 hover:text-brand transition-colors cursor-pointer border border-light-700 dark:border-dark-400 shrink-0 group/history shadow-inner hover:shadow-none"
+                                        title="Lịch sử làm bài"
                                     >
-                                        <History className="h-3.5 w-3.5 text-brand" />
-                                        <span>History</span>
+                                        <History className="h-5 w-5 group-hover/history:-rotate-45 transition-transform" />
                                     </Link>
 
                                     <Link
                                         href={`/quizzes/${quiz.id}`}
-                                        className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-brand/10 dark:bg-brand/20 hover:bg-brand text-xs font-bold text-brand hover:text-white transition-all cursor-pointer border border-brand/20"
+                                        className="inline-flex flex-1 items-center justify-center gap-2 h-12 px-6 rounded-2xl bg-gradient-to-r from-brand to-emerald-500 hover:from-emerald-400 hover:to-brand text-sm font-bold text-white transition-all cursor-pointer shadow-md hover:shadow-lg"
                                     >
-                                        <span>Start Quiz</span>
-                                        <Play className="h-3.5 w-3.5 fill-current" />
+                                        <span>Bắt đầu Quiz</span>
+                                        <Play className="h-4 w-4 fill-current" />
                                     </Link>
                                 </div>
 
                                 <button
                                     onClick={(e) => handleDelete(e, quiz.id)}
                                     disabled={isDeleting === quiz.id}
-                                    className="absolute top-5 right-5 z-20 flex items-center justify-center h-8 w-8 text-light-200 dark:text-dark-400 bg-light-800 dark:bg-dark-300 hover:text-white hover:bg-red dark:hover:bg-red rounded-full transition-all cursor-pointer shadow-xs disabled:opacity-50 border border-light-700 dark:border-dark-400"
-                                    title="Delete Quiz"
+                                    className="absolute top-5 right-5 z-20 flex items-center justify-center h-8 w-8 text-light-200 dark:text-dark-400 bg-white/80 dark:bg-dark-300/80 backdrop-blur-sm hover:text-white hover:bg-red dark:hover:bg-red rounded-full transition-all cursor-pointer shadow-xs disabled:opacity-50 border border-light-700 dark:border-dark-400 opacity-0 group-hover:opacity-100 focus:opacity-100"
+                                    title="Xóa Quiz"
                                 >
                                     <Trash2 className="h-4 w-4" />
                                 </button>
