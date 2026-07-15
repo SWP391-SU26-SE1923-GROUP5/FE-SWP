@@ -11,12 +11,17 @@ import FormattedDateTime from "@/components/FormattedDateTime";
 import { useDebounce } from "use-debounce";
 import { File_ } from "@/types";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Sparkles, Loader2, FileText } from "lucide-react";
+import { Sparkles, Loader2, FileText, BookOpen } from "lucide-react";
+import ApryseViewer from "@/components/ApryseViewer";
 
 interface Citation {
     source: string;
     content: string;
     relevance: number;
+    documentId?: string;
+    DocumentId?: string;
+    pageNumber?: number;
+    PageNumber?: number;
 }
 
 interface SemanticSearchResponse {
@@ -37,6 +42,7 @@ const Search = () => {
     const [isLoadingAI, setIsLoadingAI] = useState(false);
 
     const [aiResult, setAiResult] = useState<SemanticSearchResponse | string | null>(null);
+    const [activeCitation, setActiveCitation] = useState<Citation | null>(null);
 
     const router = useRouter();
     const path = usePathname();
@@ -133,9 +139,32 @@ const Search = () => {
         navigateToTarget(file.fileName, file.fileType || file.fileExtension || "");
     };
 
-    const handleCitationClick = (source: string) => {
-        const ext = source.split('.').pop() || "";
-        navigateToTarget(source, ext);
+    const handleCitationClick = async (citation: Citation) => {
+        let docId = citation.documentId || citation.DocumentId;
+        
+        // If the backend returns a missing or Guid.Empty DocumentId, try to look it up by filename
+        if (!docId || docId === "00000000-0000-0000-0000-000000000000") {
+            try {
+                const files = await getFiles({ types: [], searchText: citation.source });
+                if (files && files.documents && files.documents.length > 0) {
+                    // Find exact match or just take the first one
+                    const matchedFile = files.documents.find(f => f.fileName === citation.source) || files.documents[0];
+                    docId = matchedFile.id;
+                    // Update citation object so ApryseViewer gets the right ID
+                    citation.documentId = docId;
+                }
+            } catch (error) {
+                console.error("Failed to lookup document by name", error);
+            }
+        }
+
+        if (docId && docId !== "00000000-0000-0000-0000-000000000000") {
+            setActiveCitation(citation);
+        } else {
+            // Ultimate fallback if file cannot be found at all
+            const ext = citation.source.split('.').pop() || "";
+            navigateToTarget(citation.source, ext);
+        }
     };
 
     return (
@@ -238,7 +267,7 @@ const Search = () => {
                                                 {aiResult.citations.map((citation, idx) => (
                                                     <div
                                                         key={idx}
-                                                        onClick={() => handleCitationClick(citation.source)}
+                                                        onClick={() => handleCitationClick(citation)}
                                                         className="bg-slate-50 border border-slate-100 rounded-lg p-3 hover:bg-slate-100 transition-colors cursor-pointer"
                                                     >
                                                         <p className="text-sm font-medium text-brand line-clamp-1" title={citation.source}>
@@ -256,6 +285,48 @@ const Search = () => {
                                     )}
                                 </div>
                             </div>
+                        )}
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            <Dialog open={!!activeCitation} onOpenChange={(open) => !open && setActiveCitation(null)}>
+                <DialogContent className="sm:max-w-[80vw] h-[85vh] p-0 overflow-hidden rounded-2xl flex flex-col bg-white">
+                    <DialogHeader className="px-6 py-4 border-b border-slate-100 flex-shrink-0 bg-slate-50/50">
+                        <DialogTitle className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-lg bg-brand/10 flex items-center justify-center shrink-0">
+                                <BookOpen className="h-4 w-4 text-brand" />
+                            </div>
+                            <span className="text-base font-bold text-slate-800 line-clamp-1">
+                                {activeCitation?.source}
+                            </span>
+                        </DialogTitle>
+                    </DialogHeader>
+                    
+                    <div className="flex-1 w-full relative bg-slate-50">
+                        {activeCitation && (
+                            <ApryseViewer 
+                                key={`${activeCitation.documentId || activeCitation.DocumentId}-${activeCitation.pageNumber || activeCitation.PageNumber}`}
+                                file={{
+                                    id: activeCitation.documentId || activeCitation.DocumentId || "",
+                                    fileName: activeCitation.source,
+                                    fileExtension: activeCitation.source.split('.').pop() || 'pdf',
+                                    mimeType: "",
+                                    fileSizeBytes: 0,
+                                    uploadedAt: new Date().toISOString(),
+                                    status: "Completed",
+                                    lifecycleStatus: "Active",
+                                    isEncrypted: false,
+                                    isPublic: false,
+                                    encryptionKeyId: "",
+                                    ownerId: ""
+                                }} 
+                                path="/search" 
+                                closeModals={() => setActiveCitation(null)} 
+                                readOnly={true} 
+                                targetPage={activeCitation.pageNumber || activeCitation.PageNumber}
+                                searchSnippet={activeCitation.content}
+                            />
                         )}
                     </div>
                 </DialogContent>

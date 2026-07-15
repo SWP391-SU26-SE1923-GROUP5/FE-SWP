@@ -22,6 +22,15 @@ export interface ChatMessage {
     content: string;
     createdAt: string;
     updatedAt: string;
+    isRelevant?: boolean;
+    citations?: {
+        documentId: string;
+        source: string;
+        snippet: string;
+        pageNumber?: number;
+        relevance: number;
+        matchType: string;
+    }[];
 }
 
 export interface ChatSession {
@@ -37,6 +46,10 @@ export interface Citation {
     source: string;
     content: string;
     relevance: number;
+    documentId?: string;
+    DocumentId?: string;
+    pageNumber?: number;
+    PageNumber?: number;
 }
 
 export interface RAGCitation {

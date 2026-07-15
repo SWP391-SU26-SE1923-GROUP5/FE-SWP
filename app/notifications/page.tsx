@@ -180,32 +180,38 @@ export default function NotificationsPage() {
 
             {/* Main Content Area */}
             <div className="w-full space-y-6">
-                {/* Filter Pills */}
-                <div className="flex items-center justify-between">
-                    <div className="bg-light-800 dark:bg-dark-300 p-1.5 rounded-full inline-flex gap-1 border border-light-700 dark:border-dark-400 shadow-inner">
+                {/* Filter Tabs */}
+                <div className="flex items-center justify-between border-b border-light-700 dark:border-dark-400">
+                    <div className="flex gap-6">
                         <button
                             onClick={() => handleFilterChange('all')}
-                            className={`px-5 py-2 rounded-full text-xs font-bold transition-all duration-200 cursor-pointer ${
+                            className={`pb-3 text-sm font-bold transition-all duration-200 cursor-pointer relative ${
                                 filter === 'all'
-                                    ? 'bg-brand text-white shadow-drop-2'
+                                    ? 'text-brand'
                                     : 'text-dark500_light400 hover:text-dark100_light900'
                             }`}
                         >
-                            All ({notifications.length})
+                            Tất cả ({notifications.length})
+                            {filter === 'all' && (
+                                <span className="absolute bottom-[-1px] left-0 w-full h-0.5 bg-brand rounded-t-full" />
+                            )}
                         </button>
                         <button
                             onClick={() => handleFilterChange('unread')}
-                            className={`px-5 py-2 rounded-full text-xs font-bold transition-all duration-200 cursor-pointer ${
+                            className={`pb-3 text-sm font-bold transition-all duration-200 cursor-pointer relative ${
                                 filter === 'unread'
-                                    ? 'bg-brand text-white shadow-drop-2'
+                                    ? 'text-brand'
                                     : 'text-dark500_light400 hover:text-dark100_light900'
                             }`}
                         >
-                            Unread ({unreadCount})
+                            Chưa đọc ({unreadCount})
+                            {filter === 'unread' && (
+                                <span className="absolute bottom-[-1px] left-0 w-full h-0.5 bg-brand rounded-t-full" />
+                            )}
                         </button>
                     </div>
 
-                    <span className="text-xs font-semibold text-dark500_light400">
+                    <span className="text-xs font-semibold text-dark500_light400 mb-3">
                         Showing {paginatedNotifications.length} of {totalItems}
                     </span>
                 </div>
@@ -221,35 +227,51 @@ export default function NotificationsPage() {
                         return (
                             <div
                                 key={item.id}
-                                onClick={() => handleItemClick(item.id, item.isRead)}
-                                className={`rounded-3xl p-5 sm:p-6 border transition-all duration-200 flex items-start justify-between gap-4 cursor-pointer ${
+                                className={`rounded-3xl p-5 sm:p-6 border transition-all duration-200 flex flex-col sm:flex-row items-start justify-between gap-4 ${
                                     !item.isRead
-                                        ? 'bg-white dark:bg-dark-200 border-brand shadow-drop-1 hover:shadow-drop-3 ring-1 ring-brand/10'
-                                        : 'bg-white/80 dark:bg-dark-200/80 border-light-700 dark:border-dark-400 shadow-xs hover:border-light-600 dark:hover:border-dark-300'
+                                        ? 'bg-white dark:bg-dark-200 border-brand/40 shadow-drop-2 hover:shadow-drop-3 hover:border-brand/60'
+                                        : 'bg-light-900/40 dark:bg-dark-300/20 border-light-700 dark:border-dark-400 shadow-none hover:bg-light-900/80 dark:hover:bg-dark-300/40 opacity-70 hover:opacity-100'
                                 }`}
                             >
                                 <div className="flex items-start gap-4 flex-1">
-                                    <div className={`p-3 rounded-2xl shrink-0 mt-0.5 ${style.iconBg}`}>
+                                    <div className={`p-3 rounded-2xl shrink-0 mt-0.5 ${style.iconBg} ${!item.isRead ? 'ring-2 ring-brand/20 shadow-sm' : 'opacity-60'}`}>
                                         {style.icon}
                                     </div>
 
-                                    <div className="space-y-1">
-                                        <h3 className={`h4 ${!item.isRead ? 'text-dark100_light900 font-bold' : 'text-dark200_light800 font-semibold'}`}>
-                                            {item.type ? item.type.charAt(0).toUpperCase() + item.type.slice(1) : 'Notification'}
-                                        </h3>
-                                        <p className="body-2 text-dark500_light400 leading-relaxed">
+                                    <div className="space-y-1.5">
+                                        <div className="flex items-center gap-2.5">
+                                            <h3 className={`h4 ${!item.isRead ? 'text-dark100_light900 font-extrabold' : 'text-dark300_light700 font-semibold'}`}>
+                                                {item.type ? item.type.charAt(0).toUpperCase() + item.type.slice(1) : 'Notification'}
+                                            </h3>
+                                            {!item.isRead && (
+                                                <span className="px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider bg-brand text-white shadow-sm flex items-center gap-1">
+                                                    Mới
+                                                </span>
+                                            )}
+                                        </div>
+                                        <p className={`body-2 leading-relaxed ${!item.isRead ? 'text-dark200_light800 font-medium' : 'text-dark500_light400'}`}>
                                             {item.message}
                                         </p>
                                     </div>
                                 </div>
 
-                                <div className="flex items-center gap-2 shrink-0 pt-1">
-                                    {!item.isRead && (
-                                        <span className="w-2.5 h-2.5 rounded-full bg-brand animate-pulse" />
-                                    )}
-                                    <span className="caption font-semibold text-dark500_light400">
+                                <div className="flex items-center sm:flex-col sm:items-end sm:justify-center gap-2 shrink-0 pt-1 w-full sm:w-auto justify-between border-t border-light-700 sm:border-0 mt-3 sm:mt-0 pt-3 sm:pt-0 dark:border-dark-400">
+                                    <span className={`caption font-semibold ${!item.isRead ? 'text-brand/80' : 'text-dark500_light400'}`}>
                                         {dateStr}
                                     </span>
+                                    {!item.isRead && (
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleItemClick(item.id, item.isRead);
+                                            }}
+                                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand/10 hover:bg-brand/20 text-brand text-xs font-bold transition-colors"
+                                            title="Đánh dấu đã đọc"
+                                        >
+                                            <CheckCircle2 className="w-3.5 h-3.5" />
+                                            Đã đọc
+                                        </button>
+                                    )}
                                 </div>
                             </div>
                         );

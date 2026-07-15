@@ -40,6 +40,8 @@ import {
 } from '@/components/ui/dialog';
 import FileUploader from '@/components/FileUploader';
 import { toast } from 'sonner';
+import ApryseViewer from '@/components/ApryseViewer';
+import { File_ } from '@/types';
 
 interface LibraryFile {
     id: string;
@@ -61,6 +63,48 @@ const isDocumentValid = (docId: string, docObj?: any, trashedIds?: Set<string>) 
     return true;
 };
 
+const MessageWithCitations = ({ 
+    content, 
+    citations, 
+    onCitationClick 
+}: { 
+    content: string; 
+    citations?: any[]; 
+    onCitationClick: (docId: string, page?: number, snippet?: string) => void 
+}) => {
+    if (!citations || citations.length === 0) return <span>{content}</span>;
+
+    const parts = content.split(/(\[\d+\])/g);
+    return (
+        <span>
+            {parts.map((part, i) => {
+                const match = part.match(/\[(\d+)\]/);
+                if (match) {
+                    const idx = parseInt(match[1]) - 1;
+                    if (idx >= 0 && idx < citations.length) {
+                        const cit = citations[idx];
+                        return (
+                            <button 
+                                key={i}
+                                onClick={() => onCitationClick(
+                                    cit.documentId || cit.DocumentId, 
+                                    cit.pageNumber || cit.PageNumber, 
+                                    cit.snippet || cit.Snippet
+                                )}
+                                className="inline-flex items-center justify-center px-1.5 py-0.5 mx-1 rounded-sm bg-brand/20 text-brand text-[10px] font-bold cursor-pointer hover:bg-brand hover:text-white transition-colors align-super"
+                                title={`Source: ${cit.source || cit.Source}`}
+                            >
+                                {match[1]}
+                            </button>
+                        );
+                    }
+                }
+                return <span key={i}>{part}</span>;
+            })}
+        </span>
+    );
+};
+
 export default function AIChatPage() {
     const [sessions, setSessions] = useState<ChatSession[]>([]);
     const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
@@ -78,6 +122,10 @@ export default function AIChatPage() {
 
     const [isAddModalOpen, setIsAddModalOpen] = useState<boolean>(false);
     const [isRefetchingLibrary, setIsRefetchingLibrary] = useState<boolean>(false);
+
+    const [activeCitationDocId, setActiveCitationDocId] = useState<string | null>(null);
+    const [activeCitationPage, setActiveCitationPage] = useState<number | undefined>(undefined);
+    const [activeCitationSnippet, setActiveCitationSnippet] = useState<string | undefined>(undefined);
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -507,7 +555,7 @@ export default function AIChatPage() {
             </aside>
 
             {/* RIGHT / MIDDLE COLUMN: CHAT STUDIO */}
-            <main className="flex-1 flex flex-col h-2/3 lg:h-full bg-light-800 dark:bg-dark-100 relative overflow-hidden">
+            <main className={cn("flex flex-col h-2/3 lg:h-full bg-light-800 dark:bg-dark-100 relative overflow-hidden transition-all duration-300", activeCitationDocId ? "lg:w-1/3 xl:w-[40%]" : "flex-1")}>
                 {/* Chat Studio Top Banner */}
                 <div className="h-16 px-6 border-b border-light-700 dark:border-dark-400 bg-white/80 dark:bg-dark-200/80 backdrop-blur-md flex items-center justify-between shrink-0">
                     <div className="flex items-center gap-3 min-w-0">
@@ -597,7 +645,19 @@ export default function AIChatPage() {
                                                 : "bg-white dark:bg-dark-200 border border-light-700 dark:border-dark-400 text-dark-200 dark:text-light-100 rounded-tl-xs"
                                         )}
                                     >
-                                        {msg.content}
+                                        {!isUser ? (
+                                            <MessageWithCitations 
+                                                content={msg.content} 
+                                                citations={msg.citations || msg.Citations} 
+                                                onCitationClick={(docId, page, snippet) => {
+                                                    setActiveCitationDocId(docId);
+                                                    setActiveCitationPage(page);
+                                                    setActiveCitationSnippet(snippet);
+                                                }}
+                                            />
+                                        ) : (
+                                            msg.content
+                                        )}
                                     </div>
                                 </div>
                             );
@@ -663,6 +723,53 @@ export default function AIChatPage() {
                     </p>
                 </div>
             </main>
+
+            {/* FAR RIGHT COLUMN: APRYSE VIEWER */}
+            {activeCitationDocId && (() => {
+                const doc = attachedSources.find(s => s.documentId === activeCitationDocId);
+                if (!doc) return null;
+                const fakeFile: File_ = {
+                    id: doc.documentId,
+                    fileName: doc.fileName || doc.title,
+                    fileExtension: (doc.fileName || "").split('.').pop() || 'pdf',
+                    mimeType: "",
+                    fileSizeBytes: 0,
+                    uploadedAt: doc.addedAt,
+                    status: "Completed",
+                    lifecycleStatus: "Active",
+                    isEncrypted: false,
+                    isPublic: false,
+                    encryptionKeyId: "",
+                    ownerId: ""
+                };
+                return (
+                    <aside className="hidden lg:flex flex-1 flex-col h-full bg-white dark:bg-dark-200 border-l border-light-700 dark:border-dark-400 z-10 transition-all shadow-[-4px_0_24px_rgba(0,0,0,0.02)]">
+                        <div className="h-16 px-4 border-b border-light-700 dark:border-dark-400 flex items-center justify-between shrink-0 bg-white">
+                            <div className="flex items-center gap-2 min-w-0">
+                                <BookOpen className="w-5 h-5 text-brand" />
+                                <h2 className="text-sm font-bold text-slate-800 truncate">{doc.fileName || doc.title}</h2>
+                            </div>
+                            <button 
+                                onClick={() => setActiveCitationDocId(null)}
+                                className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-500 cursor-pointer transition-colors"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+                        <div className="flex-1 w-full relative bg-slate-50">
+                            <ApryseViewer 
+                                key={`${fakeFile.id}-${activeCitationPage}`}
+                                file={fakeFile} 
+                                path="/chat" 
+                                closeModals={() => setActiveCitationDocId(null)} 
+                                readOnly={true} 
+                                targetPage={activeCitationPage}
+                                searchSnippet={activeCitationSnippet}
+                            />
+                        </div>
+                    </aside>
+                );
+            })()}
 
             {/* ADD SOURCES MODAL */}
             <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>

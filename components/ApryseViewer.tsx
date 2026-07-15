@@ -7,11 +7,30 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Loader2, Save, FileText, Shield, Pencil } from "lucide-react";
 
-export default function ApryseViewer({ file, path, closeModals, readOnly = false }: { file: File_, path: string, closeModals: () => void, readOnly?: boolean }) {
+export default function ApryseViewer({ file, path, closeModals, readOnly = false, targetPage, searchSnippet }: { file: File_, path: string, closeModals: () => void, readOnly?: boolean, targetPage?: number, searchSnippet?: string }) {
     const viewer = useRef<HTMLDivElement>(null);
     const [isSaving, setIsSaving] = useState(false);
     const instanceRef = useRef<any>(null);
     const blobUrlRef = useRef<string | null>(null);
+
+    useEffect(() => {
+        if (!instanceRef.current || instanceRef.current === "initializing") return;
+        
+        try {
+            const instance = instanceRef.current;
+            if (targetPage) {
+                const pageNum = parseInt(targetPage.toString(), 10);
+                if (!isNaN(pageNum) && pageNum > 0) {
+                    instance.UI.setCurrentPageNumber(pageNum);
+                }
+            }
+            if (searchSnippet) {
+                instance.UI.searchTextFull(searchSnippet);
+            }
+        } catch (error) {
+            console.error("Error jumping to citation:", error);
+        }
+    }, [targetPage, searchSnippet]);
 
     const ext = file.fileExtension?.toLowerCase().replace('.', '') || "";
 
@@ -58,6 +77,19 @@ export default function ApryseViewer({ file, path, closeModals, readOnly = false
                             if (readOnly) {
                                 instance.UI.disableElements(['annotationToolbarButton', 'toolsHeader', 'saveButton']);
                             }
+                            
+                            // Listen for document load to jump to target page
+                            instance.Core.documentViewer.addEventListener('documentLoaded', () => {
+                                if (targetPage) {
+                                    const pageNum = parseInt(targetPage.toString(), 10);
+                                    if (!isNaN(pageNum) && pageNum > 0) {
+                                        instance.Core.documentViewer.setCurrentPage(pageNum, true);
+                                    }
+                                }
+                                if (searchSnippet) {
+                                    instance.UI.searchTextFull(searchSnippet);
+                                }
+                            });
                         });
                     }
                 });
