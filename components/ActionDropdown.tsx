@@ -11,7 +11,11 @@ import {
     Loader2,
     RotateCcw,
     Sparkles,
-    MessageSquare
+    MessageSquare,
+    Pencil,
+    Trash2,
+    Check,
+    X
 } from "lucide-react";
 
 import {
@@ -50,6 +54,8 @@ import {
     getUserSessions,
     getSessionDocuments,
     addDocumentToSession,
+    renameChatSession,
+    deleteChatSession,
     ChatSession,
     ChatMessage
 } from "@/lib/actions/ai.actions";
@@ -139,6 +145,13 @@ export default function ActionDropdown({ file }: { file: File_ }) {
     const [chatInput, setChatInput] = useState("");
     const [isChatLoading, setIsChatLoading] = useState(false);
     const [isSending, setIsSending] = useState(false);
+    
+    // AI session management states
+    const [isRenameSessionModalOpen, setIsRenameSessionModalOpen] = useState(false);
+    const [renameSessionTitle, setRenameSessionTitle] = useState("");
+    const [isRenamingSession, setIsRenamingSession] = useState(false);
+    const [isDeleteSessionModalOpen, setIsDeleteSessionModalOpen] = useState(false);
+    const [isDeletingSession, setIsDeletingSession] = useState(false);
 
     const closeAllModals = () => {
         setIsModalOpen(false);
@@ -363,7 +376,7 @@ export default function ActionDropdown({ file }: { file: File_ }) {
         setIsSending(true);
 
         try {
-            const aiResponse = await sendChatMessage(currentSessionId, file.id, userMessage.content);
+            const aiResponse = await sendChatMessage(currentSessionId, userMessage.content);
             setChatMessages((prev) => [...prev, aiResponse]);
         } catch (error: unknown) {
             setChatMessages((prev) => prev.filter(msg => msg.id !== userMessage.id));
@@ -386,6 +399,45 @@ export default function ActionDropdown({ file }: { file: File_ }) {
         } catch (error) {
             console.error(error);
             toast.error("Failed to download file.", { id: toastId });
+        }
+    };
+
+    const handleRenameSession = async () => {
+        if (!selectedSessionId || !renameSessionTitle.trim()) return;
+        setIsRenamingSession(true);
+        const toastId = toast.loading("Renaming session...");
+        try {
+            const updated = await renameChatSession(selectedSessionId, renameSessionTitle);
+            setChatSessions(prev => prev.map(s => s.id === selectedSessionId ? { ...s, sessionTitle: updated.sessionTitle } : s));
+            setIsRenameSessionModalOpen(false);
+            toast.success("Session renamed successfully!", { id: toastId });
+        } catch (error: any) {
+            toast.error(error.message || "Failed to rename session", { id: toastId });
+        } finally {
+            setIsRenamingSession(false);
+        }
+    };
+
+    const handleDeleteSession = async () => {
+        if (!selectedSessionId) return;
+        setIsDeletingSession(true);
+        const toastId = toast.loading("Deleting session...");
+        try {
+            await deleteChatSession(selectedSessionId);
+            const remaining = chatSessions.filter(s => s.id !== selectedSessionId);
+            setChatSessions(remaining);
+            if (remaining.length > 0) {
+                handleSelectSession(remaining[0].id);
+            } else {
+                setSelectedSessionId(null);
+                setChatMessages([]);
+            }
+            setIsDeleteSessionModalOpen(false);
+            toast.success("Session deleted successfully!", { id: toastId });
+        } catch (error: any) {
+            toast.error(error.message || "Failed to delete session", { id: toastId });
+        } finally {
+            setIsDeletingSession(false);
         }
     };
 
@@ -460,21 +512,95 @@ export default function ActionDropdown({ file }: { file: File_ }) {
 
                             {value === "ask-ai" && (
                                 <div className="flex flex-col h-[50vh] gap-4">
-                                    <div className="flex items-center justify-between">
-                                        <select
-                                            className="p-2 rounded-md border light-border bg-white text-sm outline-none cursor-pointer"
-                                            value={selectedSessionId || ""}
-                                            onChange={(e) => {
-                                                if (e.target.value === "new") handleCreateSession();
-                                                else handleSelectSession(e.target.value);
-                                            }}
-                                        >
-                                            <option value="" disabled>Select a session</option>
-                                            <option value="new" className="font-semibold text-brand">+ New Chat Session</option>
-                                            {chatSessions.map((s) => (
-                                                <option key={s.id} value={s.id}>{s.sessionTitle}</option>
-                                            ))}
-                                        </select>
+                                    <div className="flex flex-col gap-3">
+                                        <div className="flex items-center gap-2">
+                                            <div className="flex-1 relative">
+                                                <select
+                                                    className="w-full p-2.5 rounded-xl border border-slate-200 bg-white text-sm font-medium outline-none cursor-pointer hover:border-brand focus:border-brand focus:ring-2 focus:ring-brand/20 transition-all appearance-none"
+                                                    value={selectedSessionId || ""}
+                                                    onChange={(e) => {
+                                                        if (e.target.value === "new") handleCreateSession();
+                                                        else handleSelectSession(e.target.value);
+                                                    }}
+                                                >
+                                                    <option value="" disabled>Select a session</option>
+                                                    <option value="new" className="font-semibold text-brand">+ New Chat Session</option>
+                                                    {chatSessions.map((s) => (
+                                                        <option key={s.id} value={s.id}>{s.sessionTitle}</option>
+                                                    ))}
+                                                </select>
+                                                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-slate-500">
+                                                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
+                                                </div>
+                                            </div>
+
+                                            {selectedSessionId && selectedSessionId !== "new" && (
+                                                <div className="flex items-center gap-1 shrink-0">
+                                                    <button
+                                                        onClick={() => {
+                                                            const session = chatSessions.find(s => s.id === selectedSessionId);
+                                                            if (session) {
+                                                                setRenameSessionTitle(session.sessionTitle);
+                                                                setIsRenameSessionModalOpen(true);
+                                                                setIsDeleteSessionModalOpen(false);
+                                                            }
+                                                        }}
+                                                        className="p-2.5 text-slate-400 hover:text-brand hover:bg-brand/10 rounded-xl transition-all cursor-pointer"
+                                                        title="Rename session"
+                                                    >
+                                                        <Pencil className="w-4 h-4" />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => {
+                                                            setIsDeleteSessionModalOpen(true);
+                                                            setIsRenameSessionModalOpen(false);
+                                                        }}
+                                                        className="p-2.5 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all cursor-pointer"
+                                                        title="Delete session"
+                                                    >
+                                                        <Trash2 className="w-4 h-4" />
+                                                    </button>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* Inline Rename UI */}
+                                        {isRenameSessionModalOpen && (
+                                            <div className="flex items-center gap-2 p-3 bg-brand/5 border border-brand/20 rounded-xl animate-in slide-in-from-top-2">
+                                                <Input
+                                                    value={renameSessionTitle}
+                                                    onChange={(e) => setRenameSessionTitle(e.target.value)}
+                                                    placeholder="New session name..."
+                                                    className="h-9 flex-1 bg-white border-brand/30 focus-visible:ring-brand/30"
+                                                    onKeyDown={(e) => {
+                                                        if (e.key === 'Enter') handleRenameSession();
+                                                        if (e.key === 'Escape') setIsRenameSessionModalOpen(false);
+                                                    }}
+                                                />
+                                                <Button size="icon" onClick={handleRenameSession} disabled={isRenamingSession} className="h-9 w-9 bg-brand hover:bg-brand/90 text-white shrink-0 cursor-pointer">
+                                                    {isRenamingSession ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                                                </Button>
+                                                <Button size="icon" variant="ghost" onClick={() => setIsRenameSessionModalOpen(false)} disabled={isRenamingSession} className="h-9 w-9 text-slate-500 hover:text-slate-700 hover:bg-slate-200/50 shrink-0 cursor-pointer">
+                                                    <X className="w-4 h-4" />
+                                                </Button>
+                                            </div>
+                                        )}
+
+                                        {/* Inline Delete UI */}
+                                        {isDeleteSessionModalOpen && (
+                                            <div className="flex items-center justify-between p-3 bg-rose-50 border border-rose-200 rounded-xl animate-in slide-in-from-top-2">
+                                                <span className="text-sm font-medium text-rose-800">Delete this session?</span>
+                                                <div className="flex items-center gap-2">
+                                                    <Button size="sm" variant="ghost" onClick={() => setIsDeleteSessionModalOpen(false)} disabled={isDeletingSession} className="h-8 px-3 text-slate-600 hover:text-slate-800 hover:bg-slate-200/50 cursor-pointer">
+                                                        Cancel
+                                                    </Button>
+                                                    <Button size="sm" onClick={handleDeleteSession} disabled={isDeletingSession} className="h-8 px-4 bg-rose-500 hover:bg-rose-600 text-white font-medium cursor-pointer">
+                                                        {isDeletingSession ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> : null}
+                                                        Delete
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
 
                                     <div className="flex-1 overflow-y-auto bg-light-800 rounded-xl p-4 space-y-4 border light-border custom-scrollbar flex flex-col">
