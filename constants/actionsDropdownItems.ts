@@ -3,6 +3,7 @@ export const actionsDropdownItems = [
         label: "Rename",
         icon: "/assets/icons/rename.svg",
         value: "rename",
+        editOnly: true,
     },
     {
         label: "Details",
@@ -18,6 +19,7 @@ export const actionsDropdownItems = [
         label: "Share",
         icon: "/assets/icons/share.svg",
         value: "share",
+        editOnly: true,
     },
     {
         label: "Download",
@@ -28,5 +30,6 @@ export const actionsDropdownItems = [
         label: "Delete",
         icon: "/assets/icons/delete.svg",
         value: "delete",
+        editOnly: true,
     },
 ];

@@ -1,0 +1,1 @@
+44:   DELETE?: (request: NextRequest, context: { params: Promise<ParamMap[Route]> }) => 

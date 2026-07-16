@@ -2,7 +2,7 @@ export interface NavItem {
     name: string;
     icon: string;
     url: string;
-    section: "main" | "insights";
+    section: "main" | "insights" | "ai";
 }
 
 export const navItems: NavItem[] = [
@@ -37,6 +37,12 @@ export const navItems: NavItem[] = [
         section: "main",
     },
     {
+        name: "Trash Bin",
+        icon: "/assets/icons/others.svg",
+        url: "/trash",
+        section: "main",
+    },
+    {
         name: "Analytics",
         icon: "/assets/icons/others.svg",
         url: "/analytics",
@@ -47,6 +53,12 @@ export const navItems: NavItem[] = [
         icon: "/assets/icons/others.svg",
         url: "/notifications",
         section: "insights",
+    },
+    {
+        name: "AI Chat",
+        icon: "/assets/icons/others.svg",
+        url: "/chat",
+        section: "ai",
     },
     {
         name: "Leaderboard",

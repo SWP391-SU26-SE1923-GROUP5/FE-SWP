@@ -57,6 +57,10 @@ export interface User extends BaseDocument {
     currentStorageCapacity?: number;
     currentAiTokenUsage?: number;
     status?: string;
+    avatar?: string;
+    username?: string;
+    accountId?: string;
+    $id?: string;
 }
 
 export interface LoginResponse {
@@ -87,9 +91,13 @@ export interface IAuthService {
     signInUser(props: SignInProps): Promise<LoginResponse | null>;
     getCurrentUser(): Promise<User | null>;
     getUserById(id: string): Promise<User>;
+    getShareableUsers(keyword?: string): Promise<User[]>;
     signOutUser(): Promise<void>;
     verifyOtp(props: VerifyOtpProps): Promise<string>;
     resendOtp(props: { email: string }): Promise<string>;
+    forgotPassword(props: { email: string }): Promise<string>;
+    verifyPasswordResetOtp(props: { email: string; otp: string }): Promise<string>;
+    resetPassword(props: { email: string; newPassword: string }): Promise<string>;
     refreshSessionToken(refreshToken: string, accessToken: string): Promise<{
         accessToken: string;
         refreshToken: string;
@@ -161,6 +169,7 @@ export interface UpdateFileUsersProps {
     fileId: string;
     emails: string[];
     path: string;
+    levels?: number[];
 }
 
 export interface DeleteFileProps {
@@ -184,10 +193,12 @@ export interface IFileStorage {
     getFiles(props: GetFilesProps): Promise<{ documents: File_[]; total: number }>;
     renameFile(props: RenameFileProps): Promise<File_ | undefined>;
     updateFileUsers(props: UpdateFileUsersProps): Promise<File_ | undefined>;
+    getDocumentShares(fileId: string): Promise<any[]>;
+    revokeDocumentShare(fileId: string, targetUserId: string, path?: string): Promise<boolean>;
     updateEditedFile(props: UpdateEditedFileProps): Promise<UploadFileResponse | undefined>;
     deleteFile(props: DeleteFileProps): Promise<{ status: string } | undefined>;
-    downloadFile(props: DownloadFileProps): Promise<{ data: string }>;
-    previewFile(props: DownloadFileProps): Promise<{ data: string; contentType: string }>;
+    downloadFile(props: DownloadFileProps): Promise<{ data: string; contentType?: string }>;
+    previewFile(props: DownloadFileProps): Promise<{ data: string; contentType?: string }>;
     getTotalSpaceUsed(): Promise<{
         image: StorageCategoryStats;
         document: StorageCategoryStats;
@@ -199,6 +210,9 @@ export interface IFileStorage {
     }>;
     getFileStatus(fileId: string): Promise<{ id: string; status: number; errorMessage?: string } | null>;
     reprocessFile(fileId: string): Promise<{ documentId: string; status: string; message: string } | null>;
+    getTrashFiles(): Promise<{ documents: File_[] }>;
+    restoreFile(props: { fileId: string; path?: string }): Promise<{ status: string } | undefined>;
+    permanentDeleteFile(props: { fileId: string; path?: string }): Promise<{ status: string } | undefined>;
 }
 
 export interface Flashcard {
@@ -255,6 +269,11 @@ export interface QuizQuestion {
 }
 
 export interface QuizResponse {
+    id?: string;
+    quizId?: string;
+    documentId?: string;
+    title?: string;
+    documentName?: string;
     quizTitle: string;
     questions: QuizQuestion[];
 }
@@ -265,6 +284,26 @@ export interface QuizRecord {
     title: string;
     createdAt: string;
     updatedAt: string;
+}
+
+export interface QuizSubmissionResponse {
+    id: string;
+    userId: string;
+    quizId: string;
+    answers: string;
+    score: number;
+    maxScore: number;
+    totalCorrect: number;
+    gradedAt?: string | null;
+    submittedAt: string;
+    createdAt: string;
+    updatedAt?: string | null;
+}
+
+export interface LevelUpToast {
+    newLevel: number;
+    title?: string;
+    message?: string;
 }
 
 export interface SummaryResponse {

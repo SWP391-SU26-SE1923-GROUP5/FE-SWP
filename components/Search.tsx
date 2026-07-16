@@ -5,25 +5,79 @@ import Image from "next/image";
 import { Input } from "@/components/ui/input";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { getFiles } from "@/lib/actions/file.actions";
-import { semanticSearch } from "@/lib/actions/ai.actions";
+import { semanticSearch, SemanticSearchResponse, SemanticSearchResult } from "@/lib/actions/ai.actions";
 import Thumbnail from "@/components/Thumbnail";
 import FormattedDateTime from "@/components/FormattedDateTime";
 import { useDebounce } from "use-debounce";
 import { File_ } from "@/types";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Sparkles, Loader2, FileText } from "lucide-react";
+import { Sparkles, Loader2, FileText, BookOpen } from "lucide-react";
+import ApryseViewer from "@/components/ApryseViewer";
 
 interface Citation {
     source: string;
     content: string;
-    relevance: number;
+    relevance?: number;
+    documentId?: string;
+    DocumentId?: string;
+    pageNumber?: number;
+    PageNumber?: number;
+    isHighlightable?: boolean;
 }
 
-interface SemanticSearchResponse {
-    answer: string;
-    citations: Citation[];
-    confidence: number;
-}
+const formatGluedText = (text: string) => {
+    if (!text) return text;
+    return text
+        .replace(/([a-zA-Z])([.:;!?)])([A-Za-z0-9])/g, '$1$2 $3') // e.g., Response.2 -> Response. 2, core:1 -> core: 1
+        .replace(/([0-9])([.:;!?)])([A-Za-z])/g, '$1$2 $3')       // e.g., 1.Luồng -> 1. Luồng
+        .replace(/([a-z])([A-Z])/g, '$1 $2');                     // e.g., sáchcác (doesn't fix), but fixes sáchCác -> sách Các
+};
+
+const getSnippet = (text: string, query: string) => {
+    if (!query) return text.length > 250 ? text.substring(0, 250) + "..." : text;
+    const terms = query.toLowerCase().split(/\s+/).filter(w => w.length > 2);
+    if (terms.length === 0) return text.length > 250 ? text.substring(0, 250) + "..." : text;
+
+    let firstMatchIdx = -1;
+    for (const term of terms) {
+        const idx = text.toLowerCase().indexOf(term);
+        if (idx !== -1 && (firstMatchIdx === -1 || idx < firstMatchIdx)) {
+            firstMatchIdx = idx;
+        }
+    }
+
+    if (firstMatchIdx !== -1) {
+        const start = Math.max(0, firstMatchIdx - 80);
+        const end = Math.min(text.length, firstMatchIdx + 160);
+        return (start > 0 ? "..." : "") + text.substring(start, end) + (end < text.length ? "..." : "");
+    }
+    
+    return text.substring(0, 250) + (text.length > 250 ? "..." : "");
+};
+
+const HighlightedText = ({ text, highlight }: { text: string, highlight: string }) => {
+    if (!highlight.trim()) return <>{text}</>;
+    
+    const terms = highlight.toLowerCase().split(/\s+/).filter(w => w.length > 2);
+    if (terms.length === 0) return <>{text}</>;
+
+    const escapedTerms = terms.map(t => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+    const splitRegex = new RegExp(`(${escapedTerms.join('|')})`, 'gi');
+    const testRegex = new RegExp(`^(?:${escapedTerms.join('|')})$`, 'i');
+    const parts = text.split(splitRegex);
+
+    return (
+        <>
+            {parts.map((part, i) => 
+                testRegex.test(part) ? (
+                    <mark key={i} className="bg-brand/20 text-brand font-bold rounded-sm px-0.5">{part}</mark>
+                ) : (
+                    <span key={i}>{part}</span>
+                )
+            )}
+        </>
+    );
+};
 
 const Search = () => {
     const [query, setQuery] = useState("");
@@ -37,12 +91,14 @@ const Search = () => {
     const [isLoadingAI, setIsLoadingAI] = useState(false);
 
     const [aiResult, setAiResult] = useState<SemanticSearchResponse | string | null>(null);
+    const [activeCitation, setActiveCitation] = useState<Citation | null>(null);
 
     const router = useRouter();
     const path = usePathname();
     const [debouncedQuery] = useDebounce(query, 300);
     const prevQueryRef = useRef(debouncedQuery);
     const isNavigating = useRef(false);
+    const abortControllerRef = useRef<AbortController | null>(null);
 
     useEffect(() => {
         const isNewTyping = prevQueryRef.current !== debouncedQuery;
@@ -88,6 +144,13 @@ const Search = () => {
     const handleAISearch = async (searchQueryText: string) => {
         if (!searchQueryText.trim()) return;
 
+        // Cancel any in-flight AI search request
+        if (abortControllerRef.current) {
+            abortControllerRef.current.abort();
+        }
+        const controller = new AbortController();
+        abortControllerRef.current = controller;
+
         setDropdownOpen(false);
         setIsModalOpen(true);
         setIsLoadingAI(true);
@@ -95,12 +158,17 @@ const Search = () => {
 
         try {
             const response: SemanticSearchResponse = await semanticSearch(searchQueryText);
+            if (controller.signal.aborted) return;
             setAiResult(response);
         } catch (error: any) {
+            if (controller.signal.aborted) return;
             console.error("AI Search Error:", error);
-            setAiResult(error.message || "Sorry, I encountered an error searching inside your documents.");
+            const cleanMsg = (error.message || "").replace(/^\[\d+\]\s*/, '');
+            setAiResult(cleanMsg || "Sorry, I encountered an error searching inside your documents.");
         } finally {
-            setIsLoadingAI(false);
+            if (!controller.signal.aborted) {
+                setIsLoadingAI(false);
+            }
         }
     };
 
@@ -133,9 +201,32 @@ const Search = () => {
         navigateToTarget(file.fileName, file.fileType || file.fileExtension || "");
     };
 
-    const handleCitationClick = (source: string) => {
-        const ext = source.split('.').pop() || "";
-        navigateToTarget(source, ext);
+    const handleCitationClick = async (citation: Citation) => {
+        let docId = citation.documentId || citation.DocumentId;
+        
+        // If the backend returns a missing or Guid.Empty DocumentId, try to look it up by filename
+        if (!docId || docId === "00000000-0000-0000-0000-000000000000") {
+            try {
+                const files = await getFiles({ types: [], searchText: citation.source });
+                if (files && files.documents && files.documents.length > 0) {
+                    // Find exact match or just take the first one
+                    const matchedFile = files.documents.find(f => f.fileName === citation.source) || files.documents[0];
+                    docId = matchedFile.id;
+                    // Update citation object so ApryseViewer gets the right ID
+                    citation.documentId = docId;
+                }
+            } catch (error) {
+                console.error("Failed to lookup document by name", error);
+            }
+        }
+
+        if (docId && docId !== "00000000-0000-0000-0000-000000000000") {
+            setActiveCitation(citation);
+        } else {
+            // Ultimate fallback if file cannot be found at all
+            const ext = citation.source.split('.').pop() || "";
+            navigateToTarget(citation.source, ext);
+        }
     };
 
     return (
@@ -224,38 +315,143 @@ const Search = () => {
                                 </div>
 
                                 <div className="max-h-[55vh] overflow-y-auto custom-scrollbar pr-2 space-y-6">
-                                    <div className="text-dark-100 body-2 leading-relaxed whitespace-pre-wrap px-1">
-                                        {typeof aiResult === 'string' ? aiResult : aiResult?.answer}
-                                    </div>
-
-                                    {typeof aiResult !== 'string' && aiResult?.citations && aiResult.citations.length > 0 && (
-                                        <div className="border-t border-slate-100 pt-5 mt-4">
-                                            <h4 className="text-sm font-semibold text-slate-500 mb-3 flex items-center gap-2">
-                                                <FileText className="h-4 w-4" />
-                                                Sources
-                                            </h4>
-                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                                {aiResult.citations.map((citation, idx) => (
-                                                    <div
-                                                        key={idx}
-                                                        onClick={() => handleCitationClick(citation.source)}
-                                                        className="bg-slate-50 border border-slate-100 rounded-lg p-3 hover:bg-slate-100 transition-colors cursor-pointer"
-                                                    >
-                                                        <p className="text-sm font-medium text-brand line-clamp-1" title={citation.source}>
-                                                            {citation.source}
-                                                        </p>
-                                                        {citation.content && (
-                                                            <p className="text-xs text-slate-400 mt-1 line-clamp-2" title={citation.content}>
-                                                                {citation.content}
-                                                            </p>
-                                                        )}
-                                                    </div>
-                                                ))}
-                                            </div>
+                                    {typeof aiResult === 'string' ? (
+                                        <div className="text-dark-100 body-2 leading-relaxed whitespace-pre-wrap px-1">
+                                            {aiResult}
                                         </div>
+                                    ) : (
+                                        <>
+                                            {aiResult?.results && aiResult.results.length > 0 ? (
+                                                <div className="pt-2">
+                                                    <h4 className="text-sm font-semibold text-slate-500 mb-4 flex items-center gap-2">
+                                                        <FileText className="h-4 w-4 text-brand" />
+                                                        Found {aiResult.count} matching segments
+                                                    </h4>
+                                                    <div className="space-y-4">
+                                                        {aiResult.results.map((res: SemanticSearchResult, idx: number) => (
+                                                            <div
+                                                                key={idx}
+                                                                onClick={() => handleCitationClick({
+                                                                    source: res.fileName,
+                                                                    content: res.content,
+                                                                    documentId: res.documentId,
+                                                                    pageNumber: res.pageNumber,
+                                                                    isHighlightable: res.isHighlightable
+                                                                })}
+                                                                className={`rounded-xl p-4 border transition-all cursor-pointer group ${
+                                                                    res.isHighlightable !== false 
+                                                                        ? "bg-white border-light-200 hover:border-brand/40 hover:shadow-drop-2" 
+                                                                        : "bg-purple-50/50 border-purple-100 hover:border-purple-300 hover:shadow-drop-2"
+                                                                }`}
+                                                            >
+                                                                <div className="flex justify-between items-start mb-3">
+                                                                    <div className="flex items-center gap-2">
+                                                                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 transition-colors ${
+                                                                            res.isHighlightable !== false ? "bg-brand/10 group-hover:bg-brand/20" : "bg-purple-100 group-hover:bg-purple-200"
+                                                                        }`}>
+                                                                            {res.isHighlightable !== false ? (
+                                                                                <BookOpen className={`h-4 w-4 ${res.isHighlightable !== false ? "text-brand" : "text-purple-600"}`} />
+                                                                            ) : (
+                                                                                <Sparkles className="h-4 w-4 text-purple-600" />
+                                                                            )}
+                                                                        </div>
+                                                                        <div>
+                                                                            <p className="text-sm font-bold text-dark-100 line-clamp-1 flex items-center gap-2" title={res.fileName}>
+                                                                                {res.fileName}
+                                                                                {res.isHighlightable === false && (
+                                                                                    <span className="px-2 py-0.5 text-[10px] font-bold bg-purple-100 text-purple-700 rounded-full uppercase tracking-wider">
+                                                                                        AI SUMMARY
+                                                                                    </span>
+                                                                                )}
+                                                                            </p>
+                                                                            {res.pageNumber ? (
+                                                                                <p className={`text-xs ${res.isHighlightable !== false ? "text-light-200" : "text-purple-400"}`}>Page {res.pageNumber}</p>
+                                                                            ) : res.isHighlightable !== false ? (
+                                                                                <p className="text-xs text-light-200">Document Snippet</p>
+                                                                            ) : (
+                                                                                <p className="text-xs text-purple-400">Document Overview</p>
+                                                                            )}
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md ${
+                                                                        res.isHighlightable !== false ? "bg-slate-100 dark:bg-dark-300" : "bg-purple-100/50"
+                                                                    }`}>
+                                                                        <span className={`w-1.5 h-1.5 rounded-full ${
+                                                                            res.score > 0.7 ? "bg-emerald-500" :
+                                                                            res.score > 0.4 ? "bg-amber-500" :
+                                                                            "bg-slate-400"
+                                                                        }`}></span>
+                                                                        <span className="text-[10px] font-bold text-dark-200 uppercase tracking-wider">
+                                                                            {(res.score * 100).toFixed(0)}% Match
+                                                                        </span>
+                                                                    </div>
+                                                                </div>
+                                                                <p className={`text-sm mt-2 line-clamp-4 leading-relaxed p-3 rounded-lg border whitespace-pre-line ${
+                                                                    res.isHighlightable !== false 
+                                                                        ? "text-dark-200 bg-slate-50 border-slate-100" 
+                                                                        : "text-purple-900 bg-white/60 border-purple-100/50"
+                                                                }`} title={res.content}>
+                                                                    {res.isHighlightable !== false ? (
+                                                                        <HighlightedText text={getSnippet(formatGluedText(res.content), query)} highlight={query} />
+                                                                    ) : (
+                                                                        <span className="italic">{res.content}</span>
+                                                                    )}
+                                                                </p>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <div className="text-center py-8">
+                                                    <p className="text-slate-500 body-2">No relevant documents found for your search.</p>
+                                                </div>
+                                            )}
+                                        </>
                                     )}
                                 </div>
                             </div>
+                        )}
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            <Dialog open={!!activeCitation} onOpenChange={(open) => !open && setActiveCitation(null)}>
+                <DialogContent className="sm:max-w-[80vw] h-[85vh] p-0 overflow-hidden rounded-2xl flex flex-col bg-white">
+                    <DialogHeader className="px-6 py-4 border-b border-slate-100 flex-shrink-0 bg-slate-50/50">
+                        <DialogTitle className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-lg bg-brand/10 flex items-center justify-center shrink-0">
+                                <BookOpen className="h-4 w-4 text-brand" />
+                            </div>
+                            <span className="text-base font-bold text-slate-800 line-clamp-1">
+                                {activeCitation?.source}
+                            </span>
+                        </DialogTitle>
+                    </DialogHeader>
+                    
+                    <div className="flex-1 w-full relative bg-slate-50">
+                        {activeCitation && (
+                            <ApryseViewer 
+                                key={`${activeCitation.documentId || activeCitation.DocumentId}-${activeCitation.pageNumber || activeCitation.PageNumber}`}
+                                file={{
+                                    id: activeCitation.documentId || activeCitation.DocumentId || "",
+                                    fileName: activeCitation.source,
+                                    fileExtension: activeCitation.source.split('.').pop() || 'pdf',
+                                    mimeType: "",
+                                    fileSizeBytes: 0,
+                                    uploadedAt: new Date().toISOString(),
+                                    status: "Completed",
+                                    lifecycleStatus: "Active",
+                                    isEncrypted: false,
+                                    isPublic: false,
+                                    encryptionKeyId: "",
+                                    ownerId: ""
+                                }} 
+                                path="/search" 
+                                closeModals={() => setActiveCitation(null)} 
+                                readOnly={true} 
+                                targetPage={activeCitation.pageNumber || activeCitation.PageNumber || 1}
+                                searchSnippet={activeCitation.isHighlightable === false ? undefined : formatGluedText(activeCitation.content)}
+                            />
                         )}
                     </div>
                 </DialogContent>

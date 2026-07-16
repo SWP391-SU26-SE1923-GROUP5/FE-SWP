@@ -1,0 +1,12 @@
+17: import { deleteAdminFile } from "@/lib/actions/admin.actions";
+22:     onDeleted?: (fileId: string) => void;
+25: export default function AdminFileRow({ file, onDeleted }: AdminFileRowProps) {
+29:     const handleDelete = async () => {
+32:             await deleteAdminFile(file.$id);
+35:             onDeleted?.(file.$id);
+37:             toast.error(error?.message || "Could not delete file.");
+82:                             <Button variant="ghost" size="icon-sm" 
+91:                                 <Trash2 className="size-4" /> Delete file
+101:                 title="Delete this file?"
+108:                 confirmLabel="Delete file"
+112:                 onConfirm={handleDelete}

@@ -1,0 +1,6 @@
+71:             next.delete(key);
+75:         if (key !== "page") next.delete("page");
+83:         if (nextPage <= 1) params.delete("page");
+92:     const handleUserDeleted = (id: string) => {
+157:                             <th className="text-right">Actions</th>
+168:                                     onDeleted={handleUserDeleted}

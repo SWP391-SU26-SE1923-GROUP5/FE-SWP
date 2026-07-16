@@ -1,0 +1,2 @@
+31:             next.delete(paramName);
+33:         next.delete("page");

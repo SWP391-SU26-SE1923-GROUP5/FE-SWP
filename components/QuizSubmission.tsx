@@ -4,9 +4,11 @@ import React, { useEffect } from "react";
 import { useReward } from "react-rewards";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { X, Trophy } from "lucide-react";
+import { X, Trophy, Sparkles, History } from "lucide-react";
+import Link from "next/link";
 
 type Props = {
+    quizId?: string;
     scorePercentage: number;
     score: number;
     totalQuestions: number;
@@ -16,17 +18,22 @@ type Props = {
         description?: string;
         xpReward?: number;
     }>;
+    levelUpToast?: {
+        newLevel: number;
+        title?: string;
+        message?: string;
+    } | null;
 };
 
-const QuizSubmission = ({ scorePercentage, score, totalQuestions, xpEarned = 0, newAchievements = [] }: Props) => {
+const QuizSubmission = ({ quizId, scorePercentage, score, totalQuestions, xpEarned = 0, newAchievements = [], levelUpToast = null }: Props) => {
     const { reward } = useReward("rewardId", "confetti");
     const router = useRouter();
 
     useEffect(() => {
-        if (scorePercentage === 100 || newAchievements.length > 0) {
+        if (scorePercentage === 100 || newAchievements.length > 0 || levelUpToast) {
             reward();
         }
-    }, [scorePercentage, newAchievements.length, reward]);
+    }, [scorePercentage, newAchievements.length, levelUpToast, reward]);
 
     const handleBack = () => {
         router.back();
@@ -40,9 +47,22 @@ const QuizSubmission = ({ scorePercentage, score, totalQuestions, xpEarned = 0, 
                 </Button>
             </div>
 
-            <main className="py-11 flex flex-col gap-6 items-center flex-1 mt-12">
+            <main className="py-11 flex flex-col gap-6 items-center flex-1 mt-6">
                 <h2 className="text-3xl font-bold text-dark-100">Quiz Complete!</h2>
                 <p className="text-lg font-medium text-light-200">You scored: {scorePercentage}%</p>
+
+                {levelUpToast && (
+                    <div className="flex items-center gap-4 p-5 bg-gradient-to-r from-amber-500/20 via-amber-400/10 to-brand/20 border-2 border-amber-400/60 rounded-3xl shadow-md animate-in fade-in duration-500 max-w-md w-full">
+                        <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-400 to-amber-600 text-white shadow-md">
+                            <Sparkles className="h-7 w-7 animate-spin" style={{ animationDuration: '6s' }} />
+                        </div>
+                        <div className="flex flex-col text-left">
+                            <span className="text-xs font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">Level Up Celebration</span>
+                            <span className="text-xl font-extrabold text-dark-100">{levelUpToast.title || `Level ${levelUpToast.newLevel} Unlocked!`}</span>
+                            {levelUpToast.message && <span className="text-sm font-medium text-dark-400">{levelUpToast.message}</span>}
+                        </div>
+                    </div>
+                )}
 
                 {xpEarned > 0 && (
                     <div className="flex items-center gap-2 px-6 py-3 bg-amber-50 border border-amber-200 rounded-full animate-bounce">
@@ -101,9 +121,27 @@ const QuizSubmission = ({ scorePercentage, score, totalQuestions, xpEarned = 0, 
                         </div>
                     </div>
                 )}
+
+                <div className="flex flex-col sm:flex-row items-center gap-4 mt-8 w-full max-w-md justify-center">
+                    {quizId && (
+                        <Link
+                            href={`/quizzes/${quizId}/history`}
+                            className="flex items-center justify-center gap-2 px-6 py-3.5 bg-slate-100 hover:bg-slate-200 dark:bg-dark-300 dark:hover:bg-dark-400 text-dark-100 rounded-2xl font-bold transition-all w-full sm:w-auto shadow-xs"
+                        >
+                            <History className="h-5 w-5 text-brand" />
+                            <span>View Attempt History</span>
+                        </Link>
+                    )}
+                    <Button
+                        onClick={handleBack}
+                        className="px-8 py-6 bg-brand hover:bg-emerald-500 text-white rounded-2xl font-bold text-base transition-all w-full sm:w-auto shadow-sm cursor-pointer"
+                    >
+                        Return to Quizzes
+                    </Button>
+                </div>
             </main>
         </div>
     );
 };
 
-export default QuizSubmission;
+export default QuizSubmission;

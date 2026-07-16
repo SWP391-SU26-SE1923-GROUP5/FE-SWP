@@ -1,0 +1,2 @@
+37:             next.delete(key);
+41:         next.delete("page");

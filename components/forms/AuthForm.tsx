@@ -13,7 +13,7 @@ import { toast } from "sonner";
 interface AuthFormProps<T extends FieldValues> {
     schema: ZodType<T>;
     defaultValues: DefaultValues<T>;
-    onSubmit: (data: T) => Promise<{ success: boolean; error?: string }>;
+    onSubmit: (data: T) => Promise<{ success: boolean; error?: string; message?: string }>;
     formType: "SIGN_IN" | "SIGN_UP";
 }
 
@@ -40,7 +40,9 @@ const AuthForm = <T extends FieldValues>({
             const result = await onSubmit(data);
 
             if (result.success) {
-                if (formType === "SIGN_UP") {
+                if (result.message) {
+                    toast.success(result.message);
+                } else if (formType === "SIGN_UP") {
                     toast.success("Account created! Redirecting to verification...");
                 } else {
                     toast.success("Signed in successfully!");
@@ -97,24 +99,30 @@ const AuthForm = <T extends FieldValues>({
                     : buttonText}
             </Button>
 
-            <div className="mt-4">
-                <p className="text-dark400_light700">
-                    {formType === "SIGN_IN" ? (
-                        <>
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-2 text-dark400_light700">
+                {formType === "SIGN_IN" ? (
+                    <>
+                        <p>
                             Don&#39;t have an account?{" "}
                             <Link href={ROUTES.SIGN_UP} className="paragraph-semibold primary-text-gradient">
                                 Sign up
                             </Link>
-                        </>
-                    ) : (
-                        <>
-                            Already have an account?{" "}
-                            <Link href={ROUTES.SIGN_IN} className="paragraph-semibold primary-text-gradient">
-                                Sign in
-                            </Link>
-                        </>
-                    )}
-                </p>
+                        </p>
+                        <Link
+                            href="/forgot-password"
+                            className="paragraph-semibold primary-text-gradient hover:underline ml-auto"
+                        >
+                            Forgot password?
+                        </Link>
+                    </>
+                ) : (
+                    <p>
+                        Already have an account?{" "}
+                        <Link href={ROUTES.SIGN_IN} className="paragraph-semibold primary-text-gradient">
+                            Sign in
+                        </Link>
+                    </p>
+                )}
             </div>
         </form>
     );

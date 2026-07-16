@@ -6,6 +6,7 @@ import {
     Flashcard,
     QuizResponse,
     QuizRecord,
+    QuizSubmissionResponse,
     ReviewFlashcardResult,
     DueFlashcard,
     FlashcardReviewStats
@@ -21,6 +22,17 @@ export interface ChatMessage {
     content: string;
     createdAt: string;
     updatedAt: string;
+    isRelevant?: boolean;
+    citations?: {
+        documentId: string;
+        source: string;
+        snippet: string;
+        pageNumber?: number;
+        relevance: number;
+        matchType: string;
+        isHighlightable: boolean;
+        reason?: string;
+    }[];
 }
 
 export interface ChatSession {
@@ -36,6 +48,10 @@ export interface Citation {
     source: string;
     content: string;
     relevance: number;
+    documentId?: string;
+    DocumentId?: string;
+    pageNumber?: number;
+    PageNumber?: number;
 }
 
 export interface RAGCitation {
@@ -59,19 +75,33 @@ export interface RAGResponse {
     neighbors?: any[];
 }
 
+export interface SemanticSearchResult {
+    content: string;
+    score: number;
+    documentId: string;
+    fileName: string;
+    pageNumber?: number;
+    chunkIndex?: number;
+    matchType: string;
+    isHighlightable: boolean;
+}
+
 export interface SemanticSearchResponse {
-    answer: string;
-    citations: Citation[];
-    confidence: number;
+    query: string;
+    count: number;
+    results: SemanticSearchResult[];
 }
 
 export const createChatSession = async (
-    sessionTitle: string = "New Chat Session"
+    sessionTitle: string = "New Chat Session",
+    documentId?: string | null
 ): Promise<ChatSession> => {
     const session = await auth();
     if (!session?.accessToken) {
         throw new Error("Unauthorized. Please log in.");
     }
+
+    const payload: Record<string, unknown> = { sessionTitle };
 
     const response = await fetch(`${connection_url}/api/Chat/sessions`, {
         method: 'POST',
@@ -79,9 +109,7 @@ export const createChatSession = async (
             'Authorization': `Bearer ${session.accessToken}`,
             'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-            sessionTitle: sessionTitle
-        })
+        body: JSON.stringify(payload)
     });
 
     if (!response.ok) {
@@ -89,12 +117,21 @@ export const createChatSession = async (
         throw new Error(`[${response.status}] ${errorData.message || errorData.title || "Failed to create chat session."}`);
     }
 
-    return await response.json();
+    const data = await response.json();
+    
+    if (documentId) {
+        try {
+            await addDocumentToSession(data.id, documentId);
+        } catch (e) {
+            console.error("Failed to automatically link document to session:", e);
+        }
+    }
+    
+    return data;
 };
 
 export const sendChatMessage = async (
     sessionId: string,
-    documentId: string,
     message: string
 ): Promise<ChatMessage> => {
     const session = await auth();
@@ -108,7 +145,6 @@ export const sendChatMessage = async (
         },
         body: JSON.stringify({
             sessionId: sessionId,
-            documentId: documentId,
             message: message
         })
     });
@@ -118,7 +154,12 @@ export const sendChatMessage = async (
         throw new Error(`[${response.status}] ${errorData.message || "Failed to send message."}`);
     }
 
-    return await response.json();
+    const data = await response.json();
+    return {
+        ...data,
+        sender: data.sender?.toLowerCase() === 'user' ? 'user' : 'ai',
+        citations: data.citations ?? data.Citations
+    };
 };
 
 export const deleteFlashcard = async (flashcardId: string): Promise<void> => {
@@ -341,11 +382,24 @@ export const getFlashcardReviewStats = async (userId?: string): Promise<Flashcar
     return await response.json();
 };
 
-export const getCreatedQuizzes = async (): Promise<QuizRecord[]> => {
+export const getCreatedQuizzes = async (params?: {
+    offset?: number;
+    limit?: number;
+    searchTerm?: string;
+    sortBy?: string;
+    isDescending?: boolean;
+}): Promise<QuizRecord[]> => {
     const session = await auth();
     if (!session?.accessToken) throw new Error("Unauthorized. Please log in.");
 
-    const response = await fetch(`${connection_url}/api/Quiz?limit=100`, {
+    const searchParams = new URLSearchParams();
+    searchParams.set("limit", (params?.limit ?? 100).toString());
+    if (params?.offset !== undefined) searchParams.set("offset", params.offset.toString());
+    if (params?.searchTerm) searchParams.set("searchTerm", params.searchTerm);
+    if (params?.sortBy) searchParams.set("sortBy", params.sortBy);
+    if (params?.isDescending !== undefined) searchParams.set("isDescending", params.isDescending.toString());
+
+    const response = await fetch(`${connection_url}/api/Quiz?${searchParams.toString()}`, {
         method: 'GET',
         headers: {
             'Authorization': `Bearer ${session.accessToken}`,
@@ -441,6 +495,26 @@ export const submitQuiz = async (
     return await response.json();
 };
 
+export const getQuizHistory = async (quizId: string): Promise<QuizSubmissionResponse[]> => {
+    const session = await auth();
+    if (!session?.accessToken) throw new Error("Unauthorized. Please log in.");
+
+    const response = await fetch(`${connection_url}/api/Quiz/${quizId}/history`, {
+        method: 'GET',
+        headers: {
+            'Authorization': `Bearer ${session.accessToken}`,
+            'Content-Type': 'application/json',
+        },
+    });
+
+    if (!response.ok) {
+        return [];
+    }
+
+    const data = await response.json();
+    return Array.isArray(data) ? data : (data?.items || data?.Items || []);
+};
+
 export const getSessionMessages = async (sessionId: string): Promise<ChatMessage[]> => {
     const session = await auth();
     if (!session?.accessToken) throw new Error("Unauthorized. Please log in.");
@@ -458,7 +532,12 @@ export const getSessionMessages = async (sessionId: string): Promise<ChatMessage
         throw new Error(`[${response.status}] ${errorData.message || errorData.title || "Failed to fetch chat messages."}`);
     }
 
-    return await response.json();
+    const data = await response.json();
+    return data.map((msg: any) => ({
+        ...msg,
+        sender: msg.sender?.toLowerCase() === 'user' ? 'user' : 'ai',
+        citations: msg.citations ?? msg.Citations
+    }));
 };
 
 export const getUserSessions = async (): Promise<ChatSession[]> => {
@@ -478,7 +557,14 @@ export const getUserSessions = async (): Promise<ChatSession[]> => {
         throw new Error(`[${response.status}] ${errorData.message || errorData.title || "Failed to fetch chat sessions."}`);
     }
 
-    return await response.json();
+    const data: ChatSession[] = await response.json();
+    const currentUserId = session.user?.id;
+    
+    if (currentUserId) {
+        return data.filter(s => s.userId === currentUserId);
+    }
+    
+    return data;
 };
 
 export const semanticSearch = async (
@@ -524,6 +610,131 @@ export const summarizeRagDocument = async (documentId: string): Promise<SummaryR
     if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         throw new Error(`[${response.status}] ${errorData.message || errorData.title || "Failed to generate RAG summary."}`);
+    }
+
+    return await response.json();
+};
+
+export interface ChatSessionDocument {
+    id?: string;
+    chatSessionId: string;
+    documentId: string;
+    title: string;
+    fileName: string;
+    addedAt: string;
+}
+
+export const getSessionDocuments = async (sessionId: string): Promise<ChatSessionDocument[]> => {
+    const session = await auth();
+    if (!session?.accessToken) throw new Error("Unauthorized. Please log in.");
+
+    const response = await fetch(`${connection_url}/api/Chat/sessions/${sessionId}/documents`, {
+        method: 'GET',
+        headers: {
+            'Authorization': `Bearer ${session.accessToken}`,
+            'Content-Type': 'application/json',
+        },
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(`[${response.status}] ${errorData.message || errorData.title || "Failed to fetch session documents."}`);
+    }
+
+    return await response.json();
+};
+
+export const addDocumentToSession = async (sessionId: string, documentId: string): Promise<ChatSessionDocument> => {
+    const session = await auth();
+    if (!session?.accessToken) throw new Error("Unauthorized. Please log in.");
+
+    const response = await fetch(`${connection_url}/api/Chat/sessions/${sessionId}/documents`, {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${session.accessToken}`,
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ documentId }),
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(`[${response.status}] ${errorData.message || errorData.title || "Failed to add document to session."}`);
+    }
+
+    return await response.json();
+};
+
+export const removeDocumentFromSession = async (sessionId: string, documentId: string): Promise<void> => {
+    const session = await auth();
+    if (!session?.accessToken) throw new Error("Unauthorized. Please log in.");
+
+    const response = await fetch(`${connection_url}/api/Chat/sessions/${sessionId}/documents/${documentId}`, {
+        method: 'DELETE',
+        headers: {
+            'Authorization': `Bearer ${session.accessToken}`,
+            'Content-Type': 'application/json',
+        },
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(`[${response.status}] ${errorData.message || errorData.title || "Failed to remove document from session."}`);
+    }
+};
+export const renameChatSession = async (sessionId: string, sessionTitle: string): Promise<ChatSession> => {
+    const session = await auth();
+    if (!session?.accessToken) throw new Error("Unauthorized. Please log in.");
+
+    const response = await fetch(`${connection_url}/api/Chat/sessions/${sessionId}`, {
+        method: 'PUT',
+        headers: {
+            'Authorization': `Bearer ${session.accessToken}`,
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ sessionTitle })
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(`[${response.status}] ${errorData.message || errorData.title || "Failed to rename session."}`);
+    }
+
+    return await response.json();
+};
+
+export const deleteChatSession = async (sessionId: string): Promise<void> => {
+    const session = await auth();
+    if (!session?.accessToken) throw new Error("Unauthorized. Please log in.");
+
+    const response = await fetch(`${connection_url}/api/Chat/sessions/${sessionId}`, {
+        method: 'DELETE',
+        headers: {
+            'Authorization': `Bearer ${session.accessToken}`,
+            'Content-Type': 'application/json',
+        },
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(`[${response.status}] ${errorData.message || errorData.title || "Failed to delete session."}`);
+    }
+};
+
+export const getSuggestedPrompts = async (documentId: string): Promise<string[]> => {
+    const session = await auth();
+    if (!session?.accessToken) throw new Error("Unauthorized. Please log in.");
+
+    const response = await fetch(`${connection_url}/api/Document/${documentId}/suggested-prompts`, {
+        method: 'GET',
+        headers: {
+            'Authorization': `Bearer ${session.accessToken}`,
+            'Content-Type': 'application/json',
+        },
+    });
+
+    if (!response.ok) {
+        return [];
     }
 
     return await response.json();

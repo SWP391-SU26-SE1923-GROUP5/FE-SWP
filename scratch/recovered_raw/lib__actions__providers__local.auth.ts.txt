@@ -1,0 +1,6 @@
+126:             const res = await fetch(`${connection_url}/api/User/shareable`, {
+150:     async getShareableUsers(keyword?: string): Promise<User[]> {
+161:                 ? 
+162:                 : `${connection_url}/api/User/shareable`;
+171:                 throw new Error(`[${res.status}] ${errorData.message || 
+177:             this.handleError(error, "getShareableUsers");

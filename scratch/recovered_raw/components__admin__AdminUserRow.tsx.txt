@@ -1,0 +1,18 @@
+26: import { deleteAdminUser, updateAdminUser } from "@/lib/actions/admin.actions";
+33:     onDeleted?: (userId: string) => void;
+36: export default function AdminUserRow({ user, isSelf = false, onUpdated, onDeleted 
+38:     const [deleteOpen, setDeleteOpen] = useState(false);
+55:     const handleDelete = async () => {
+58:             await deleteAdminUser(user.$id);
+60:             setDeleteOpen(false);
+61:             onDeleted?.(user.$id);
+63:             toast.error(error?.message || "Could not delete user.");
+116:                                 aria-label="User actions"
+130:                                     if (!isSelf) setDeleteOpen(true);
+133:                                 <Trash2 className="size-4" /> Delete
+161:                 open={deleteOpen}
+162:                 onOpenChange={setDeleteOpen}
+163:                 title="Delete this user?"
+167:                         and all of their uploaded files. This action cannot be 
+170:                 confirmLabel="Delete user"
+174:                 onConfirm={handleDelete}

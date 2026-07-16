@@ -1,9 +1,10 @@
-import NextAuth from "next-auth";
+import NextAuth, { AuthError } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import GitHub from "next-auth/providers/github";
 import Google from "next-auth/providers/google";
 import { LocalAuth } from "@/lib/actions/providers/local.auth";
 import { JWT } from "next-auth/jwt";
+
 
 declare global {
     var _pendingRefreshRequests: Map<string, Promise<any>> | undefined;
@@ -75,21 +76,22 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             },
             async authorize(credentials) {
                 if (!credentials?.email || !credentials?.password) {
-                    throw new Error("Email and password is required");
+                    return { id: "AUTH_ERROR", email: credentials?.email as string, name: "Email and password is required" };
                 }
 
                 const authService = new LocalAuth();
 
-                const result = await authService.signInUser({
-                    email: credentials.email as string,
-                    password: credentials.password as string
-                });
+                try {
+                    const result = await authService.signInUser({
+                        email: credentials.email as string,
+                        password: credentials.password as string
+                    });
 
-                if (!result || !result.user) {
-                    throw new Error("Invalid email or password");
-                }
+                    if (!result || !result.user) {
+                        return { id: "AUTH_ERROR", email: credentials.email as string, name: "Invalid email or password" };
+                    }
 
-                return {
+                    return {
                     id: result.user.id,
                     email: result.user.email,
                     name: result.user.fullName,
@@ -98,13 +100,22 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
                     tierStorageLimitMb: result.user.tierStorageLimitMb,
                     accessToken: result.accessToken,
                     refreshToken: result.refreshToken,
-                    accessTokenExpiresAt: Date.parse(result.accessTokenExpiresAt),
-                };
+                    };
+                } catch (error: any) {
+                    return { id: "AUTH_ERROR", email: credentials.email as string, name: error.message };
+                }
             }
         })
     ],
     callbacks: {
-        async signIn({ account }) {
+        async signIn({ user }) {
+            if (user?.id === "AUTH_ERROR") {
+                const errMsg = user.name || "";
+                if (errMsg.toLowerCase().includes("verify your email")) {
+                    return `/verify-otp?email=${encodeURIComponent(user.email || "")}`;
+                }
+                return `/?error=${encodeURIComponent(errMsg)}`;
+            }
             return true;
         },
 

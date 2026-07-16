@@ -1,0 +1,1 @@
+8:  * @example A function that reads credentials from shared SDK configuration

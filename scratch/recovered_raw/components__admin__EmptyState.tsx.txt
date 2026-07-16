@@ -1,0 +1,3 @@
+8:     action?: React.ReactNode;
+12: export default function EmptyState({ title, description, icon: Icon = Inbox, 
+20:             {action && <div className="mt-3">{action}</div>}

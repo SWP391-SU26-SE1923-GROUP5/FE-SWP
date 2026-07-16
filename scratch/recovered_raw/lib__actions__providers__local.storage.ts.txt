@@ -1,0 +1,33 @@
+3:     DeleteFileProps,
+5:     RenameFileProps,
+12:     DocumentShareEntry
+109:                     throw new Error("Storage limit exceeded. Please delete 
+236:     async renameFile({ fileId, name, extension, path }: RenameFileProps) {
+258:                 shareStatus: currentFile.shareStatus
+269:                 throw new Error(`[${putRes.status}] ${errorData.message || 
+278:             this.handleError(error, "RenameFile");
+293:                 let allShareableUsers: Array<{ id: string; email?: string; 
+295:                     const lookupRes = await 
+300:                         allShareableUsers = await lookupRes.json();
+319:                         let matched = allShareableUsers.find(u => 
+320:                                         allShareableUsers.find(u => 
+324:                                 const fallbackRes = await 
+350:                 sharedUserIds: resolvedIds,
+354:             const shareRes = await 
+360:             if (!shareRes.ok) {
+361:                 const errorData = await shareRes.json().catch(() => ({}));
+362:                 throw new Error(`[${shareRes.status}] ${errorData.message 
+365:             const data = await shareRes.json();
+378:     async getDocumentShares(fileId: string): Promise<DocumentShareEntry[]> {
+381:             const res = await 
+389:             return parseStringify(data?.shares || []);
+391:             this.handleError(error, "GetDocumentShares");
+414:             await this.deleteFile({ fileId, path });
+428:     async deleteFile({ fileId, path }: DeleteFileProps) {
+433:                 method: 'DELETE',
+439:                 throw new Error(`[${res.status}] ${errorData.message || 
+445:             this.handleError(error, "DeleteFile");
+607:     async permanentDeleteFile({ fileId, path }: { fileId: string; path?: 
+611:                 method: 'DELETE',
+617:                 throw new Error(`[${res.status}] ${errorData.message || 
+623:             this.handleError(error, "PermanentDeleteFile");

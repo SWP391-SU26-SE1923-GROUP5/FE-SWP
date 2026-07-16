@@ -5,63 +5,79 @@ import { parseStringify } from "@/lib/utils";
 const connection_url = process.env.NEXT_PUBLIC_API_URL;
 
 export class LocalAuth implements IAuthService {
-    async createAccount({ fullName, email, password, dateOfBirth }: CreateAccountProps) {
-        const res = await fetch(`${connection_url}/api/Auth/register`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                fullName,
-                email,
-                password,
-                dateOfBirth
-            })
-        });
-
-        const data = await res.json().catch(() => ({}));
-
-        if (!res.ok) {
-            throw new Error(`[${res.status}] ${data.message || "Failed to register account"}`);
+    private handleError(error: any, context: string): never {
+        if (error && typeof error === 'object' && error.digest?.startsWith('NEXT_REDIRECT')) {
+            throw error;
         }
+        console.error(`[LocalAuth:${context}]`, error instanceof Error ? error.message : error);
+        throw error;
+    }
 
-        return parseStringify({ email: data.email });
+    async createAccount({ fullName, email, password, dateOfBirth }: CreateAccountProps) {
+        try {
+            const res = await fetch(`${connection_url}/api/Auth/register`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    fullName,
+                    email,
+                    password,
+                    dateOfBirth
+                })
+            });
+
+            const data = await res.json().catch(() => ({}));
+
+            if (!res.ok) {
+                throw new Error(`[${res.status}] ${data.message || data.error || data.title || "Failed to register account"}`);
+            }
+
+            return parseStringify({ email: data.email });
+        } catch (error) {
+            this.handleError(error, "createAccount");
+        }
     }
 
     async signInUser({ email, password }: SignInProps) {
-        const res = await fetch(`${connection_url}/api/Auth/login`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                email,
-                password
-            })
-        });
+        try {
+            const res = await fetch(`${connection_url}/api/Auth/login`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    email,
+                    password
+                })
+            });
 
-        const data = await res.json().catch(() => ({}));
+            const data = await res.json().catch(() => ({}));
 
-        if (!res.ok) {
-            throw new Error(`[${res.status}] ${data.message || "Invalid email or password"}`);
+            if (!res.ok) {
+                throw new Error(`[${res.status}] ${data.message || data.error || data.title || "Invalid email or password"}`);
+            }
+
+            const sessionData = {
+                user: {
+                    id: data.user.id,
+                    fullName: data.user.fullName,
+                    email: data.user.email,
+                    role: data.user.role,
+                    dateOfBirth: data.user.dateOfBirth,
+                    currentStorageCapacity: data.user.currentStorageCapacity,
+                    currentAiTokenUsage: data.user.currentAiTokenUsage,
+                    status: data.user.status,
+                    createdAt: data.user.createdAt,
+                    updatedAt: data.user.updatedAt,
+                },
+                accessToken: data.accessToken,
+                accessTokenExpiresAt: data.accessTokenExpiresAt,
+                refreshToken: data.refreshToken,
+                refreshTokenExpiresAt: data.refreshTokenExpiresAt
+            };
+
+            return parseStringify(sessionData);
+        } catch (error) {
+            this.handleError(error, "signInUser");
         }
-
-        const sessionData = {
-            user: {
-                id: data.user.id,
-                fullName: data.user.fullName,
-                email: data.user.email,
-                role: data.user.role,
-                dateOfBirth: data.user.dateOfBirth,
-                currentStorageCapacity: data.user.currentStorageCapacity,
-                currentAiTokenUsage: data.user.currentAiTokenUsage,
-                status: data.user.status,
-                createdAt: data.user.createdAt,
-                updatedAt: data.user.updatedAt,
-            },
-            accessToken: data.accessToken,
-            accessTokenExpiresAt: data.accessTokenExpiresAt,
-            refreshToken: data.refreshToken,
-            refreshTokenExpiresAt: data.refreshTokenExpiresAt
-        };
-
-        return parseStringify(sessionData);
     }
 
     async getCurrentUser(): Promise<User | null> {
@@ -114,7 +130,7 @@ export class LocalAuth implements IAuthService {
 
             if (!res.ok) {
                 const errorData = await res.json().catch(() => ({}));
-                throw new Error(`[${res.status}] ${errorData.message || "Failed to fetch users"}`);
+                throw new Error(`[${res.status}] ${errorData.message || errorData.error || errorData.title || "Failed to fetch users"}`);
             }
 
             const usersData: User[] = await res.json();
@@ -127,8 +143,31 @@ export class LocalAuth implements IAuthService {
 
             return parseStringify(targetUser);
         } catch (error) {
-            console.error("Get User By ID Error:", error);
-            throw error;
+            this.handleError(error, "getUserById");
+        }
+    }
+
+    async getShareableUsers(keyword?: string): Promise<User[]> {
+        try {
+            const session = await auth();
+            const headers: Record<string, string> = {
+                'Content-Type': 'application/json',
+            };
+            if (session?.accessToken) {
+                headers['Authorization'] = `Bearer ${session.accessToken}`;
+            }
+            const url = keyword && keyword.trim()
+                ? `${connection_url}/api/User/shareable?keyword=${encodeURIComponent(keyword.trim())}`
+                : `${connection_url}/api/User/shareable`;
+            const res = await fetch(url, { method: 'GET', headers });
+            if (!res.ok) {
+                const errorData = await res.json().catch(() => ({}));
+                throw new Error(`[${res.status}] ${errorData.message || errorData.error || errorData.title || "Failed to fetch shareable users"}`);
+            }
+            const data: User[] = await res.json();
+            return parseStringify(data || []);
+        } catch (error) {
+            this.handleError(error, "getShareableUsers");
         }
     }
 
@@ -137,24 +176,26 @@ export class LocalAuth implements IAuthService {
     }
 
     async refreshSessionToken(refreshToken: string, accessToken: string) {
-        const res = await fetch(`${connection_url}/api/Auth/refresh-token`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${accessToken}`
-            },
-            body: JSON.stringify({ refreshToken })
-        });
+        try {
+            const res = await fetch(`${connection_url}/api/Auth/refresh-token`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${accessToken}`
+                },
+                body: JSON.stringify({ refreshToken })
+            });
 
-        console.log(refreshToken);
+            const data = await res.json().catch(() => ({}));
 
-        const data = await res.json().catch(() => ({}));
+            if (!res.ok) {
+                throw new Error(`[${res.status}] ${data.message || data.error || data.title || "Failed to refresh token"}`);
+            }
 
-        if (!res.ok) {
-            throw new Error(`[${res.status}] ${data.message || "Failed to refresh token"}`);
+            return parseStringify(data);
+        } catch (error) {
+            this.handleError(error, "refreshSessionToken");
         }
-
-        return parseStringify(data);
     }
 
     async verifyOtp({ email, otp }: { email: string; otp: string }): Promise<string> {
@@ -168,13 +209,12 @@ export class LocalAuth implements IAuthService {
             const data = await res.json().catch(() => ({}));
 
             if (!res.ok) {
-                throw new Error(`[${res.status}] ${data.message || "Verification failed"}`);
+                throw new Error(`[${res.status}] ${data.message || data.error || data.title || "Verification failed"}`);
             }
 
             return parseStringify(data.message || "Verification successful");
         } catch (error) {
-            console.error("Verify OTP Error:", error);
-            throw error;
+            this.handleError(error, "verifyOtp");
         }
     }
 
@@ -189,13 +229,72 @@ export class LocalAuth implements IAuthService {
             const data = await res.json().catch(() => ({}));
 
             if (!res.ok) {
-                throw new Error(`[${res.status}] ${data.message || "Resend OTP failed"}`);
+                throw new Error(`[${res.status}] ${data.message || data.error || data.title || "Resend OTP failed"}`);
             }
 
             return parseStringify(data.message || "OTP resent successfully.");
         } catch (error) {
-            console.error("Resend OTP Error:", error);
-            throw error;
+            this.handleError(error, "resendOtp");
+        }
+    }
+
+    async forgotPassword({ email }: { email: string }): Promise<string> {
+        try {
+            const res = await fetch(`${connection_url}/api/Auth/forgot-password`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email })
+            });
+
+            const data = await res.json().catch(() => ({}));
+
+            if (!res.ok) {
+                throw new Error(`[${res.status}] ${data.message || data.error || data.title || "Forgot password request failed"}`);
+            }
+
+            return parseStringify(data.message || "If the email exists, an OTP has been sent.");
+        } catch (error) {
+            this.handleError(error, "forgotPassword");
+        }
+    }
+
+    async verifyPasswordResetOtp({ email, otp }: { email: string; otp: string }): Promise<string> {
+        try {
+            const res = await fetch(`${connection_url}/api/Auth/verify-password-reset-otp`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, otp })
+            });
+
+            const data = await res.json().catch(() => ({}));
+
+            if (!res.ok) {
+                throw new Error(`[${res.status}] ${data.message || data.error || data.title || "OTP verification failed"}`);
+            }
+
+            return parseStringify(data.message || "OTP verified successfully.");
+        } catch (error) {
+            this.handleError(error, "verifyPasswordResetOtp");
+        }
+    }
+
+    async resetPassword({ email, newPassword }: { email: string; newPassword: string }): Promise<string> {
+        try {
+            const res = await fetch(`${connection_url}/api/Auth/reset-password`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, newPassword })
+            });
+
+            const data = await res.json().catch(() => ({}));
+
+            if (!res.ok) {
+                throw new Error(`[${res.status}] ${data.message || data.error || data.title || "Password reset failed"}`);
+            }
+
+            return parseStringify(data.message || "Password reset successfully.");
+        } catch (error) {
+            this.handleError(error, "resetPassword");
         }
     }
 }

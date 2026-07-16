@@ -1,0 +1,4 @@
+15: export const renameFile = storageProvider.renameFile.bind(storageProvider);
+17: export const getDocumentShares = 
+19: export const deleteFile = storageProvider.deleteFile.bind(storageProvider);
+27: export const permanentDeleteFile = 

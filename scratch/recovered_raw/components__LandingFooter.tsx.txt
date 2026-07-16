@@ -1,0 +1,2 @@
+3: import { BookOpen, GitBranch, Link as LinkIcon, Share2 } from 'lucide-react';
+31:     { icon: Share2, href: '#', label: 'Twitter' },

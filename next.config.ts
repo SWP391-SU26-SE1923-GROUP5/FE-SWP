@@ -37,7 +37,22 @@ const nextConfig: NextConfig = {
                 hostname: "cloud.appwrite.io",
             }
         ]
-    }
+    },
+
+    async redirects() {
+        return [
+            {
+                source: '/flashcard/:id*',
+                destination: '/flashcards/:id*',
+                permanent: true,
+            },
+            {
+                source: '/quiz/:id*',
+                destination: '/quizzes/:id*',
+                permanent: true,
+            },
+        ];
+    },
 };
 
 export default nextConfig;

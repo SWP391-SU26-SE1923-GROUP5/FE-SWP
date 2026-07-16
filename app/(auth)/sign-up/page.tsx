@@ -24,10 +24,23 @@ const SignUp = () => {
             }
 
             return { success: false, error: "Failed to create account." };
-        } catch (error: unknown) {
+        } catch (error: any) {
+            const rawMessage = error instanceof Error ? error.message : String(error);
+            const cleanMessage = rawMessage.replace(/^\[\d+\]\s*/, '');
+
+            if (
+                cleanMessage.toLowerCase().includes("already registered") ||
+                cleanMessage.toLowerCase().includes("already exists")
+            ) {
+                return {
+                    success: false,
+                    error: "Email is already registered. Please sign in instead."
+                };
+            }
+
             return {
                 success: false,
-                error: "An unexpected error occurred during sign up."
+                error: cleanMessage || "An unexpected error occurred during sign up."
             };
         }
     };
