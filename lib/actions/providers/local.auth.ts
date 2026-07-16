@@ -1,105 +1,201 @@
 import { IAuthService, CreateAccountProps, SignInProps, User } from "@/types";
-import { Pool } from "pg";
-import { v4 as uuidv4 } from "uuid";
-import bcrypt from "bcrypt";
-import { cookies } from "next/headers";
-import { avatarPlaceholderUrl } from "@/constants/avatar";
 import { auth, signOut } from "@/auth";
-import { isAdminEmail } from "@/lib/admin/roles";
+import { parseStringify } from "@/lib/utils";
 
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+const connection_url = process.env.NEXT_PUBLIC_API_URL;
 
 export class LocalAuth implements IAuthService {
-    async getUserById(id: string | undefined): Promise<User | null> {
-        if (!id) return null;
-        try {
-            const res = await pool.query("SELECT * FROM users WHERE id = $1 LIMIT 1", [id]);
-            return res.rows.length ? this.mapToUser(res.rows[0]) : null;
-        } catch { return null; }
-    }
+    async createAccount({ fullName, email, password, dateOfBirth }: CreateAccountProps) {
+        const res = await fetch(`${connection_url}/api/Auth/register`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                fullName,
+                email,
+                password,
+                dateOfBirth
+            })
+        });
 
-    async getUserFullName(id: string | undefined) {
-        const user = await this.getUserById(id);
-        return user ? user.fullName : null;
-    }
+        const data = await res.json().catch(() => ({}));
 
-    async getUserByEmail(email: string): Promise<User | null> {
-        try {
-            const res = await pool.query("SELECT * FROM users WHERE email = $1 LIMIT 1", [email]);
-            return res.rows.length ? this.mapToUser(res.rows[0]) : null;
-        } catch { return null; }
-    }
-
-    async createAccount({ fullName, username, email, password }: CreateAccountProps) {
-        const existingUser = await this.getUserByEmail(email);
-        const accountId = uuidv4();
-        const isAdmin = isAdminEmail(email);
-
-        if (!existingUser) {
-            const hashedPassword = password ? await bcrypt.hash(password, 12) : null;
-            await pool.query(
-                "INSERT INTO users (id, account_id, email, full_name, username, avatar, password_hash, role) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
-                [uuidv4(), accountId, email, fullName, username, avatarPlaceholderUrl, hashedPassword, isAdmin ? "admin" : "user"]
-            );
+        if (!res.ok) {
+            throw new Error(`[${res.status}] ${data.message || "Failed to register account"}`);
         }
-        return JSON.parse(JSON.stringify({ accountId: existingUser ? existingUser.accountId : accountId }));
+
+        return parseStringify({ email: data.email });
     }
 
     async signInUser({ email, password }: SignInProps) {
-        const res = await pool.query("SELECT password_hash, account_id FROM users WHERE email = $1 LIMIT 1", [email]);
-        const user = res.rows[0];
-
-        if (!user || !user.password_hash || !password) return { accountId: null };
-
-        const passwordsMatch = await bcrypt.compare(password, user.password_hash);
-        if (!passwordsMatch) return { accountId: null };
-
-        const cookieStore = await cookies();
-        cookieStore.set("user-session", user.account_id, {
-            path: "/", httpOnly: true, sameSite: "strict",
-            secure: process.env.NODE_ENV === "production", maxAge: 60 * 60 * 24 * 7
+        const res = await fetch(`${connection_url}/api/Auth/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                email,
+                password
+            })
         });
 
-        return JSON.parse(JSON.stringify({ accountId: user.account_id }));
+        const data = await res.json().catch(() => ({}));
+
+        if (!res.ok) {
+            throw new Error(`[${res.status}] ${data.message || "Invalid email or password"}`);
+        }
+
+        const sessionData = {
+            user: {
+                id: data.user.id,
+                fullName: data.user.fullName,
+                email: data.user.email,
+                role: data.user.role,
+                dateOfBirth: data.user.dateOfBirth,
+                currentStorageCapacity: data.user.currentStorageCapacity,
+                currentAiTokenUsage: data.user.currentAiTokenUsage,
+                status: data.user.status,
+                createdAt: data.user.createdAt,
+                updatedAt: data.user.updatedAt,
+            },
+            accessToken: data.accessToken,
+            accessTokenExpiresAt: data.accessTokenExpiresAt,
+            refreshToken: data.refreshToken,
+            refreshTokenExpiresAt: data.refreshTokenExpiresAt
+        };
+
+        return parseStringify(sessionData);
     }
 
     async getCurrentUser(): Promise<User | null> {
         try {
-            const nextAuthSession = await auth();
-            if (nextAuthSession?.user?.email) {
-                const user = await this.getUserByEmail(nextAuthSession.user.email);
-                if (user) return user;
-            }
+            const session = await auth();
 
-            const cookieStore = await cookies();
-            const sessionCookie = cookieStore.get("user-session");
+            if (session && session.user) {
+                const user = {
+                    id: session.user.id,
+                    email: session.user.email!,
+                    fullName: session.user.name!,
+                    role: session.user.role,
+                } as User;
 
-            if (sessionCookie?.value) {
-                const res = await pool.query("SELECT * FROM users WHERE account_id = $1 LIMIT 1", [sessionCookie.value]);
-                if (res.rows.length) return this.mapToUser(res.rows[0]);
+                return parseStringify(user);
             }
             return null;
-        } catch { return null; }
+        } catch {
+            return null;
+        }
+    }
+
+    async getUserById(id: string): Promise<User> {
+        try {
+            const session = await auth();
+
+            if (session && session.user && session.user.id === id) {
+                const currentUser = {
+                    id: session.user.id,
+                    email: session.user.email!,
+                    fullName: session.user.name!,
+                    role: session.user.role,
+                } as User;
+
+                return parseStringify(currentUser);
+            }
+
+            const headers: Record<string, string> = {
+                'Content-Type': 'application/json'
+            };
+
+            if (session?.accessToken) {
+                headers['Authorization'] = `Bearer ${session.accessToken}`;
+            }
+
+            const res = await fetch(`${connection_url}/api/User/shareable`, {
+                method: 'GET',
+                headers,
+            });
+
+            if (!res.ok) {
+                const errorData = await res.json().catch(() => ({}));
+                throw new Error(`[${res.status}] ${errorData.message || "Failed to fetch users"}`);
+            }
+
+            const usersData: User[] = await res.json();
+
+            const targetUser = usersData.find((user) => user.id === id);
+
+            if (!targetUser) {
+                throw new Error("[404] User not found");
+            }
+
+            return parseStringify(targetUser);
+        } catch (error) {
+            console.error("Get User By ID Error:", error);
+            throw error;
+        }
     }
 
     async signOutUser() {
-        const cookieStore = await cookies();
-        cookieStore.delete("user-session");
         await signOut({ redirectTo: "/sign-in" });
     }
 
-    private mapToUser(row: any): User {
-        return {
-            $id: row.id,
-            accountId: row.account_id,
-            email: row.email,
-            fullName: row.full_name,
-            username: row.username,
-            avatar: row.avatar,
-            password_hash: row.password_hash,
-            role: row.role ?? "user",
-            $createdAt: row.created_at ? new Date(row.created_at).toISOString() : undefined,
-            $updatedAt: row.updated_at ? new Date(row.updated_at).toISOString() : undefined,
-        } as User;
+    async refreshSessionToken(refreshToken: string, accessToken: string) {
+        const res = await fetch(`${connection_url}/api/Auth/refresh-token`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${accessToken}`
+            },
+            body: JSON.stringify({ refreshToken })
+        });
+
+        console.log(refreshToken);
+
+        const data = await res.json().catch(() => ({}));
+
+        if (!res.ok) {
+            throw new Error(`[${res.status}] ${data.message || "Failed to refresh token"}`);
+        }
+
+        return parseStringify(data);
+    }
+
+    async verifyOtp({ email, otp }: { email: string; otp: string }): Promise<string> {
+        try {
+            const res = await fetch(`${connection_url}/api/Auth/verify-registration-otp`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, otp })
+            });
+
+            const data = await res.json().catch(() => ({}));
+
+            if (!res.ok) {
+                throw new Error(`[${res.status}] ${data.message || "Verification failed"}`);
+            }
+
+            return parseStringify(data.message || "Verification successful");
+        } catch (error) {
+            console.error("Verify OTP Error:", error);
+            throw error;
+        }
+    }
+
+    async resendOtp({ email }: { email: string }): Promise<string> {
+        try {
+            const res = await fetch(`${connection_url}/api/Auth/resend-registration-otp`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email })
+            });
+
+            const data = await res.json().catch(() => ({}));
+
+            if (!res.ok) {
+                throw new Error(`[${res.status}] ${data.message || "Resend OTP failed"}`);
+            }
+
+            return parseStringify(data.message || "OTP resent successfully.");
+        } catch (error) {
+            console.error("Resend OTP Error:", error);
+            throw error;
+        }
     }
 }

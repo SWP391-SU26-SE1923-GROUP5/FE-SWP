@@ -1,222 +1,452 @@
-import { IFileStorage, DeleteFileProps, GetFilesProps, RenameFileProps, UpdateFileUsersProps, UploadFileProps, UpdateEditedFileProps } from "@/types";
-import { S3Client, PutObjectCommand, DeleteObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
-import { Pool } from "pg";
-import { v4 as uuidv4 } from "uuid";
-import { getFileType } from "@/lib/utils";
-import { getCurrentUser } from "@/lib/actions/user.actions";
-import eventBus, { EVENTS } from "@/lib/event-bus";
+import {
+    IFileStorage,
+    DeleteFileProps,
+    GetFilesProps,
+    RenameFileProps,
+    UpdateFileUsersProps,
+    UploadFileProps,
+    UpdateEditedFileProps,
+    File_,
+    FileType,
+    Subject
+} from "@/types";
+import { auth } from "@/auth";
 import { revalidatePath } from "next/cache";
+import { parseStringify } from "@/lib/utils";
+import { redirect } from "next/navigation";
 
-const s3 = new S3Client({
-    region: "us-east-1",
-    endpoint: process.env.MINIO_ENDPOINT,
-    credentials: {
-        accessKeyId: process.env.MINIO_ACCESS_KEY || "admin",
-        secretAccessKey: process.env.MINIO_SECRET_KEY || "smartstorepassword123"
-    },
-    forcePathStyle: true,
-});
+const connection_url = process.env.NEXT_PUBLIC_API_URL;
 
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-const BUCKET_NAME = process.env.MINIO_BUCKET_NAME || "smartstore-files";
+const getFileCategory = (mimeType: string): FileType => {
+    if (!mimeType) return "other";
+
+    const lowerMime = mimeType.toLowerCase();
+
+    if (lowerMime.startsWith("image/")) return "image";
+    if (lowerMime.startsWith("video/")) return "video";
+    if (lowerMime.startsWith("audio/")) return "audio";
+
+    const documentMimeTypes = [
+        "application/pdf",
+        "application/msword",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "application/vnd.ms-excel",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "application/vnd.ms-powerpoint",
+        "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+        "text/plain",
+        "text/csv",
+        "text/markdown",
+        "text/html",
+        "application/json"
+    ];
+
+    if (documentMimeTypes.includes(lowerMime)) return "document";
+
+    return "other";
+};
 
 export class LocalStorage implements IFileStorage {
+    private async getHeaders(isFormData = false) {
+        const session = await auth();
 
-    async uploadFile({ file, ownerId, accountId, path }: UploadFileProps) {
-        try {
-            const bucketFileId = uuidv4();
-            const arrayBuffer = await file.arrayBuffer();
-            const buffer = Buffer.from(arrayBuffer);
-            const fileTypeInfo = getFileType(file.name);
+        if (!session?.accessToken || session.error === "RefreshAccessTokenError") {
+            redirect("/sign-in");
+        }
 
-            await s3.send(new PutObjectCommand({ Bucket: BUCKET_NAME, Key: bucketFileId, Body: buffer, ContentType: file.type }));
-            const url = `${process.env.MINIO_ENDPOINT}/${BUCKET_NAME}/${bucketFileId}`;
-            const id = uuidv4();
+        const headers: Record<string, string> = {
+            'Authorization': `Bearer ${session.accessToken}`
+        };
 
-            const result = await pool.query(
-                `INSERT INTO files (id, name, url, type, bucket_file_id, account_id, owner_id, extension, size) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *;`,
-                [id, file.name, url, fileTypeInfo.type, bucketFileId, accountId, ownerId, fileTypeInfo.extension, file.size]
-            );
+        if (!isFormData) {
+            headers['Content-Type'] = 'application/json';
+        }
 
-            const newFile = this.mapToFile(result.rows[0]);
-            eventBus.emit(EVENTS.FILE_CREATED, { fileId: newFile.$id, accountId, bucketFileId, mimeType: file.type });
-            revalidatePath(path);
-
-            return JSON.parse(JSON.stringify(newFile));
-        } catch (error) { console.error("[Local Storage] Upload Error:", error); throw error; }
+        return headers;
     }
 
-    async getFiles({ types = [], searchText = "", sort = "$createdAt-desc", limit }: GetFilesProps) {
+    private handleError(error: any, context: string): never {
+        if (error && typeof error === 'object' && error.digest?.startsWith('NEXT_REDIRECT')) {
+            throw error;
+        }
+
+        console.error(`${context} Error:`, error);
+        throw error;
+    }
+
+    async getSubjects(): Promise<Subject[]> {
         try {
-            const currentUser = await getCurrentUser();
-            if (!currentUser) throw new Error("Current user does not exist");
+            const headers = await this.getHeaders();
 
-            let query = `SELECT * FROM files WHERE (owner_id = $1 OR $2 = ANY(users))`;
-            const values: any[] = [currentUser.$id, currentUser.email];
-            let paramCount = 3;
+            const res = await fetch(`${connection_url}/api/Subject`, {
+                method: 'GET',
+                headers,
+            });
 
-            if (types.length > 0) { query += ` AND type = ANY($${paramCount})`; values.push(types); paramCount++; }
-            if (searchText) { query += ` AND name ILIKE $${paramCount}`; values.push(`%${searchText}%`); paramCount++; }
+            if (!res.ok) {
+                const errorData = await res.json().catch(() => ({}));
+                throw new Error(`[${res.status}] ${errorData.message || "Failed to fetch subjects"}`);
+            }
 
+            const responseData = await res.json();
+            return parseStringify(responseData?.items || responseData?.Items || []);
+
+        } catch (error) {
+            this.handleError(error, "GetSubjects");
+        }
+    }
+
+    async uploadFile({ file, path, subjectId }: UploadFileProps) {
+        try {
+            const currentSpace = await this.getTotalSpaceUsed();
+
+            if (currentSpace) {
+                const projectedSpace = currentSpace.used + file.size;
+
+                if (projectedSpace > currentSpace.all) {
+                    console.error(`[UPLOAD BLOCKED] Projected: ${projectedSpace} Bytes | Limit: ${currentSpace.all} Bytes`);
+                    throw new Error("Storage limit exceeded. Please delete some files or upgrade your plan to upload this file.");
+                }
+            }
+
+            const headers = await this.getHeaders(true);
+
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('title', file.name);
+            formData.append('subjectId', subjectId);
+
+            const res = await fetch(`${connection_url}/api/Document/upload/file`, {
+                method: 'POST',
+                headers: headers,
+                body: formData
+            });
+
+            if (!res.ok) {
+                const errorData = await res.json().catch(() => ({}));
+                throw new Error(`[${res.status}] ${errorData.message || errorData.title || "Upload failed"}`);
+            }
+
+            const uploadResponse = await res.json();
+
+            if (path) {
+                revalidatePath(path);
+            }
+
+            return parseStringify(uploadResponse);
+        } catch (error) {
+            this.handleError(error, "UploadFile");
+        }
+    }
+
+    async getFileStatus(fileId: string) {
+        try {
+            const headers = await this.getHeaders();
+            const res = await fetch(`${connection_url}/api/Document/${fileId}/status`, {
+                headers,
+                cache: 'no-store',
+            });
+            return res.ok ? await res.json() : null;
+        } catch (error) {
+            return null;
+        }
+    }
+
+    async reprocessFile(fileId: string) {
+        try {
+            const headers = await this.getHeaders();
+            const res = await fetch(`${connection_url}/api/Document/${fileId}/reprocess`, {
+                method: 'POST',
+                headers
+            });
+            if (!res.ok) throw new Error("Cannot reprocess this document.");
+            return await res.json();
+        } catch (error: any) {
+            throw new Error(error.message || "Error sending reprocess request");
+        }
+    }
+
+    async getFiles({ types = [], searchText = "", sort = "CreatedAt-desc", limit = 10, page = 1, subjectId }: GetFilesProps) {
+        try {
+            const headers = await this.getHeaders();
             const [sortBy, orderBy] = sort.split('-');
-            const dbSortColumn = sortBy === '$createdAt' ? 'created_at' : 'name';
-            query += ` ORDER BY ${dbSortColumn} ${orderBy.toUpperCase()}`;
+            const isDescending = orderBy === 'desc';
+            const offset = (page - 1) * limit;
 
-            if (limit) { query += ` LIMIT $${paramCount}`; values.push(limit); }
+            const queryParams = new URLSearchParams({
+                Offset: offset.toString(),
+                Limit: limit.toString(),
+                SortBy: sortBy,
+                IsDescending: isDescending.toString()
+            });
 
-            const result = await pool.query(query, values);
-            const documents = result.rows.map(row => this.mapToFile(row));
+            if (searchText) {
+                queryParams.append("SearchTerm", searchText);
+            }
 
-            return JSON.parse(JSON.stringify({ documents, total: documents.length }));
-        } catch (error) { console.error("[Local Storage] GetFiles Error:", error); throw error; }
+            if (subjectId) {
+                queryParams.append("SubjectId", subjectId);
+            }
+
+            const res = await fetch(`${connection_url}/api/Document?${queryParams.toString()}`, {
+                method: 'GET',
+                headers,
+                cache: 'no-store',
+            });
+
+            if (!res.ok) {
+                const errorData = await res.json().catch(() => ({}));
+                throw new Error(`[${res.status}] ${errorData.message || "Failed to fetch documents"}`);
+            }
+
+            const responseData = await res.json();
+
+            let documents: File_[] = responseData?.items || [];
+            let total = responseData?.totalCount || 0;
+
+            if (types.length > 0) {
+                documents = documents.filter((file) => {
+                    const fileCategory = getFileCategory(file.fileType);
+                    return types.includes(fileCategory as FileType);
+                });
+
+                total = documents.length;
+            }
+
+            return parseStringify({ documents, total });
+
+        } catch (error) {
+            this.handleError(error, "GetFiles");
+        }
     }
 
     async renameFile({ fileId, name, extension, path }: RenameFileProps) {
         try {
-            const currentUser = await getCurrentUser();
-            if (!currentUser) throw new Error("User not authenticated");
+            const headers = await this.getHeaders();
+            const newFileName = `${name}.${extension}`;
 
-            const newName = `${name}.${extension}`;
-            const result = await pool.query(
-                `UPDATE files SET name = $1, updated_at = NOW() WHERE id = $2 RETURNING *`,
-                [newName, fileId]
-            );
+            const getRes = await fetch(`${connection_url}/api/Document/${fileId}`, {
+                method: 'GET',
+                headers,
+            });
 
-            if (!result.rows.length) throw new Error("File not found");
+            if (!getRes.ok) {
+                const errorData = await getRes.json().catch(() => ({}));
+                throw new Error(`[${getRes.status}] ${errorData.message || "Failed to fetch file for renaming"}`);
+            }
 
-            eventBus.emit(EVENTS.FILE_RENAMED, { fileId, accountId: currentUser.accountId, newName });
+            const currentFile = await getRes.json();
+
+            const payload = {
+                title: newFileName,
+                fileName: newFileName,
+                fileExtension: extension,
+                fileType: currentFile.fileType,
+                shareStatus: currentFile.shareStatus
+            };
+
+            const putRes = await fetch(`${connection_url}/api/Document/${fileId}`, {
+                method: 'PUT',
+                headers,
+                body: JSON.stringify(payload)
+            });
+
+            if (!putRes.ok) {
+                const errorData = await putRes.json().catch(() => ({}));
+                throw new Error(`[${putRes.status}] ${errorData.message || "Rename failed"}`);
+            }
+
+            const data = await putRes.json();
             revalidatePath(path);
 
-            return JSON.parse(JSON.stringify(this.mapToFile(result.rows[0])));
-        } catch (error) { console.error("[Local Storage] Rename Error:", error); throw error; }
+            return parseStringify(data);
+
+        } catch (error) {
+            this.handleError(error, "RenameFile");
+        }
     }
 
     async updateFileUsers({ fileId, emails, path }: UpdateFileUsersProps) {
         try {
-            const result = await pool.query(
-                `UPDATE files SET users = $1, updated_at = NOW() WHERE id = $2 RETURNING *`,
-                [emails, fileId]
-            );
+            const headers = await this.getHeaders();
 
-            if (!result.rows.length) throw new Error("File not found");
+            const payload = {
+                sharedUserIds: emails || [],
+            };
 
-            revalidatePath(path);
-            return JSON.parse(JSON.stringify(this.mapToFile(result.rows[0])));
-        } catch (error) { console.error("[Local Storage] Update Users Error:", error); throw error; }
-    }
+            const shareRes = await fetch(`${connection_url}/api/Document/${fileId}/share`, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify(payload)
+            });
 
-    async updateEditedFile({ fileId, oldBucketFileId, file, path }: UpdateEditedFileProps) {
-        try {
-            const currentUser = await getCurrentUser();
-            if (!currentUser) throw new Error("User not authenticated");
-
-            const newBucketFileId = uuidv4();
-            const arrayBuffer = await file.arrayBuffer();
-            const buffer = Buffer.from(arrayBuffer);
-
-            await s3.send(new PutObjectCommand({ Bucket: BUCKET_NAME, Key: newBucketFileId, Body: buffer, ContentType: file.type }));
-            const newUrl = `${process.env.MINIO_ENDPOINT}/${BUCKET_NAME}/${newBucketFileId}`;
-            const fileTypeInfo = getFileType(file.name);
-
-            const result = await pool.query(
-                `UPDATE files SET bucket_file_id = $1, url = $2, size = $3, extension = $4, updated_at = NOW() WHERE id = $5 RETURNING *`,
-                [newBucketFileId, newUrl, file.size, fileTypeInfo.extension, fileId]
-            );
-
-            await s3.send(new DeleteObjectCommand({ Bucket: BUCKET_NAME, Key: oldBucketFileId }));
-
-            eventBus.emit(EVENTS.FILE_DELETED, { fileId, accountId: currentUser.accountId });
-            eventBus.emit(EVENTS.FILE_CREATED, { fileId, accountId: currentUser.accountId, fileUrl: newUrl, mimeType: file.type });
-
-            revalidatePath(path);
-            return JSON.parse(JSON.stringify(this.mapToFile(result.rows[0])));
-        } catch (error) { console.error("[Local Storage] Update Edited File Error:", error); throw error; }
-    }
-
-    async deleteFile({ fileId, bucketFileId, path }: DeleteFileProps) {
-        try {
-            const currentUser = await getCurrentUser();
-            if (!currentUser) throw new Error("User not authenticated");
-
-            const result = await pool.query(`DELETE FROM files WHERE id = $1 RETURNING id`, [fileId]);
-
-            if (result.rows.length) {
-                await s3.send(new DeleteObjectCommand({ Bucket: BUCKET_NAME, Key: bucketFileId }));
+            if (!shareRes.ok) {
+                const errorData = await shareRes.json().catch(() => ({}));
+                throw new Error(`[${shareRes.status}] ${errorData.message || "Update users failed"}`);
             }
 
-            eventBus.emit(EVENTS.FILE_DELETED, { fileId, accountId: currentUser.accountId });
-            revalidatePath(path);
+            const data = await shareRes.json();
 
-            return JSON.parse(JSON.stringify({ status: "success" }));
-        } catch (error) { console.error("[Local Storage] Delete Error:", error); throw error; }
+            if (path) {
+                revalidatePath(path);
+            }
+
+            return parseStringify(data);
+
+        } catch (error) {
+            this.handleError(error, "UpdateFileUsers");
+        }
+    }
+
+    async updateEditedFile({ fileId, file, path }: UpdateEditedFileProps) {
+        try {
+            await this.deleteFile({ fileId, path });
+
+            const newFileResponse = await this.uploadFile({
+                file,
+                path,
+                subjectId: "placeholder-or-fetch-from-original-file"
+            } as any);
+
+            return parseStringify(newFileResponse);
+        } catch (error) {
+            this.handleError(error, "UpdateEditedFile");
+        }
+    }
+
+    async deleteFile({ fileId, path }: DeleteFileProps) {
+        try {
+            const headers = await this.getHeaders();
+
+            const res = await fetch(`${connection_url}/api/Document/${fileId}`, {
+                method: 'DELETE',
+                headers,
+            });
+
+            if (!res.ok) {
+                const errorData = await res.json().catch(() => ({}));
+                throw new Error(`[${res.status}] ${errorData.message || "Delete failed"}`);
+            }
+
+            revalidatePath(path);
+            return parseStringify({ status: "success" });
+        } catch (error) {
+            this.handleError(error, "DeleteFile");
+        }
+    }
+
+    async downloadFile({ fileId }: { fileId: string }) {
+        try {
+            const headers = await this.getHeaders();
+
+            const res = await fetch(`${connection_url}/api/Document/${fileId}/download`, {
+                method: 'GET',
+                headers,
+            });
+
+            if (!res.ok) {
+                const errorData = await res.json().catch(() => ({}));
+                throw new Error(`[${res.status}] ${errorData.message || "Download failed"}`);
+            }
+
+            const contentType = res.headers.get("content-type") || "application/octet-stream";
+            const arrayBuffer = await res.arrayBuffer();
+
+            const buffer = Buffer.from(arrayBuffer);
+            const base64Data = buffer.toString('base64');
+
+            return parseStringify({ data: base64Data, contentType });
+
+        } catch (error) {
+            this.handleError(error, "DownloadFile");
+        }
+    }
+
+    async previewFile({ fileId }: { fileId: string }) {
+        try {
+            const headers = await this.getHeaders();
+
+            const res = await fetch(`${connection_url}/api/Document/${fileId}/preview`, {
+                method: 'GET',
+                headers,
+            });
+
+            if (!res.ok) {
+                const errorData = await res.json().catch(() => ({}));
+                throw new Error(`[${res.status}] ${errorData.message || "Preview failed"}`);
+            }
+
+            const contentType = res.headers.get("content-type") || "application/octet-stream";
+            const arrayBuffer = await res.arrayBuffer();
+            const buffer = Buffer.from(arrayBuffer);
+            const base64Data = buffer.toString('base64');
+
+            return parseStringify({ data: base64Data, contentType });
+        } catch (error) {
+            this.handleError(error, "PreviewFile");
+        }
     }
 
     async getTotalSpaceUsed() {
         try {
-            const currentUser = await getCurrentUser();
-            if (!currentUser) throw new Error("User is not authenticated.");
+            const headers = await this.getHeaders();
+            const session = await auth();
 
-            const result = await pool.query(`SELECT type, size, updated_at FROM files WHERE owner_id = $1`, [currentUser.$id]);
-
-            const totalSpace = {
-                image: { size: 0, latestDate: "" }, document: { size: 0, latestDate: "" },
-                video: { size: 0, latestDate: "" }, audio: { size: 0, latestDate: "" },
-                other: { size: 0, latestDate: "" }, used: 0, all: 2 * 1024 * 1024 * 1024 // 2GB limit
-            };
-
-            result.rows.forEach((row) => {
-                const fileType = row.type as keyof typeof totalSpace;
-                const fileSize = Number(row.size); // PG BigInt is returned as a string, must cast to Number
-
-                if (typeof totalSpace[fileType] === 'object') {
-                    (totalSpace[fileType] as any).size += fileSize;
-
-                    const rowDate = row.updated_at.toISOString();
-                    if (!(totalSpace[fileType] as any).latestDate || new Date(rowDate) > new Date((totalSpace[fileType] as any).latestDate)) {
-                        (totalSpace[fileType] as any).latestDate = rowDate;
-                    }
-                }
-                totalSpace.used += fileSize;
+            const res = await fetch(`${connection_url}/api/Document`, {
+                method: 'GET',
+                headers,
             });
 
-            return JSON.parse(JSON.stringify(totalSpace));
-        } catch (error) { console.error("[Local Storage] Get Total Space Error:", error); throw error; }
-    }
+            if (!res.ok) {
+                const errorData = await res.json().catch(() => ({}));
+                throw new Error(`[${res.status}] ${errorData.message || "Failed to fetch documents for space calculation"}`);
+            }
 
-    async getFileBuffer(bucketFileId: string): Promise<Buffer> {
-        try {
-            const BUCKET_NAME = process.env.MINIO_BUCKET_NAME || "smartstore-files";
+            const responseData = await res.json();
+            const documents: File_[] = responseData?.items || [];
 
-            const response = await s3.send(new GetObjectCommand({
-                Bucket: BUCKET_NAME,
-                Key: bucketFileId
-            }));
+            const user = session?.user as any;
 
-            const byteArray = await response.Body?.transformToByteArray();
+            let userCapacityBytes = 3 * 1024 * 1024 * 1024;
 
-            if (!byteArray) throw new Error("File body is empty");
-            return Buffer.from(byteArray);
+            if (user?.tierStorageLimitMb && Number(user.tierStorageLimitMb) > 0) {
+                userCapacityBytes = Number(user.tierStorageLimitMb) * 1024 * 1024;
+            }
+
+            const totalSpace = {
+                image: { size: 0, latestDate: "" },
+                document: { size: 0, latestDate: "" },
+                video: { size: 0, latestDate: "" },
+                audio: { size: 0, latestDate: "" },
+                other: { size: 0, latestDate: "" },
+                used: 0,
+                all: userCapacityBytes
+            };
+
+            documents.forEach((file) => {
+                const type = getFileCategory(file.fileType) as FileType;
+
+                if (totalSpace[type]) {
+                    const fileSize = file.fileSizeBytes || 0;
+
+                    totalSpace[type].size += fileSize;
+                    totalSpace.used += fileSize;
+
+                    const fileDate = new Date(file.createdAt || "").getTime();
+                    const latestDate = totalSpace[type].latestDate
+                        ? new Date(totalSpace[type].latestDate).getTime()
+                        : 0;
+
+                    if (fileDate > latestDate) {
+                        totalSpace[type].latestDate = file.createdAt || "";
+                    }
+                }
+            });
+
+            return parseStringify(totalSpace);
 
         } catch (error) {
-            console.error("[Local Storage] Get File Buffer Error:", error);
-            throw error;
+            this.handleError(error, "GetTotalSpaceUsed");
         }
-    }
-
-    private mapToFile(row: any) {
-        return {
-            $id: row.id,
-            name: row.name,
-            url: row.url,
-            type: row.type,
-            bucketFileId: row.bucket_file_id,
-            accountId: row.account_id,
-            owner: row.owner_id,
-            extension: row.extension,
-            size: Number(row.size),
-            users: row.users,
-            $createdAt: row.created_at.toISOString(),
-            $updatedAt: row.updated_at.toISOString()
-        };
     }
 }

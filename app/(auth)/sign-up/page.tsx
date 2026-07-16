@@ -12,27 +12,22 @@ const SignUp = () => {
     const handleSignUp = async (data: z.infer<typeof SignUpSchema>) => {
         try {
             const result = await createAccount({
-                fullName: data.name,
-                username: data.username,
+                fullName: data.fullName,
                 email: data.email,
                 password: data.password,
+                dateOfBirth: data.dateOfBirth
             });
 
-            if (result?.accountId) {
-                router.push("/sign-in");
+            if (result?.email) {
+                router.push(`/verify-otp?email=${encodeURIComponent(data.email)}`);
                 return { success: true };
             }
 
+            return { success: false, error: "Failed to create account." };
+        } catch (error: unknown) {
             return {
                 success: false,
-                error: "Failed to create account."
-            };
-
-        } catch (error: any) {
-            console.error("Sign up error:", error);
-            return {
-                success: false,
-                error: error?.message || "An error occurred during sign up."
+                error: "An unexpected error occurred during sign up."
             };
         }
     };
@@ -41,10 +36,10 @@ const SignUp = () => {
         <AuthForm
             schema={SignUpSchema}
             defaultValues={{
+                fullName: "",
                 email: "",
                 password: "",
-                name: "",
-                username: "",
+                dateOfBirth: "",
             }}
             onSubmit={handleSignUp}
             formType="SIGN_UP"

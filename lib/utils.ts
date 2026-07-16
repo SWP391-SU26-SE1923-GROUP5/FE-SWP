@@ -1,3 +1,4 @@
+import { downloadFile } from "@/lib/actions/file.actions";
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 import {FileType} from "@/types";
@@ -32,8 +33,7 @@ export const calculatePercentage = (sizeInBytes: number) => {
 };
 
 export const getFileType = (fileName: string) => {
-  const extension = fileName.split(".").pop()?.toLowerCase();
-
+  const extension = fileName.split(".").pop()?.toLowerCase() || "";
   if (!extension) return { type: "other", extension: "" };
 
   const documentExtensions = [
@@ -60,7 +60,6 @@ export const getFileType = (fileName: string) => {
     "xd",
     "sketch",
     "afdesign",
-    "afphoto",
     "afphoto",
   ];
   const imageExtensions = ["jpg", "jpeg", "png", "gif", "bmp", "svg", "webp"];
@@ -115,6 +114,7 @@ export const getFileIcon = (
     extension: string | undefined,
     type: FileType | string,
 ) => {
+  extension = extension?.replace('.', '');
   switch (extension) {
       // Document
     case "pdf":
@@ -173,12 +173,33 @@ export const getFileIcon = (
   }
 };
 
-export const constructFileUrl = (bucketFileId: string) => {
-  return `${process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT}/storage/buckets/${process.env.NEXT_PUBLIC_APPWRITE_BUCKET}/files/${bucketFileId}/view?project=${process.env.NEXT_PUBLIC_APPWRITE_PROJECT}`;
-};
+export const triggerDownload = async (fileId: string, fileName: string) => {
+  try {
+    const result = await downloadFile({ fileId });
 
-export const constructDownloadUrl = (bucketFileId: string) => {
-  return `${process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT}/storage/buckets/${process.env.NEXT_PUBLIC_APPWRITE_BUCKET}/files/${bucketFileId}/download?project=${process.env.NEXT_PUBLIC_APPWRITE_PROJECT}`;
+    if (!result?.data) {
+      throw new Error("Invalid response: No file data received from the server.");
+    }
+
+    const binaryString = window.atob(result.data);
+    const bytes = Uint8Array.from(binaryString, (char) => char.charCodeAt(0));
+
+    const blob = new Blob([bytes], { type: 'application/octet-stream' });
+    const url = window.URL.createObjectURL(blob);
+
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = fileName;
+
+    document.body.appendChild(link);
+    link.click();
+
+    link.remove();
+    window.URL.revokeObjectURL(url);
+
+  } catch (error) {
+    throw error;
+  }
 };
 
 export const getUsageSummary = (totalSpace: any) => {
@@ -188,14 +209,14 @@ export const getUsageSummary = (totalSpace: any) => {
       size: totalSpace.document.size,
       latestDate: totalSpace.document.latestDate,
       icon: "/assets/icons/file-document-light.svg",
-      url: "/documents",
+      url: "/home/documents",
     },
     {
       title: "Images",
       size: totalSpace.image.size,
       latestDate: totalSpace.image.latestDate,
       icon: "/assets/icons/file-image-light.svg",
-      url: "/images",
+      url: "/home/images",
     },
     {
       title: "Media",
@@ -205,14 +226,14 @@ export const getUsageSummary = (totalSpace: any) => {
               ? totalSpace.video.latestDate
               : totalSpace.audio.latestDate,
       icon: "/assets/icons/file-video-light.svg",
-      url: "/media",
+      url: "/home/media",
     },
     {
       title: "Others",
       size: totalSpace.other.size,
       latestDate: totalSpace.other.latestDate,
       icon: "/assets/icons/file-other-light.svg",
-      url: "/others",
+      url: "/home/others",
     },
   ];
 };

@@ -1,7 +1,3 @@
-/**
- * Report Types - For Admin Management
- */
-
 export interface ReportResponseDto {
   id: string;
   userId: string;

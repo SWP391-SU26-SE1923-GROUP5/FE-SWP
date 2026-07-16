@@ -12,15 +12,10 @@ interface PageProps {
     params: Promise<{ id: string }>;
 }
 
-/**
- * Admin Report Detail Page - Server Component
- * Shows detailed report information and allows admin to take action
- */
 export default async function AdminReportDetailPage({ params }: PageProps) {
     const { id } = await params;
     const currentUser = await getCurrentUser();
     
-    // 🔐 Verify admin access
     if (!currentUser) {
         redirect("/sign-in");
     }
@@ -29,7 +24,7 @@ export default async function AdminReportDetailPage({ params }: PageProps) {
         <Suspense fallback={<AdminLoadingState label="Loading report..." />}>
             <AdminReportDetailClient
                 reportId={id}
-                currentUserId={currentUser.$id ?? ""}
+                currentUserId={currentUser.id ?? ""}
             />
         </Suspense>
     );

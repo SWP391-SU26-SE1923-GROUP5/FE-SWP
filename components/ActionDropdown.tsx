@@ -1,20 +1,16 @@
 "use client";
 
-import {useState} from "react";
+import { useState } from "react";
 import Image from "next/image";
-import Link from "next/link";
-import {usePathname} from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
+    AlignLeft,
     BrainCircuit,
-    Code,
     FileText,
-    Film,
-    ListChecks,
     Loader2,
-    MessageSquare,
     RotateCcw,
-    Send,
     Sparkles,
+    MessageSquare
 } from "lucide-react";
 
 import {
@@ -36,82 +32,149 @@ import {
     DropdownMenuSubTrigger,
     DropdownMenuPortal,
 } from "@/components/ui/dropdown-menu";
-import {Input} from "@/components/ui/input";
-import {Button} from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 
-import {ActionType, AiResultState, File_, Flashcard, QuizQuestion} from "@/types";
-import {actionsDropdownItems} from "@/constants/actionsDropdownItems";
-import {constructDownloadUrl} from "@/lib/utils";
-import {deleteFile, renameFile, updateFileUsers} from "@/lib/actions/file.actions";
-import {executeAIFeature} from "@/lib/actions/ai.actions";
+import { ActionType, AiResultState, File_, Flashcard, QuizQuestion } from "@/types";
+import { actionsDropdownItems } from "@/constants/actionsDropdownItems";
+import { triggerDownload } from "@/lib/utils";
+import { deleteFile, renameFile, updateFileUsers } from "@/lib/actions/file.actions";
+import {
+    generateQuiz,
+    generateFlashcards,
+    summarizeRagDocument,
+    createChatSession,
+    sendChatMessage,
+    getSessionMessages,
+    getUserSessions,
+    ChatSession,
+    ChatMessage
+} from "@/lib/actions/ai.actions";
 
-import {FileDetails, ShareInput} from "@/components/ActionsModalContent";
+import { FileDetails, ShareInput } from "@/components/ActionsModalContent";
 import ApryseViewer from "./ApryseViewer";
+import { toast } from "sonner";
 
-const SUPPORTED_EDIT_EXTENSIONS = ["pdf", "docx", "doc", "xlsx", "xls", "pptx", "ppt"];
-const SUPPORTED_AI_DOC_EXTENSIONS = ["pdf", "txt", "csv", "docx", "md", "html", "json"];
-const SUPPORTED_AI_VIDEO_EXTENSIONS = ["mp4", "webm", "mov"];
-const SUPPORTED_AI_CODE_EXTENSIONS = ["go", "py", "js", "ts", "lua", "java"];
-const AI_ACTIONS = ["quiz", "flashcards", "ask-ai", "video-indexer", "code-sandbox"];
+const SUPPORTED_EDIT_EXTENSIONS = [
+    ".pdf", "pdf",
+    ".docx", "docx",
+    ".doc", "doc",
+    ".xlsx", "xlsx",
+    ".xls", "xls",
+    ".pptx", "pptx",
+    ".ppt", "ppt"
+];
 
-export default function ActionDropdown({file}: { file: File_ }) {
+const SUPPORTED_AI_DOC_EXTENSIONS = [
+    ".pdf", "pdf",
+    ".txt", "txt",
+    ".csv", "csv",
+    ".docx", "docx",
+    ".md", "md",
+    ".html", "html",
+    ".json", "json"
+];
+
+const AI_ACTIONS = ["quiz", "flashcards", "summarize", "ask-ai"];
+
+export default function ActionDropdown({ file }: { file: File_ }) {
     const path = usePathname();
-    const fileExt = file.extension?.toLowerCase() || "";
+    const router = useRouter();
+    const fileExt = file.fileExtension?.toLowerCase() || "";
 
     const isAiDocSupported = SUPPORTED_AI_DOC_EXTENSIONS.includes(fileExt);
-    const isVideoSupported = SUPPORTED_AI_VIDEO_EXTENSIONS.includes(fileExt);
-    const isCodeSupported = SUPPORTED_AI_CODE_EXTENSIONS.includes(fileExt);
-    const hasAnyAiSupport = isAiDocSupported || isVideoSupported || isCodeSupported;
 
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [action, setAction] = useState<ActionType | null>(null);
-    const [name, setName] = useState(file.name);
-    const [emails, setEmails] = useState<string[]>([]);
+    const [name, setName] = useState(file.fileName);
+
+    const [emails, setEmails] = useState<string[]>(
+        file.sharedUsers && file.sharedUsers.trim() !== ""
+            ? file.sharedUsers.split(",")
+            : []
+    );
 
     const [aiResult, setAiResult] = useState<AiResultState | null>(null);
-    const [isChatting, setIsChatting] = useState(false);
-    const [chatInput, setChatInput] = useState("");
-    const [chatHistory, setChatHistory] = useState<{ sender: "user" | "ai"; text: string }[]>([]);
     const [userAnswers, setUserAnswers] = useState<Record<number, string>>({});
     const [flippedCards, setFlippedCards] = useState<Record<number, boolean>>({});
+
+    const [chatSessions, setChatSessions] = useState<ChatSession[]>([]);
+    const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
+    const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+    const [chatInput, setChatInput] = useState("");
+    const [isChatLoading, setIsChatLoading] = useState(false);
+    const [isSending, setIsSending] = useState(false);
 
     const closeAllModals = () => {
         setIsModalOpen(false);
         setIsDropdownOpen(false);
         setAction(null);
-        setName(file.name);
+        setName(file.fileName);
+        setEmails(
+            file.sharedUsers && file.sharedUsers.trim() !== ""
+                ? file.sharedUsers.split(",")
+                : []
+        );
         setAiResult(null);
-        setChatHistory([]);
-        setChatInput("");
         setUserAnswers({});
         setFlippedCards({});
+        setChatSessions([]);
+        setSelectedSessionId(null);
+        setChatMessages([]);
+        setChatInput("");
     };
 
     const handleAction = async () => {
         if (!action) return null;
         setIsLoading(true);
 
-        const actions = {
-            rename: () => renameFile({fileId: file.$id, name, extension: file.extension, path}),
-            share: () => updateFileUsers({fileId: file.$id, emails: file.users, path}),
-            delete: () => deleteFile({fileId: file.$id, bucketFileId: file.bucketFileId, path}),
-            edit: () => Promise.resolve(true),
-        };
+        const toastId = toast.loading(`Processing ${action.label}...`);
 
-        const actionKey = action.value as keyof typeof actions;
-        const success = await actions[actionKey]();
+        try {
+            const actions = {
+                rename: () => renameFile({ fileId: file.id, name, extension: file.fileExtension.replace('.', ''), path }),
+                share: () => updateFileUsers({ fileId: file.id, emails, path }),
+                delete: () => deleteFile({ fileId: file.id, path }),
+                edit: () => Promise.resolve(true),
+            };
 
-        if (success) closeAllModals();
-        setIsLoading(false);
+            const actionKey = action.value as keyof typeof actions;
+            const success = await actions[actionKey]();
+
+            if (success) {
+                toast.success(`${action.label} completed successfully!`, { id: toastId });
+                closeAllModals();
+            }
+        } catch (error: unknown) {
+            if (error instanceof Error) {
+                toast.error(error.message, { id: toastId });
+            } else {
+                toast.error(`Failed to execute ${action.label}.`, { id: toastId });
+            }
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     const handleRemoveUser = async (email: string) => {
         const updatedEmails = emails.filter((e) => e !== email);
-        const success = await updateFileUsers({fileId: file.$id, emails: file.users, path});
-        if (success) setEmails(updatedEmails);
-        closeAllModals();
+        const toastId = toast.loading(`Removing ${email}...`);
+
+        try {
+            const success = await updateFileUsers({ fileId: file.id, emails: updatedEmails, path });
+            if (success) {
+                setEmails(updatedEmails);
+                toast.success(`User removed successfully!`, { id: toastId });
+            }
+        } catch (error: unknown) {
+            if (error instanceof Error) {
+                toast.error(error.message, { id: toastId });
+            } else {
+                toast.error("Failed to remove user.", { id: toastId });
+            }
+        }
     };
 
     const triggerAIFeature = async (
@@ -119,83 +182,153 @@ export default function ActionDropdown({file}: { file: File_ }) {
         label: string,
         extraParams?: Record<string, string>
     ) => {
-        setAction({value: endpoint, label, icon: ""} as ActionType);
+        setAction({ value: endpoint, label, icon: "" } as ActionType);
         setIsModalOpen(true);
         setIsLoading(true);
+        const toastId = toast.loading(`Initializing ${label}...`);
+
         try {
-            const data = await executeAIFeature(file, endpoint, extraParams);
-            setAiResult({type: endpoint, data});
-        } catch (error) {
+            let data: Record<string, unknown> = {};
+
+            if (endpoint === "quiz") {
+                const amount = Number(extraParams?.amount) || 10;
+                const res = await generateQuiz(file.id, amount);
+
+                data = {
+                    id: res.id,
+                    quizTitle: res.title || res.quizTitle || `${file.fileName} Quiz`,
+                    questions: res.questions?.map((q: any) => ({
+                        id: q.id,
+                        questionTitle: q.title || q.questionTitle,
+                        answers: q.answers || []
+                    })) || []
+                };
+            } else if (endpoint === "flashcards") {
+                const amount = Number(extraParams?.amount) || 10;
+                const res = await generateFlashcards(file.id, amount);
+                data = { deckTitle: `${file.fileName} Flashcards`, cards: res };
+            } else if (endpoint === "summarize") {
+                const res = await summarizeRagDocument(file.id);
+                data = { summary: res.summary };
+            } else if (endpoint === "ask-ai") {
+                const sessions = await getUserSessions();
+                const docSessions = sessions.filter(s => s.documentId === file.id);
+                setChatSessions(docSessions);
+
+                if (docSessions.length > 0) {
+                    const firstSession = docSessions[0];
+                    setSelectedSessionId(firstSession.id);
+                    const msgs = await getSessionMessages(firstSession.id);
+                    setChatMessages(msgs);
+                }
+                data = { ready: true };
+            }
+
+            setAiResult({ type: endpoint, data });
+            toast.success(`${label} ready!`, { id: toastId });
+        } catch (error: unknown) {
             console.error(error);
+            if (error instanceof Error) {
+                toast.error(error.message, { id: toastId });
+            } else {
+                toast.error(`Failed to load ${label}.`, { id: toastId });
+            }
         } finally {
             setIsLoading(false);
         }
     };
 
-    const handleStartAskAI = () => {
-        setAction({value: "ask-ai", label: "Ask AI", icon: ""} as ActionType);
-        setIsModalOpen(true);
-        setAiResult({type: "ask-ai", data: {fileUrl: file.url}});
-        setChatHistory([
-            {
-                sender: "ai",
-                text: `I have active context for ${file.name}. What would you like to know? You can select a quick action or ask a specific question.`,
-            },
-        ]);
+    const handleCreateSession = async () => {
+        setIsChatLoading(true);
+        try {
+            const newSession = await createChatSession(`Chat about ${file.fileName}`);
+            setChatSessions((prev) => [newSession, ...prev]);
+            setSelectedSessionId(newSession.id);
+            setChatMessages([]);
+        } catch (error: unknown) {
+            toast.error("Failed to create chat session.");
+        } finally {
+            setIsChatLoading(false);
+        }
     };
 
-    const submitChatQuery = async (query: string) => {
-        if (!query.trim()) return;
+    const handleSelectSession = async (sessionId: string) => {
+        setSelectedSessionId(sessionId);
+        setIsChatLoading(true);
+        try {
+            const msgs = await getSessionMessages(sessionId);
+            setChatMessages(msgs);
+        } catch (error: unknown) {
+            toast.error("Failed to load chat messages.");
+        } finally {
+            setIsChatLoading(false);
+        }
+    };
 
-        setChatHistory((prev) => [...prev, {sender: "user", text: query}]);
-        setChatInput("");
-        setIsChatting(true);
+    const handleSendMessage = async () => {
+        if (!chatInput.trim()) return;
 
-        const mimeTypes: Record<string, string> = {
-            pdf: "application/pdf",
-            txt: "text/plain",
-            csv: "text/csv",
-            docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        let currentSessionId = selectedSessionId;
+
+        if (!currentSessionId) {
+            setIsChatLoading(true);
+            try {
+                const newSession = await createChatSession(`Chat about ${file.fileName}`);
+                setChatSessions((prev) => [newSession, ...prev]);
+                currentSessionId = newSession.id;
+                setSelectedSessionId(newSession.id);
+            } catch (error) {
+                setIsChatLoading(false);
+                toast.error("Failed to initialize session.");
+                return;
+            }
+            setIsChatLoading(false);
+        }
+
+        const tempMessage: ChatMessage = {
+            id: Date.now().toString(),
+            chatSessionId: currentSessionId,
+            sender: "User",
+            content: chatInput,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
         };
-        const mappedMimeType = mimeTypes[fileExt] || "application/pdf";
+
+        setChatMessages((prev) => [...prev, tempMessage]);
+        setChatInput("");
+        setIsSending(true);
 
         try {
-            const res = await fetch("/api/ai/context-caching", {
-                method: "POST",
-                headers: {"Content-Type": "application/json"},
-                body: JSON.stringify({
-                    fileUrl: file.url,
-                    mimeType: mappedMimeType,
-                    userQuestion: query,
-                }),
-            });
-            const data = await res.json();
-            if (!res.ok) throw new Error(data.error);
-
-            setChatHistory((prev) => [...prev, {sender: "ai", text: data.answer}]);
+            const aiResponse = await sendChatMessage(currentSessionId, file.id, tempMessage.content);
+            setChatMessages((prev) => [...prev, aiResponse]);
         } catch (error) {
-            setChatHistory((prev) => [
-                ...prev,
-                {
-                    sender: "ai",
-                    text: "Sorry, I encountered an error analyzing the document context.",
-                },
-            ]);
+            toast.error("Failed to send message.");
         } finally {
-            setIsChatting(false);
+            setIsSending(false);
+        }
+    };
+
+    const handleDownload = async () => {
+        const toastId = toast.loading(`Downloading ${file.fileName}...`);
+        try {
+            await triggerDownload(file.id, file.fileName);
+            toast.success("Download complete!", { id: toastId });
+        } catch (error) {
+            console.error(error);
+            toast.error("Failed to download file.", { id: toastId });
         }
     };
 
     const renderDialogContent = () => {
         if (!action) return null;
-        const {value, label} = action;
+        const { value, label } = action;
         const isAiAction = AI_ACTIONS.includes(value);
 
         return (
             <DialogContent
                 className={`p-8 ${
                     value === "edit" || isAiAction
-                        ? "max-w-5xl w-full max-h-[90vh] overflow-y-auto custom-scrollbar"
+                        ? "max-w-5xl! w-full max-h-[90vh] overflow-y-auto custom-scrollbar"
                         : "shad-dialog"
                 }`}
                 aria-describedby={undefined}
@@ -210,19 +343,19 @@ export default function ActionDropdown({file}: { file: File_ }) {
                     </DialogTitle>
 
                     {value === "rename" && (
-                        <Input type="text" value={name} onChange={(e) => setName(e.target.value)}/>
+                        <Input type="text" value={name} onChange={(e) => setName(e.target.value)} />
                     )}
-                    {value === "details" && <FileDetails file={file}/>}
+                    {value === "details" && <FileDetails file={file} />}
                     {value === "share" && (
-                        <ShareInput file={file} onInputChange={setEmails} onRemove={handleRemoveUser}/>
+                        <ShareInput file={file} onInputChange={setEmails} onRemove={handleRemoveUser} />
                     )}
                     {value === "edit" && (
-                        <ApryseViewer file={file} path={path} closeModals={closeAllModals}/>
+                        <ApryseViewer file={file} path={path} closeModals={closeAllModals} />
                     )}
                     {value === "delete" && (
                         <p className="delete-confirmation">
                             Are you sure you want to delete{" "}
-                            <span className="delete-file-name">{file.name}</span>?
+                            <span className="delete-file-name">{file.fileName}</span>?
                         </p>
                     )}
 
@@ -230,94 +363,94 @@ export default function ActionDropdown({file}: { file: File_ }) {
                         <div className="text-left space-y-6">
                             <h2 className="h2-bold text-dark-100 mb-6">{label}</h2>
 
-                            {value === "ask-ai" && (
-                                <div className="flex flex-col h-[55vh]">
-                                    <div className="flex justify-between items-center mb-4 pb-2 border-b light-border">
-                                        <span className="caption text-light-400 flex items-center gap-2">
-                                            <Sparkles className="h-3 w-3 text-brand"/> Powered by Gemini 3.5 Flash
-                                        </span>
+                            {value === "summarize" && aiResult.data?.summary && (
+                                <div className="space-y-4">
+                                    <div className="p-6 border light-border rounded-xl bg-light-800">
+                                        <p className="text-dark-200 leading-relaxed whitespace-pre-wrap">
+                                            {aiResult.data.summary as string}
+                                        </p>
+                                    </div>
+                                </div>
+                            )}
 
-                                        <span className="caption text-brand bg-brand-100 px-2 py-1 rounded-md">
-                                            Native Caching Active
-                                        </span>
+                            {value === "ask-ai" && (
+                                <div className="flex flex-col h-[50vh] gap-4">
+                                    <div className="flex items-center justify-between">
+                                        <select
+                                            className="p-2 rounded-md border light-border bg-white text-sm outline-none cursor-pointer"
+                                            value={selectedSessionId || ""}
+                                            onChange={(e) => {
+                                                if (e.target.value === "new") handleCreateSession();
+                                                else handleSelectSession(e.target.value);
+                                            }}
+                                        >
+                                            <option value="" disabled>Select a session</option>
+                                            <option value="new" className="font-semibold text-brand">+ New Chat Session</option>
+                                            {chatSessions.map((s) => (
+                                                <option key={s.id} value={s.id}>{s.sessionTitle}</option>
+                                            ))}
+                                        </select>
                                     </div>
 
-                                    <div className="flex-1 overflow-y-auto custom-scrollbar space-y-4 pr-2">
-                                        {chatHistory.map((msg, idx) => (
-                                            <div
-                                                key={idx}
-                                                className={`flex ${
-                                                    msg.sender === "user" ? "justify-end" : "justify-start"
-                                                }`}
-                                            >
+                                    <div className="flex-1 overflow-y-auto bg-light-800 rounded-xl p-4 space-y-4 border light-border custom-scrollbar flex flex-col">
+                                        {isChatLoading ? (
+                                            <div className="flex justify-center items-center h-full">
+                                                <Loader2 className="animate-spin text-brand h-6 w-6" />
+                                            </div>
+                                        ) : chatMessages.length === 0 ? (
+                                            <div className="flex-1 flex items-center justify-center text-light-400 text-sm">
+                                                Start asking questions about this document.
+                                            </div>
+                                        ) : (
+                                            chatMessages.map((msg) => (
                                                 <div
-                                                    className={`max-w-[80%] p-4 text-sm rounded-2xl whitespace-pre-wrap ${
-                                                        msg.sender === "user"
-                                                            ? "bg-brand text-white rounded-br-none"
-                                                            : "bg-light-800 text-dark-200 rounded-bl-none border border-slate-100 shadow-sm"
+                                                    key={msg.id}
+                                                    className={`p-3 rounded-xl max-w-[85%] text-sm ${
+                                                        msg.sender === "User"
+                                                            ? "bg-brand text-white self-end ml-auto rounded-tr-sm"
+                                                            : "bg-white text-dark-200 border light-border self-start mr-auto rounded-tl-sm whitespace-pre-wrap"
                                                     }`}
                                                 >
-                                                    {msg.text}
+                                                    {msg.content}
                                                 </div>
-                                            </div>
-                                        ))}
-                                        {chatHistory.length === 1 && !isChatting && (
-                                            <div className="flex flex-col sm:flex-row gap-2 mt-4 ml-2">
-                                                <button
-                                                    onClick={() => submitChatQuery("Provide a comprehensive summary of this document.")}
-                                                    className="flex items-center gap-2 text-xs font-medium border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 px-3 py-2 rounded-lg transition-colors"
-                                                >
-                                                    <FileText className="h-3 w-3"/> Summarize File
-                                                </button>
-                                                <button
-                                                    onClick={() => submitChatQuery("Extract all actionable items, tasks, or key takeaways.")}
-                                                    className="flex items-center gap-2 text-xs font-medium border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 px-3 py-2 rounded-lg transition-colors"
-                                                >
-                                                    <ListChecks className="h-3 w-3"/> Extract Action Items
-                                                </button>
-                                            </div>
+                                            ))
                                         )}
-                                        {isChatting && (
-                                            <div
-                                                className="text-xs text-light-400 animate-pulse pl-2 flex items-center gap-2">
-                                                <Loader2 className="h-3 w-3 animate-spin text-brand"/> Analyzing file
-                                                context...
+                                        {isSending && (
+                                            <div className="bg-white border light-border p-3 rounded-xl max-w-[85%] self-start mr-auto rounded-tl-sm flex items-center gap-2">
+                                                <Loader2 className="h-4 w-4 animate-spin text-brand" />
+                                                <span className="text-sm text-light-400">AI is thinking...</span>
                                             </div>
                                         )}
                                     </div>
 
-                                    <form
-                                        onSubmit={(e) => {
-                                            e.preventDefault();
-                                            submitChatQuery(chatInput);
-                                        }}
-                                        className="mt-4 flex gap-3 pt-4 border-t light-border"
-                                    >
+                                    <div className="flex gap-2">
                                         <Input
-                                            type="text"
                                             value={chatInput}
                                             onChange={(e) => setChatInput(e.target.value)}
-                                            placeholder="Type a specific question..."
+                                            onKeyDown={(e) => e.key === "Enter" && handleSendMessage()}
+                                            placeholder="Ask a question about this document..."
+                                            disabled={isSending || isChatLoading}
                                             className="flex-1"
-                                            disabled={isChatting}
                                         />
                                         <Button
-                                            type="submit"
-                                            disabled={isChatting || !chatInput.trim()}
-                                            className="primary-btn px-5 rounded-xl"
+                                            onClick={handleSendMessage}
+                                            disabled={isSending || isChatLoading || !chatInput.trim()}
+                                            className="bg-brand text-white px-6 hover:bg-emerald-500"
                                         >
-                                            <Send className="h-4 w-4"/>
+                                            Send
                                         </Button>
-                                    </form>
+                                    </div>
                                 </div>
                             )}
 
                             {value === "quiz" && aiResult.data?.questions && (
                                 <div className="space-y-6">
-                                    <h3 className="h3-bold text-brand">{aiResult.data.quiz_title}</h3>
+                                    <h3 className="h3-bold text-brand">{aiResult.data.quizTitle}</h3>
                                     {aiResult.data.questions.map((q: QuizQuestion, idx: number) => {
                                         const hasAnswered = userAnswers[idx] !== undefined;
-                                        const isCorrect = userAnswers[idx] === q.correct_answer;
+                                        const selectedIndex = Number(userAnswers[idx]);
+                                        const isCorrect = hasAnswered ? q.answers[selectedIndex]?.isCorrect : false;
+                                        const correctText = q.answers.find((a) => a.isCorrect)?.selectedOption;
 
                                         return (
                                             <div
@@ -325,10 +458,10 @@ export default function ActionDropdown({file}: { file: File_ }) {
                                                 className="p-4 border light-border rounded-xl bg-light-800 space-y-2"
                                             >
                                                 <p className="font-semibold text-dark-200">
-                                                    {idx + 1}. {q.question_text}
+                                                    {idx + 1}. {q.questionTitle}
                                                 </p>
                                                 <div className="grid gap-2 mt-3">
-                                                    {q.options.map((opt: string, i: number) => {
+                                                    {q.answers.map((ans, i: number) => {
                                                         let optionClass =
                                                             "text-sm p-3 bg-white rounded-lg border light-border flex items-center gap-2 transition-all duration-200";
                                                         let circleClass =
@@ -337,12 +470,12 @@ export default function ActionDropdown({file}: { file: File_ }) {
                                                         if (!hasAnswered) {
                                                             optionClass += " cursor-pointer hover:bg-brand/10 hover:border-brand";
                                                         } else {
-                                                            if (opt === q.correct_answer) {
+                                                            if (ans.isCorrect) {
                                                                 optionClass +=
                                                                     " bg-emerald-50 border-emerald-500 text-emerald-800 font-medium";
                                                                 circleClass =
                                                                     "h-4 w-4 rounded-full border-emerald-500 bg-emerald-500 shrink-0";
-                                                            } else if (opt === userAnswers[idx]) {
+                                                            } else if (i === selectedIndex) {
                                                                 optionClass += " bg-red/10 border-red text-red font-medium";
                                                                 circleClass =
                                                                     "h-4 w-4 rounded-full border-red bg-red shrink-0";
@@ -358,12 +491,12 @@ export default function ActionDropdown({file}: { file: File_ }) {
                                                                     if (!hasAnswered)
                                                                         setUserAnswers((prev) => ({
                                                                             ...prev,
-                                                                            [idx]: opt
+                                                                            [idx]: i.toString()
                                                                         }));
                                                                 }}
                                                             >
-                                                                <div className={circleClass}/>
-                                                                <p>{opt}</p>
+                                                                <div className={circleClass} />
+                                                                <p>{ans.selectedOption}</p>
                                                             </div>
                                                         );
                                                     })}
@@ -376,7 +509,7 @@ export default function ActionDropdown({file}: { file: File_ }) {
                                                     >
                                                         {isCorrect
                                                             ? "✨ Correct!"
-                                                            : `❌ Incorrect. The right answer is: ${q.correct_answer}`}
+                                                            : `❌ Incorrect. The right answer is: ${correctText}`}
                                                     </div>
                                                 )}
                                             </div>
@@ -388,7 +521,7 @@ export default function ActionDropdown({file}: { file: File_ }) {
                             {value === "flashcards" && aiResult.data?.cards && (
                                 <div className="space-y-6">
                                     <div className="flex items-center justify-between">
-                                        <h3 className="h3-bold text-brand">{aiResult.data.deck_title}</h3>
+                                        <h3 className="h3-bold text-brand">{aiResult.data.deckTitle}</h3>
                                         <span className="caption text-light-400">Click a card to flip</span>
                                     </div>
 
@@ -399,7 +532,7 @@ export default function ActionDropdown({file}: { file: File_ }) {
                                                 <div
                                                     key={idx}
                                                     onClick={() =>
-                                                        setFlippedCards((prev) => ({...prev, [idx]: !prev[idx]}))
+                                                        setFlippedCards((prev) => ({ ...prev, [idx]: !prev[idx] }))
                                                     }
                                                     className={`relative cursor-pointer min-h-[160px] p-6 rounded-2xl border flex items-center justify-center text-center transition-all duration-300 transform ${
                                                         isFlipped
@@ -456,19 +589,43 @@ export default function ActionDropdown({file}: { file: File_ }) {
                 )}
 
                 {isAiAction && !isLoading && (
-                    <DialogFooter className="mt-4 border-t light-border pt-4">
+                    <DialogFooter className="mt-4 border-t light-border pt-4 flex flex-col sm:flex-row gap-3">
                         <Button
                             onClick={closeAllModals}
                             className="btn-secondary w-full py-2 rounded-full text-dark-100 font-semibold hover:bg-light-700 transition-colors cursor-pointer"
                         >
-                            Close AI Workspace
+                            Close Workspace
                         </Button>
+
+                        {value === "quiz" && (
+                            <Button
+                                onClick={() => {
+                                    closeAllModals();
+                                    router.push("/quizzes");
+                                }}
+                                className="w-full py-2 rounded-full bg-brand text-white hover:bg-emerald-400 transition-colors cursor-pointer shadow-sm"
+                            >
+                                Go to My Quizzes
+                            </Button>
+                        )}
+
+                        {value === "flashcards" && (
+                            <Button
+                                onClick={() => {
+                                    closeAllModals();
+                                    router.push("/flashcards");
+                                }}
+                                className="w-full py-2 rounded-full bg-brand text-white hover:bg-emerald-400 transition-colors cursor-pointer shadow-sm"
+                            >
+                                Go to My Flashcards
+                            </Button>
+                        )}
                     </DialogFooter>
                 )}
 
                 {isLoading && (
                     <div className="flex flex-col items-center justify-center mt-10 gap-3">
-                        <Loader2 className="h-10 w-10 animate-spin text-brand"/>
+                        <Loader2 className="h-10 w-10 animate-spin text-brand" />
                         {isAiAction && (
                             <p className="subtitle-2 text-dark-300">Setting up cognitive framework...</p>
                         )}
@@ -492,9 +649,9 @@ export default function ActionDropdown({file}: { file: File_ }) {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent>
                     <DropdownMenuLabel className="max-w-[200px] truncate">
-                        {file.name}
+                        {file.fileName}
                     </DropdownMenuLabel>
-                    <DropdownMenuSeparator/>
+                    <DropdownMenuSeparator />
 
                     {actionsDropdownItems
                         .filter((item) => {
@@ -515,114 +672,99 @@ export default function ActionDropdown({file}: { file: File_ }) {
                                 }}
                             >
                                 {item.value === "download" ? (
-                                    <Link
-                                        href={constructDownloadUrl(file.bucketFileId)}
-                                        download={file.name}
-                                        className="flex items-center gap-2"
+                                    <button
+                                        type="button"
+                                        onClick={handleDownload}
+                                        className="flex items-center gap-2 cursor-pointer w-full text-left"
                                     >
-                                        <Image src={item.icon} alt={item.label} width={30} height={30}/>{" "}
+                                        <Image src={item.icon} alt={item.label} width={30} height={30} />
                                         {item.label}
-                                    </Link>
+                                    </button>
                                 ) : (
                                     <div className="flex items-center gap-2">
-                                        <Image src={item.icon} alt={item.label} width={30} height={30}/>{" "}
+                                        <Image src={item.icon} alt={item.label} width={30} height={30} />{" "}
                                         {item.label}
                                     </div>
                                 )}
                             </DropdownMenuItem>
                         ))}
 
-                    {hasAnyAiSupport && (
+                    {isAiDocSupported && (
                         <>
-                            <DropdownMenuSeparator className="my-2 bg-light-300"/>
+                            <DropdownMenuSeparator className="my-2 bg-light-300" />
                             <DropdownMenuLabel className="text-brand flex items-center gap-2 subtitle-2">
-                                <Sparkles className="h-4 w-4"/> AI Tools
+                                <Sparkles className="h-4 w-4" /> AI Tools
                             </DropdownMenuLabel>
 
-                            {isAiDocSupported && (
-                                <>
-                                    <DropdownMenuSub>
-                                        <DropdownMenuSubTrigger className="shad-dropdown-item gap-2">
-                                            <BrainCircuit className="h-4 w-4 text-brand"/> Generate Quiz
-                                        </DropdownMenuSubTrigger>
-                                        <DropdownMenuPortal>
-                                            <DropdownMenuSubContent>
-                                                <DropdownMenuItem
-                                                    onClick={() => triggerAIFeature("quiz", "Quiz Engine", {amount: "10"})}
-                                                    className="shad-dropdown-item cursor-pointer"
-                                                >
-                                                    10 Questions
-                                                </DropdownMenuItem>
-                                                <DropdownMenuItem
-                                                    onClick={() => triggerAIFeature("quiz", "Quiz Engine", {amount: "20"})}
-                                                    className="shad-dropdown-item cursor-pointer"
-                                                >
-                                                    20 Questions
-                                                </DropdownMenuItem>
-                                                <DropdownMenuItem
-                                                    onClick={() => triggerAIFeature("quiz", "Quiz Engine", {amount: "50"})}
-                                                    className="shad-dropdown-item cursor-pointer"
-                                                >
-                                                    50 Questions
-                                                </DropdownMenuItem>
-                                            </DropdownMenuSubContent>
-                                        </DropdownMenuPortal>
-                                    </DropdownMenuSub>
+                            <DropdownMenuItem
+                                onClick={() => triggerAIFeature("ask-ai", "Ask AI")}
+                                className="shad-dropdown-item gap-2 cursor-pointer"
+                            >
+                                <MessageSquare className="h-4 w-4 text-brand" /> Ask AI
+                            </DropdownMenuItem>
 
-                                    <DropdownMenuSub>
-                                        <DropdownMenuSubTrigger className="shad-dropdown-item gap-2">
-                                            <FileText className="h-4 w-4 text-brand"/> Extract Flashcards
-                                        </DropdownMenuSubTrigger>
-                                        <DropdownMenuPortal>
-                                            <DropdownMenuSubContent>
-                                                <DropdownMenuItem
-                                                    onClick={() => triggerAIFeature("flashcards", "Flashcards", {amount: "10"})}
-                                                    className="shad-dropdown-item cursor-pointer"
-                                                >
-                                                    10 Cards
-                                                </DropdownMenuItem>
-                                                <DropdownMenuItem
-                                                    onClick={() => triggerAIFeature("flashcards", "Flashcards", {amount: "20"})}
-                                                    className="shad-dropdown-item cursor-pointer"
-                                                >
-                                                    20 Cards
-                                                </DropdownMenuItem>
-                                                <DropdownMenuItem
-                                                    onClick={() => triggerAIFeature("flashcards", "Flashcards", {amount: "50"})}
-                                                    className="shad-dropdown-item cursor-pointer"
-                                                >
-                                                    50 Cards
-                                                </DropdownMenuItem>
-                                            </DropdownMenuSubContent>
-                                        </DropdownMenuPortal>
-                                    </DropdownMenuSub>
+                            <DropdownMenuItem
+                                onClick={() => triggerAIFeature("summarize", "Document Summary")}
+                                className="shad-dropdown-item gap-2 cursor-pointer"
+                            >
+                                <AlignLeft className="h-4 w-4 text-brand" /> Summarize Document
+                            </DropdownMenuItem>
 
-                                    <DropdownMenuItem
-                                        onClick={handleStartAskAI}
-                                        className="shad-dropdown-item gap-2"
-                                    >
-                                        <MessageSquare className="h-4 w-4 text-brand"/> Ask AI
-                                    </DropdownMenuItem>
-                                </>
-                            )}
+                            <DropdownMenuSub>
+                                <DropdownMenuSubTrigger className="shad-dropdown-item gap-2">
+                                    <BrainCircuit className="h-4 w-4 text-brand" /> Generate Quiz
+                                </DropdownMenuSubTrigger>
+                                <DropdownMenuPortal>
+                                    <DropdownMenuSubContent>
+                                        <DropdownMenuItem
+                                            onClick={() => triggerAIFeature("quiz", "Quiz Engine", { amount: "10" })}
+                                            className="shad-dropdown-item cursor-pointer"
+                                        >
+                                            10 Questions
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem
+                                            onClick={() => triggerAIFeature("quiz", "Quiz Engine", { amount: "20" })}
+                                            className="shad-dropdown-item cursor-pointer"
+                                        >
+                                            20 Questions
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem
+                                            onClick={() => triggerAIFeature("quiz", "Quiz Engine", { amount: "15" })}
+                                            className="shad-dropdown-item cursor-pointer"
+                                        >
+                                            15 Questions
+                                        </DropdownMenuItem>
+                                    </DropdownMenuSubContent>
+                                </DropdownMenuPortal>
+                            </DropdownMenuSub>
 
-                            {isVideoSupported && (
-                                <DropdownMenuItem
-                                    onClick={() => triggerAIFeature("video-indexer", "Video Indexer")}
-                                    className="shad-dropdown-item gap-2"
-                                >
-                                    <Film className="h-4 w-4 text-brand"/> Index Video Chapters
-                                </DropdownMenuItem>
-                            )}
-
-                            {isCodeSupported && (
-                                <DropdownMenuItem
-                                    onClick={() => triggerAIFeature("code-sandbox", "Code Sandbox")}
-                                    className="shad-dropdown-item gap-2"
-                                >
-                                    <Code className="h-4 w-4 text-brand"/> Run in Sandbox
-                                </DropdownMenuItem>
-                            )}
+                            <DropdownMenuSub>
+                                <DropdownMenuSubTrigger className="shad-dropdown-item gap-2">
+                                    <FileText className="h-4 w-4 text-brand" /> Extract Flashcards
+                                </DropdownMenuSubTrigger>
+                                <DropdownMenuPortal>
+                                    <DropdownMenuSubContent>
+                                        <DropdownMenuItem
+                                            onClick={() => triggerAIFeature("flashcards", "Flashcards", { amount: "10" })}
+                                            className="shad-dropdown-item cursor-pointer"
+                                        >
+                                            10 Cards
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem
+                                            onClick={() => triggerAIFeature("flashcards", "Flashcards", { amount: "20" })}
+                                            className="shad-dropdown-item cursor-pointer"
+                                        >
+                                            20 Cards
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem
+                                            onClick={() => triggerAIFeature("flashcards", "Flashcards", { amount: "15" })}
+                                            className="shad-dropdown-item cursor-pointer"
+                                        >
+                                            15 Cards
+                                        </DropdownMenuItem>
+                                    </DropdownMenuSubContent>
+                                </DropdownMenuPortal>
+                            </DropdownMenuSub>
                         </>
                     )}
                 </DropdownMenuContent>

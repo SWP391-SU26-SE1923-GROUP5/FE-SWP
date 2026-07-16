@@ -370,8 +370,11 @@
 @utility shad-otp {
     @apply w-full flex gap-1 sm:gap-2 justify-between;
 }
+@utility otp-close-button {
+    @apply absolute -right-1 -top-7 cursor-pointer sm:-right-2 sm:-top-4;
+}
 @utility shad-otp-slot {
-    @apply text-[40px] font-medium rounded-xl ring-brand shadow-drop-1 text-brand-100 justify-center flex border-2 border-light-300 size-12 md:size-16 gap-5;
+    @apply text-[40px] md:text-[48px] font-medium rounded-xl ring-brand shadow-drop-1 justify-center flex border-2 border-light-300 size-14 md:size-20 gap-5;
 }
 @utility shad-sheet {
     @apply pt-0;

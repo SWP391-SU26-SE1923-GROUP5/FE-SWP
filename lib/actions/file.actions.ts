@@ -1,15 +1,23 @@
 'use server'
-import { IFileStorage, DeleteFileProps, GetFilesProps, RenameFileProps, UpdateFileUsersProps, UploadFileProps, UpdateEditedFileProps } from "@/types";
-import { AppwriteStorage } from "./providers/appwrite.storage";
+
+import { IFileStorage } from "@/types";
 import { LocalStorage } from "./providers/local.storage";
 
-const getStorageProvider = (): IFileStorage => process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT ? new AppwriteStorage() : new LocalStorage();
+const getStorageProvider = (): IFileStorage => {
+    return new LocalStorage();
+};
 
-export const uploadFile = async (props: UploadFileProps) => getStorageProvider().uploadFile(props);
-export const getFiles = async (props: GetFilesProps) => getStorageProvider().getFiles(props);
-export const renameFile = async (props: RenameFileProps) => getStorageProvider().renameFile(props);
-export const updateFileUsers = async (props: UpdateFileUsersProps) => getStorageProvider().updateFileUsers(props);
-export const updateEditedFile = async (props: UpdateEditedFileProps) => getStorageProvider().updateEditedFile(props);
-export const deleteFile = async (props: DeleteFileProps) => getStorageProvider().deleteFile(props);
-export const getTotalSpaceUsed = async () => getStorageProvider().getTotalSpaceUsed();
-export const getFileBuffer = async (bucketFileId: string) => getStorageProvider().getFileBuffer(bucketFileId);
+const storageProvider = getStorageProvider();
+
+export const getSubjects = storageProvider.getSubjects.bind(storageProvider);
+export const uploadFile = storageProvider.uploadFile.bind(storageProvider);
+export const getFiles = storageProvider.getFiles.bind(storageProvider);
+export const renameFile = storageProvider.renameFile.bind(storageProvider);
+export const updateFileUsers = storageProvider.updateFileUsers.bind(storageProvider);
+export const updateEditedFile = storageProvider.updateEditedFile.bind(storageProvider);
+export const deleteFile = storageProvider.deleteFile.bind(storageProvider);
+export const getTotalSpaceUsed = storageProvider.getTotalSpaceUsed.bind(storageProvider);
+export const downloadFile = storageProvider.downloadFile.bind(storageProvider);
+export const previewFile = storageProvider.previewFile.bind(storageProvider);
+export const getFileStatus = storageProvider.getFileStatus.bind(storageProvider);
+export const reprocessFile = storageProvider.reprocessFile.bind(storageProvider);

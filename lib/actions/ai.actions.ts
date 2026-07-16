@@ -1,93 +1,530 @@
-import { File_ } from "@/types";
+"use server";
 
-const downloadAppwriteFile = async (appwriteFile: File_): Promise<File> => {
-    const fileResponse = await fetch(appwriteFile.url);
+import { auth } from "@/auth";
+import {
+    SummaryResponse,
+    Flashcard,
+    QuizResponse,
+    QuizRecord,
+    ReviewFlashcardResult,
+    DueFlashcard,
+    FlashcardReviewStats
+} from "@/types";
+import { revalidatePath } from "next/cache";
 
-    if (!fileResponse.ok) {
-        throw new Error(`Failed to download file: ${appwriteFile.name}`);
+const connection_url = process.env.NEXT_PUBLIC_API_URL;
+
+export interface ChatMessage {
+    id: string;
+    chatSessionId: string;
+    sender: string;
+    content: string;
+    createdAt: string;
+    updatedAt: string;
+}
+
+export interface ChatSession {
+    id: string;
+    userId: string;
+    documentId: string | null;
+    sessionTitle: string;
+    createdAt: string;
+    updatedAt: string;
+}
+
+export interface Citation {
+    source: string;
+    content: string;
+    relevance: number;
+}
+
+export interface RAGCitation {
+    index: number;
+    documentTitle: string;
+    chunkPreview: string;
+}
+
+export interface RAGReference {
+    index: number;
+    documentId: string;
+    documentTitle: string;
+    pageInfo: string;
+    chunkExcerpt: string;
+}
+
+export interface RAGResponse {
+    answer: string;
+    citations?: RAGCitation[];
+    references?: RAGReference[];
+    neighbors?: any[];
+}
+
+export interface SemanticSearchResponse {
+    answer: string;
+    citations: Citation[];
+    confidence: number;
+}
+
+export const createChatSession = async (
+    sessionTitle: string = "New Chat Session"
+): Promise<ChatSession> => {
+    const session = await auth();
+    if (!session?.accessToken) {
+        throw new Error("Unauthorized. Please log in.");
     }
 
-    const blob = await fileResponse.blob();
-    let mimeType = blob.type;
-
-    if (!mimeType || mimeType === "application/octet-stream" || mimeType === "") {
-        const ext = appwriteFile.extension?.toLowerCase() || '';
-        const types: Record<string, string> = {
-            'pdf': 'application/pdf',
-            'txt': 'text/plain',
-            'csv': 'text/csv',
-            'mp4': 'video/mp4',
-            'webm': 'audio/webm',
-            'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-            'xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-            'json': 'application/json',
-            'jpg': 'image/jpeg',
-            'png': 'image/png'
-        };
-        mimeType = types[ext] || 'application/octet-stream';
-    }
-
-    return new File([blob], appwriteFile.name, { type: mimeType });
-};
-
-export const executeAIFeature = async (appwriteFile: File_, endpoint: string, extraParams?: Record<string, string>) => {
-    const nativeFile = await downloadAppwriteFile(appwriteFile);
-    const formData = new FormData();
-
-    const fileKey = endpoint === 'video-indexer' ? 'video' : 'file';
-    formData.append(fileKey, nativeFile);
-
-    if (extraParams) {
-        Object.entries(extraParams).forEach(([k, v]) => formData.append(k, v));
-    }
-
-    const response = await fetch(`/api/ai/${endpoint}`, {
+    const response = await fetch(`${connection_url}/api/Chat/sessions`, {
         method: 'POST',
-        body: formData
+        headers: {
+            'Authorization': `Bearer ${session.accessToken}`,
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            sessionTitle: sessionTitle
+        })
     });
 
     if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || `AI processing failed with status: ${response.status}`);
+        throw new Error(`[${response.status}] ${errorData.message || errorData.title || "Failed to create chat session."}`);
     }
 
     return await response.json();
 };
 
-export const executeDeepResearch = async (files: File_[], topic: string) => {
-    const formData = new FormData();
-    formData.append('topic', topic);
+export const sendChatMessage = async (
+    sessionId: string,
+    documentId: string,
+    message: string
+): Promise<ChatMessage> => {
+    const session = await auth();
+    if (!session?.accessToken) throw new Error("Unauthorized. Please log in.");
 
-    for (const appwriteFile of files) {
-        const nativeFile = await downloadAppwriteFile(appwriteFile);
-        formData.append('files', nativeFile);
-    }
-
-    const response = await fetch('/api/ai/deep-research', {
-        method: 'POST',
-        body: formData
-    });
-
-    if (!response.ok) {
-        throw new Error("Deep Research batch execution failed.");
-    }
-
-    return await response.json();
-};
-
-export const generateEmbeddings = async (texts: string[]): Promise<number[][]> => {
-    const response = await fetch('/api/ai/embeddings', {
+    const response = await fetch(`${connection_url}/api/Chat/messages`, {
         method: 'POST',
         headers: {
-            'Content-Type': 'application/json'
+            'Authorization': `Bearer ${session.accessToken}`,
+            'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ texts })
+        body: JSON.stringify({
+            sessionId: sessionId,
+            documentId: documentId,
+            message: message
+        })
     });
 
     if (!response.ok) {
-        throw new Error("Embedding generation failed.");
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(`[${response.status}] ${errorData.message || "Failed to send message."}`);
+    }
+
+    return await response.json();
+};
+
+export const deleteFlashcard = async (flashcardId: string): Promise<void> => {
+    const session = await auth();
+    if (!session?.accessToken) throw new Error("Unauthorized. Please log in.");
+
+    const response = await fetch(`${connection_url}/api/Flashcard/${flashcardId}`, {
+        method: 'DELETE',
+        headers: {
+            'Authorization': `Bearer ${session.accessToken}`,
+            'Content-Type': 'application/json',
+        },
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(`[${response.status}] ${errorData.message || "Failed to delete flashcard."}`);
+    }
+
+    revalidatePath("/flashcards");
+};
+
+export const deleteQuiz = async (quizId: string): Promise<void> => {
+    const session = await auth();
+    if (!session?.accessToken) throw new Error("Unauthorized. Please log in.");
+
+    const response = await fetch(`${connection_url}/api/Quiz/${quizId}`, {
+        method: 'DELETE',
+        headers: {
+            'Authorization': `Bearer ${session.accessToken}`,
+            'Content-Type': 'application/json',
+        },
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(`[${response.status}] ${errorData.message || "Failed to delete quiz."}`);
+    }
+
+    revalidatePath("/quizzes");
+};
+
+export const generateFlashcards = async (docId: string, numberOfFlashcards: number = 5): Promise<Flashcard[]> => {
+    const session = await auth();
+    if (!session?.accessToken) throw new Error("Unauthorized. Please log in.");
+
+    const safeAmount = Math.min(Math.max(1, numberOfFlashcards), 20);
+
+    const response = await fetch(`${connection_url}/api/AI/flashcards/generate?docId=${docId}`, {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${session.accessToken}`,
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            numberOfFlashcards: safeAmount
+        })
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(`[${response.status}] ${errorData.message || errorData.title || "Failed to generate flashcards."}`);
+    }
+
+    return await response.json();
+};
+
+export const generateQuiz = async (docId: string, numberOfQuestions: number = 5): Promise<QuizResponse> => {
+    const session = await auth();
+    if (!session?.accessToken) throw new Error("Unauthorized. Please log in.");
+
+    const safeAmount = Math.min(Math.max(1, numberOfQuestions), 20);
+
+    const response = await fetch(`${connection_url}/api/AI/quizzes/generate?docId=${docId}`, {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${session.accessToken}`,
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            numberOfQuestions: safeAmount
+        })
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(`[${response.status}] ${errorData.message || errorData.title || "Failed to generate quiz."}`);
+    }
+
+    return await response.json();
+};
+
+export const getCreatedFlashcards = async (): Promise<Flashcard[]> => {
+    const session = await auth();
+    if (!session?.accessToken) throw new Error("Unauthorized. Please log in.");
+
+    const response = await fetch(`${connection_url}/api/Flashcard?limit=100`, {
+        method: 'GET',
+        headers: {
+            'Authorization': `Bearer ${session.accessToken}`,
+            'Content-Type': 'application/json',
+        },
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(`[${response.status}] ${errorData.message || errorData.title || "Failed to fetch flashcards."}`);
     }
 
     const data = await response.json();
-    return data.embeddings || data;
+    return data?.items || [];
+};
+
+export const getFlashcardsByDocument = async (docId: string): Promise<Flashcard[]> => {
+    const session = await auth();
+    if (!session?.accessToken) throw new Error("Unauthorized. Please log in.");
+
+    const response = await fetch(`${connection_url}/api/Flashcard/${docId}/flashcards`, {
+        method: 'GET',
+        headers: {
+            'Authorization': `Bearer ${session.accessToken}`,
+            'Content-Type': 'application/json',
+        },
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(`[${response.status}] ${errorData.message || errorData.title || "Failed to fetch flashcards."}`);
+    }
+
+    return await response.json();
+};
+
+export const submitFlashcardReview = async (
+    flashcardId: string,
+    quality: number,
+    timeSpentSeconds?: number
+): Promise<ReviewFlashcardResult> => {
+    const session = await auth();
+    if (!session?.accessToken) throw new Error("Unauthorized. Please log in.");
+
+    const response = await fetch(`${connection_url}/api/FlashcardReview/review`, {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${session.accessToken}`,
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            flashcardId,
+            quality,
+            timeSpentSeconds: timeSpentSeconds || 5,
+        })
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(`[${response.status}] ${errorData.message || errorData.title || "Failed to submit flashcard review."}`);
+    }
+
+    return await response.json();
+};
+
+export const getDueFlashcards = async (limit: number = 50): Promise<DueFlashcard[]> => {
+    const session = await auth();
+    if (!session?.accessToken) throw new Error("Unauthorized. Please log in.");
+
+    const response = await fetch(`${connection_url}/api/FlashcardReview/due?limit=${limit}`, {
+        method: 'GET',
+        headers: {
+            'Authorization': `Bearer ${session.accessToken}`,
+            'Content-Type': 'application/json',
+        },
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(`[${response.status}] ${errorData.message || errorData.title || "Failed to fetch due flashcards."}`);
+    }
+
+    return await response.json();
+};
+
+export const getDueFlashcardsCount = async (): Promise<number> => {
+    const session = await auth();
+    if (!session?.accessToken) throw new Error("Unauthorized. Please log in.");
+
+    const response = await fetch(`${connection_url}/api/FlashcardReview/due/count`, {
+        method: 'GET',
+        headers: {
+            'Authorization': `Bearer ${session.accessToken}`,
+            'Content-Type': 'application/json',
+        },
+    });
+
+    if (!response.ok) {
+        return 0;
+    }
+
+    return await response.json();
+};
+
+export const getFlashcardReviewStats = async (userId?: string): Promise<FlashcardReviewStats> => {
+    const session = await auth();
+    if (!session?.accessToken) throw new Error("Unauthorized. Please log in.");
+    const targetId = userId || session.user?.id || "00000000-0000-0000-0000-000000000000";
+
+    const response = await fetch(`${connection_url}/api/FlashcardReview/stats/${targetId}`, {
+        method: 'GET',
+        headers: {
+            'Authorization': `Bearer ${session.accessToken}`,
+            'Content-Type': 'application/json',
+        },
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(`[${response.status}] ${errorData.message || errorData.title || "Failed to fetch flashcard stats."}`);
+    }
+
+    return await response.json();
+};
+
+export const getCreatedQuizzes = async (): Promise<QuizRecord[]> => {
+    const session = await auth();
+    if (!session?.accessToken) throw new Error("Unauthorized. Please log in.");
+
+    const response = await fetch(`${connection_url}/api/Quiz?limit=100`, {
+        method: 'GET',
+        headers: {
+            'Authorization': `Bearer ${session.accessToken}`,
+            'Content-Type': 'application/json',
+        },
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(`[${response.status}] ${errorData.message || errorData.title || "Failed to fetch quizzes."}`);
+    }
+
+    const data = await response.json();
+    return data?.items || [];
+};
+
+export const getFlashcardById = async (flashcardId: string): Promise<Flashcard> => {
+    const session = await auth();
+    if (!session?.accessToken) throw new Error("Unauthorized. Please log in.");
+
+    const response = await fetch(`${connection_url}/api/Flashcard/${flashcardId}`, {
+        method: 'GET',
+        headers: {
+            'Authorization': `Bearer ${session.accessToken}`,
+            'Content-Type': 'application/json',
+        },
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(`[${response.status}] ${errorData.message || "Failed to fetch flashcard."}`);
+    }
+
+    return await response.json();
+};
+
+export const getQuizById = async (quizId: string): Promise<QuizResponse> => {
+    const session = await auth();
+    if (!session?.accessToken) throw new Error("Unauthorized. Please log in.");
+
+    const response = await fetch(`${connection_url}/api/Quiz/${quizId}`, {
+        method: 'GET',
+        headers: {
+            'Authorization': `Bearer ${session.accessToken}`,
+            'Content-Type': 'application/json',
+        },
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(`[${response.status}] ${errorData.message || "Failed to fetch quiz."}`);
+    }
+
+    const data = await response.json();
+
+    return {
+        quizTitle: data.title,
+        questions: data.questions?.map((q: any) => ({
+            id: q.id || q.Id,
+            questionTitle: q.title,
+            answers: q.answers || []
+        })) || []
+    };
+};
+
+export const submitQuiz = async (
+    quizId: string,
+    answers: Record<string, string>,
+    durationSeconds?: number
+): Promise<any> => {
+    const session = await auth();
+    if (!session?.accessToken) throw new Error("Unauthorized. Please log in.");
+
+    const response = await fetch(`${connection_url}/api/Quiz/${quizId}/submit`, {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${session.accessToken}`,
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            userId: session.user?.id || "00000000-0000-0000-0000-000000000000",
+            quizId: quizId,
+            answers: JSON.stringify(answers),
+            durationSeconds: durationSeconds || 60
+        })
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(`[${response.status}] ${errorData.message || "Failed to submit quiz."}`);
+    }
+
+    return await response.json();
+};
+
+export const getSessionMessages = async (sessionId: string): Promise<ChatMessage[]> => {
+    const session = await auth();
+    if (!session?.accessToken) throw new Error("Unauthorized. Please log in.");
+
+    const response = await fetch(`${connection_url}/api/Chat/sessions/${sessionId}/messages`, {
+        method: 'GET',
+        headers: {
+            'Authorization': `Bearer ${session.accessToken}`,
+            'Content-Type': 'application/json',
+        },
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(`[${response.status}] ${errorData.message || errorData.title || "Failed to fetch chat messages."}`);
+    }
+
+    return await response.json();
+};
+
+export const getUserSessions = async (): Promise<ChatSession[]> => {
+    const session = await auth();
+    if (!session?.accessToken) throw new Error("Unauthorized. Please log in.");
+
+    const response = await fetch(`${connection_url}/api/Chat/sessions`, {
+        method: 'GET',
+        headers: {
+            'Authorization': `Bearer ${session.accessToken}`,
+            'Content-Type': 'application/json',
+        },
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(`[${response.status}] ${errorData.message || errorData.title || "Failed to fetch chat sessions."}`);
+    }
+
+    return await response.json();
+};
+
+export const semanticSearch = async (
+    question: string
+): Promise<SemanticSearchResponse> => {
+    const session = await auth();
+    if (!session?.accessToken) throw new Error("Unauthorized. Please log in.");
+
+    const response = await fetch(`${connection_url}/api/AI/rag/ask`, {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${session.accessToken}`,
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            question: question
+        })
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(`[${response.status}] ${errorData.message || errorData.title || "Semantic search failed."}`);
+    }
+
+    return await response.json();
+};
+
+export const summarizeRagDocument = async (documentId: string): Promise<SummaryResponse> => {
+    const session = await auth();
+    if (!session?.accessToken) throw new Error("Unauthorized. Please log in.");
+
+    const response = await fetch(`${connection_url}/api/AI/rag/summarize`, {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${session.accessToken}`,
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            documentId: documentId
+        })
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(`[${response.status}] ${errorData.message || errorData.title || "Failed to generate RAG summary."}`);
+    }
+
+    return await response.json();
 };
