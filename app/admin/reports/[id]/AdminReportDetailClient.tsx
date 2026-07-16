@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
+import { toast } from 'sonner';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import { formatDateTime } from '@/lib/utils';
@@ -51,21 +52,23 @@ export default function AdminReportDetailClient({
         if (!report) return;
         
         setIsActioning(true);
-        try {
-            const payload: UpdateReportRequestDto = {
-                status: 'Resolved',
-                notes: actionNotes
-            };
+            try {
+                const payload: UpdateReportRequestDto = {
+                    status: 'Resolved',
+                    notes: actionNotes
+                };
 
-            await axios.put(`/api/Report/${reportId}`, payload);
+                const response = await axios.patch(`/api/Report/${reportId}/status`, payload);
 
-            alert('Report approved successfully!');
-            router.push('/admin/reports');
+                setReport(response.data);
+                toast.success('Report approved successfully');
+                router.push('/admin/reports');
         } catch (err) {
+            console.error('Approve error', err);
             if (axios.isAxiosError(err)) {
-                alert(err.response?.data?.message || 'Failed to approve report');
+                toast.error(err.response?.data?.message || 'Failed to approve report');
             } else {
-                alert('An error occurred');
+                toast.error('An error occurred');
             }
         } finally {
             setIsActioning(false);
@@ -81,28 +84,71 @@ export default function AdminReportDetailClient({
         }
 
         setIsActioning(true);
-        try {
-            const payload: UpdateReportRequestDto = {
-                status: 'Rejected',
-                notes: actionNotes
-            };
+            try {
+                const payload: UpdateReportRequestDto = {
+                    status: 'Rejected',
+                    notes: actionNotes
+                };
 
-            await axios.put(`/api/Report/${reportId}`, payload);
-
-            alert('Report rejected successfully!');
-            router.push('/admin/reports');
+                const response = await axios.patch(`/api/Report/${reportId}/status`, payload);
+                setReport(response.data);
+                toast.success('Report rejected successfully');
+                router.push('/admin/reports');
         } catch (err) {
+            console.error('Reject error', err);
             if (axios.isAxiosError(err)) {
-                alert(err.response?.data?.message || 'Failed to reject report');
+                toast.error(err.response?.data?.message || 'Failed to reject report');
             } else {
-                alert('An error occurred');
+                toast.error('An error occurred');
             }
         } finally {
             setIsActioning(false);
         }
     };
 
-    const getStatusColor = (status: string) => {
+    const handleDelete = async () => {
+        if (!report) return;
+        if (!confirm('Are you sure you want to delete this report? This action cannot be undone.')) return;
+
+        setIsActioning(true);
+        try {
+            await axios.delete(`/api/Report/${reportId}`);
+            toast.success('Report deleted');
+            router.push('/admin/reports');
+        } catch (err) {
+            console.error('Delete error', err);
+            if (axios.isAxiosError(err)) {
+                toast.error(err.response?.data?.message || 'Failed to delete report');
+            } else {
+                toast.error('An error occurred');
+            }
+        } finally {
+            setIsActioning(false);
+        }
+    };
+
+    const handleMarkNonFlaggable = async () => {
+        if (!report?.documentId) return;
+        setIsActioning(true);
+        try {
+            const resp = await axios.post(`/api/Report/documents/${report.documentId}/mark-non-flaggable`);
+            if (resp.data) {
+                setReport((r) => r ? { ...r, document: { ...(r.document || {}), ...resp.data } } : r);
+            }
+            toast.success('Document marked non-flaggable');
+        } catch (err) {
+            console.error('Mark non-flaggable error', err);
+            if (axios.isAxiosError(err)) {
+                toast.error(err.response?.data?.message || 'Failed to mark document');
+            } else {
+                toast.error('An error occurred');
+            }
+        } finally {
+            setIsActioning(false);
+        }
+    };
+
+        const getStatusColor = (status: string) => {
         switch (status) {
             case 'Pending':
                 return 'bg-yellow-100 text-yellow-800';

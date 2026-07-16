@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import axios from 'axios';
+import { toast } from 'sonner';
 import Link from 'next/link';
 import { formatDateTime } from '@/lib/utils';
 import { ReportResponseDto, ReportFilterParams } from '@/types/admin-report';
@@ -18,11 +19,14 @@ export default function AdminReportsClient({
     initialPage
 }: AdminReportsClientProps) {
     const [reports, setReports] = useState<ReportResponseDto[]>([]);
+    const [selectedIds, setSelectedIds] = useState<string[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [selectedStatus, setSelectedStatus] = useState(initialStatus);
     const [currentPage, setCurrentPage] = useState(initialPage);
     const [totalReports, setTotalReports] = useState(0);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [isBulkProcessing, setIsBulkProcessing] = useState(false);
 
     const reportsPerPage = 10;
 
@@ -39,11 +43,15 @@ export default function AdminReportsClient({
                     sortBy: 'createdAt',
                     sortOrder: 'desc'
                 };
+                let response;
+                if (searchQuery.trim()) {
+                    response = await axios.get('/api/Report/search', { params: { ...params, q: searchQuery } });
+                } else {
+                    response = await axios.get('/api/Report', { params });
+                }
 
-                const response = await axios.get('/api/Report', { params });
-                
-                setReports(response.data.data || []);
-                setTotalReports(response.data.total || 0);
+                setReports(response.data.data || response.data || []);
+                setTotalReports(response.data.total ?? response.data.totalCount ?? 0);
             } catch (err) {
                 if (axios.isAxiosError(err)) {
                     setError(err.response?.data?.message || 'Failed to fetch reports');
@@ -57,7 +65,15 @@ export default function AdminReportsClient({
         };
 
         fetchReports();
-    }, [selectedStatus, currentPage]);
+    }, [selectedStatus, currentPage, searchQuery]);
+
+    const handleSearchKey = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === 'Enter') {
+            setCurrentPage(1);
+            // effect will run because searchQuery is not in deps; force by toggling page
+            setCurrentPage(1);
+        }
+    };
 
     const totalPages = Math.ceil(totalReports / reportsPerPage);
 
@@ -101,7 +117,25 @@ export default function AdminReportsClient({
                         <option value="Resolved">✅ Resolved</option>
                         <option value="Rejected">❌ Rejected</option>
                     </select>
-                    <span className="text-sm text-gray-500">Total: {totalReports}</span>
+
+                    <div className="ml-4 flex items-center gap-2">
+                        <input
+                            type="text"
+                            placeholder="Search reports..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            onKeyDown={handleSearchKey}
+                            className="px-3 py-2 border border-gray-200 rounded-lg"
+                        />
+                        <button
+                            onClick={() => setCurrentPage(1)}
+                            className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                        >
+                            Search
+                        </button>
+                    </div>
+
+                    <span className="text-sm text-gray-500 ml-auto">Total: {totalReports}</span>
                 </div>
             </div>
 
@@ -128,9 +162,79 @@ export default function AdminReportsClient({
 
             {!isLoading && !error && reports.length > 0 && (
                 <div className="bg-white rounded-lg shadow overflow-hidden">
+                    <div className="p-4 border-b flex items-center gap-3">
+                        <input
+                            type="checkbox"
+                            checked={selectedIds.length === reports.length}
+                            onChange={(e) => {
+                                if (e.target.checked) setSelectedIds(reports.map(r => r.id));
+                                else setSelectedIds([]);
+                            }}
+                        />
+
+                        <div className="flex items-center gap-2">
+                            <select id="bulk-status" className="px-3 py-2 border rounded" defaultValue="Pending">
+                                <option value="Pending">Pending</option>
+                                <option value="Resolved">Resolved</option>
+                                <option value="Rejected">Rejected</option>
+                                <option value="Reviewed">Reviewed</option>
+                            </select>
+                            <button
+                                disabled={selectedIds.length === 0 || isBulkProcessing}
+                                onClick={async () => {
+                                    const el = document.getElementById('bulk-status') as HTMLSelectElement | null;
+                                    const newStatus = el?.value;
+                                    if (!newStatus) return;
+                                    setIsBulkProcessing(true);
+                                    try {
+                                        await axios.post('/api/Report/bulk-status', { ids: selectedIds, status: newStatus });
+                                        toast.success('Updated status for selected reports');
+                                        setSelectedIds([]);
+                                        setCurrentPage(1);
+                                    } catch (err) {
+                                        console.error('Bulk status error', err);
+                                        if (axios.isAxiosError(err)) toast.error(err.response?.data?.message || 'Bulk update failed');
+                                        else toast.error('Bulk update failed');
+                                    } finally {
+                                        setIsBulkProcessing(false);
+                                    }
+                                }}
+                                className="px-3 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 disabled:opacity-50"
+                            >
+                                Apply
+                            </button>
+
+                            <button
+                                disabled={selectedIds.length === 0 || isBulkProcessing}
+                                onClick={async () => {
+                                    setIsBulkProcessing(true);
+                                    try {
+                                        const documentIds = reports.filter(r => selectedIds.includes(r.id)).map(r => r.documentId);
+                                        await axios.post('/api/Report/documents/bulk-mark-non-flaggable', { documentIds });
+                                        toast.success('Marked selected documents non-flaggable');
+                                        setSelectedIds([]);
+                                        setCurrentPage(1);
+                                    } catch (err) {
+                                        console.error('Bulk mark non-flaggable', err);
+                                        if (axios.isAxiosError(err)) toast.error(err.response?.data?.message || 'Bulk operation failed');
+                                        else toast.error('Bulk operation failed');
+                                    } finally {
+                                        setIsBulkProcessing(false);
+                                    }
+                                }}
+                                className="px-3 py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700 disabled:opacity-50"
+                            >
+                                Mark Non-Flaggable
+                            </button>
+                        </div>
+                    </div>
+
                     <table className="w-full">
                         <thead className="bg-gray-50 border-b border-gray-200">
                             <tr>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">
+                                    
+                                </th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase">
                                     Document
                                 </th>
@@ -155,6 +259,17 @@ export default function AdminReportsClient({
                             {reports.map((report) => (
                                 <tr key={report.id} className="hover:bg-gray-50 transition-colors">
                                     <td className="px-6 py-4 text-sm text-gray-900">
+                                        <input
+                                            type="checkbox"
+                                            checked={selectedIds.includes(report.id)}
+                                            onChange={(e) => {
+                                                if (e.target.checked) setSelectedIds(prev => [...prev, report.id]);
+                                                else setSelectedIds(prev => prev.filter(id => id !== report.id));
+                                            }}
+                                            className="mr-2"
+                                        />
+                                    </td>
+                                    <td className="px-6 py-4 text-sm text-gray-900">
                                         <span className="font-medium truncate max-w-xs">Doc: {report.documentId.slice(0, 8)}...</span>
                                     </td>
                                     <td className="px-6 py-4 text-sm text-gray-600">
@@ -172,12 +287,32 @@ export default function AdminReportsClient({
                                         {formatDateTime(report.createdAt)}
                                     </td>
                                     <td className="px-6 py-4 text-sm">
-                                        <Link
-                                            href={`/admin/reports/${report.id}`}
-                                            className="text-blue-600 hover:text-blue-800 font-medium transition-colors"
-                                        >
-                                            Review →
-                                        </Link>
+                                        <div className="flex items-center gap-3">
+                                            <Link
+                                                href={`/admin/reports/${report.id}`}
+                                                className="text-blue-600 hover:text-blue-800 font-medium transition-colors"
+                                            >
+                                                Review →
+                                            </Link>
+                                            <button
+                                                onClick={async () => {
+                                                    if (!confirm('Delete this report?')) return;
+                                                    try {
+                                                        await axios.delete(`/api/Report/${report.id}`);
+                                                        toast.success('Report deleted');
+                                                        setReports(prev => prev.filter(r => r.id !== report.id));
+                                                        setTotalReports(prev => Math.max(0, prev - 1));
+                                                    } catch (err) {
+                                                        console.error('Delete report', err);
+                                                        if (axios.isAxiosError(err)) toast.error(err.response?.data?.message || 'Delete failed');
+                                                        else toast.error('Delete failed');
+                                                    }
+                                                }}
+                                                className="text-red-600 hover:text-red-800 text-sm"
+                                            >
+                                                Delete
+                                            </button>
+                                        </div>
                                     </td>
                                 </tr>
                             ))}
