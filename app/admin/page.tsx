@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Flag, Users, FileText, CreditCard, BrainCircuit, BookOpen } from "lucide-react";
+import { Flag, Users } from "lucide-react";
 import { getSystemStats, getAdminReports } from "@/lib/actions/admin.actions";
 import StatsCard from "@/components/admin/StatsCard";
 import EmptyState from "@/components/admin/EmptyState";
@@ -20,7 +20,7 @@ export default async function AdminDashboardPage() {
 
     return (
         <div className="flex flex-col gap-6" data-testid="admin-dashboard">
-            {/* Top stats grid - using data from /api/Admin/dashboard */}
+            {/* Top stats: reported documents focus */}
             <div className="admin-stats-grid">
                 <StatsCard
                     label="Total Users"
@@ -29,44 +29,10 @@ export default async function AdminDashboardPage() {
                     description="Registered accounts on the platform"
                 />
                 <StatsCard
-                    label="Total Documents"
-                    value={stats?.totalDocuments ?? 0}
-                    icon={FileText}
-                    description="All documents uploaded to the platform"
-                />
-                <StatsCard
                     label="Total Reports"
                     value={stats?.totalReports ?? 0}
                     icon={Flag}
                     description="Documents flagged for moderator review"
-                />
-                <StatsCard
-                    label="Pending Payments"
-                    value={stats?.pendingPayments ?? 0}
-                    icon={CreditCard}
-                    description="Payments awaiting approval"
-                />
-            </div>
-
-            {/* Secondary stats */}
-            <div className="admin-stats-grid">
-                <StatsCard
-                    label="Completed Payments"
-                    value={stats?.completedPayments ?? 0}
-                    icon={CreditCard}
-                    description="Approved payment transactions"
-                />
-                <StatsCard
-                    label="Total Flashcards"
-                    value={stats?.totalFlashcards ?? 0}
-                    icon={BrainCircuit}
-                    description="Flashcards created by users"
-                />
-                <StatsCard
-                    label="Total Quizzes"
-                    value={stats?.totalQuizzes ?? 0}
-                    icon={BookOpen}
-                    description="Quizzes taken by users"
                 />
             </div>
 
