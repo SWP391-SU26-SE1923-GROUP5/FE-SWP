@@ -67,7 +67,7 @@ import ApryseViewer from "./ApryseViewer";
 import { toast } from "sonner";
 
 const MiniMessageWithCitations = ({ content, citations }: { content: string; citations?: any[] }) => {
-    const [activeSnippet, setActiveSnippet] = useState<string | null>(null);
+    const [activeCitation, setActiveCitation] = useState<any | null>(null);
 
     if (!citations || citations.length === 0) return <div className="whitespace-pre-wrap">{content}</div>;
 
@@ -84,9 +84,9 @@ const MiniMessageWithCitations = ({ content, citations }: { content: string; cit
                             return (
                                 <button 
                                     key={i}
-                                    onClick={() => setActiveSnippet(activeSnippet === cit.snippet ? null : cit.snippet)}
+                                    onClick={() => setActiveCitation(activeCitation === cit ? null : cit)}
                                     className="inline-flex items-center justify-center px-1.5 py-0.5 mx-0.5 rounded-sm bg-brand/20 text-brand text-[10px] font-bold cursor-pointer hover:bg-brand hover:text-white transition-colors align-super"
-                                    title="Click to view snippet"
+                                    title={cit.isHighlightable === false ? "Click to view summary" : "Click to view snippet"}
                                 >
                                     {match[1]}
                                 </button>
@@ -102,7 +102,7 @@ const MiniMessageWithCitations = ({ content, citations }: { content: string; cit
                 {citations.map((cit, idx) => (
                     <button
                         key={`source-${idx}`}
-                        onClick={() => setActiveSnippet(activeSnippet === cit.snippet ? null : cit.snippet)}
+                        onClick={() => setActiveCitation(activeCitation === cit ? null : cit)}
                         className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-white dark:bg-dark-300 border border-slate-200 dark:border-dark-400 hover:border-brand dark:hover:border-brand transition-colors cursor-pointer group shadow-sm"
                         title={cit.source || cit.Source || "Document source"}
                     >
@@ -110,20 +110,29 @@ const MiniMessageWithCitations = ({ content, citations }: { content: string; cit
                         <span className="text-[10px] font-medium text-slate-600 dark:text-slate-300 truncate max-w-[120px]">
                             {cit.source || cit.Source || `Source ${idx + 1}`}
                         </span>
+                        {cit.isHighlightable === false && (
+                            <span className="px-1.5 py-0.5 text-[8px] font-bold bg-purple-100 text-purple-700 rounded-full uppercase ml-1">
+                                AI
+                            </span>
+                        )}
                     </button>
                 ))}
             </div>
 
-            {activeSnippet && (
+            {activeCitation && (
                 <div className="mt-2 p-3 bg-slate-50 dark:bg-dark-300 border border-slate-200 dark:border-dark-400 rounded-lg relative animate-in fade-in zoom-in duration-200">
                     <button 
-                        onClick={() => setActiveSnippet(null)}
+                        onClick={() => setActiveCitation(null)}
                         className="absolute top-2 right-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 cursor-pointer"
                     >
                         <X className="w-3 h-3" />
                     </button>
-                    <p className="text-xs text-slate-600 dark:text-slate-400 font-bold mb-1">Source Snippet:</p>
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400 italic leading-relaxed">"...{activeSnippet}..."</p>
+                    <p className="text-xs text-slate-600 dark:text-slate-400 font-bold mb-1">
+                        {activeCitation.isHighlightable === false ? "AI Summary:" : "Source Snippet:"}
+                    </p>
+                    <p className={`text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed ${activeCitation.isHighlightable === false ? '' : 'italic'}`}>
+                        {activeCitation.isHighlightable === false ? (activeCitation.snippet || activeCitation.Snippet) : `"...${activeCitation.snippet || activeCitation.Snippet}..."`}
+                    </p>
                 </div>
             )}
         </div>

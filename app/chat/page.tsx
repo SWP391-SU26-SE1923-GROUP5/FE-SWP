@@ -55,7 +55,7 @@ const MessageWithCitations = ({
                                     onClick={() => onCitationClick(
                                         cit.documentId || cit.DocumentId, 
                                         cit.pageNumber || cit.PageNumber, 
-                                        cit.snippet || cit.Snippet
+                                        cit.isHighlightable === false ? undefined : (cit.snippet || cit.Snippet)
                                     )}
                                     className="inline-flex items-center justify-center px-1.5 py-0.5 mx-1 rounded-sm bg-brand/20 text-brand text-[10px] font-bold cursor-pointer hover:bg-brand hover:text-white transition-colors align-super"
                                     title={`Source: ${cit.source || cit.Source}`}
@@ -73,13 +73,13 @@ const MessageWithCitations = ({
                 <span className="text-[11px] font-semibold text-slate-500/80 w-full mb-0.5 uppercase tracking-wider">Sources</span>
                 {citations.map((cit, idx) => (
                     <button
-                        key={idx}
+                        key={`source-${idx}`}
                         onClick={() => onCitationClick(
                             cit.documentId || cit.DocumentId, 
                             cit.pageNumber || cit.PageNumber, 
-                            cit.isHighlightable || cit.IsHighlightable ? (cit.snippet || cit.Snippet) : undefined
+                            cit.isHighlightable === false ? undefined : (cit.snippet || cit.Snippet)
                         )}
-                        className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-light-800 dark:bg-dark-300 border border-light-700 dark:border-dark-400 hover:border-brand/50 hover:bg-brand/10 hover:text-brand transition-all text-left max-w-[200px] cursor-pointer"
+                        className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-white dark:bg-dark-300 border border-slate-200 dark:border-dark-400 hover:border-brand dark:hover:border-brand transition-colors cursor-pointer group shadow-sm"
                         title={cit.snippet || cit.Snippet || cit.source || cit.Source}
                     >
                         <span className="flex items-center justify-center w-3.5 h-3.5 rounded-full bg-brand/10 text-brand text-[9px] font-bold shrink-0">
