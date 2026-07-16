@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
+import { toast } from 'sonner';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import { formatDateTime } from '@/lib/utils';
@@ -13,9 +14,6 @@ interface AdminReportDetailClientProps {
     currentUserId: string;
 }
 
-/**
- * Admin Report Detail Client - Review and take action on reports
- */
 export default function AdminReportDetailClient({
     reportId,
     currentUserId
@@ -27,14 +25,12 @@ export default function AdminReportDetailClient({
     const [isActioning, setIsActioning] = useState(false);
     const [actionNotes, setActionNotes] = useState('');
 
-    // 📋 Fetch report detail
     useEffect(() => {
         const fetchReport = async () => {
             setIsLoading(true);
             setError(null);
 
             try {
-                // ⚠️ Placeholder - Replace with actual API endpoint
                 const response = await axios.get(`/api/Report/${reportId}`);
                 setReport(response.data);
             } catch (err) {
@@ -52,35 +48,33 @@ export default function AdminReportDetailClient({
         fetchReport();
     }, [reportId]);
 
-    // 🎯 Handle approve action
     const handleApprove = async () => {
         if (!report) return;
         
         setIsActioning(true);
-        try {
-            const payload: UpdateReportRequestDto = {
-                status: 'Resolved',
-                notes: actionNotes
-            };
+            try {
+                const payload: UpdateReportRequestDto = {
+                    status: 'Resolved',
+                    notes: actionNotes
+                };
 
-            // ⚠️ Placeholder - Replace with actual API endpoint
-            await axios.put(`/api/Report/${reportId}`, payload);
+                const response = await axios.patch(`/api/Report/${reportId}/status`, payload);
 
-            // Show success and redirect
-            alert('Report approved successfully!');
-            router.push('/admin/reports');
+                setReport(response.data);
+                toast.success('Report approved successfully');
+                router.push('/admin/reports');
         } catch (err) {
+            console.error('Approve error', err);
             if (axios.isAxiosError(err)) {
-                alert(err.response?.data?.message || 'Failed to approve report');
+                toast.error(err.response?.data?.message || 'Failed to approve report');
             } else {
-                alert('An error occurred');
+                toast.error('An error occurred');
             }
         } finally {
             setIsActioning(false);
         }
     };
 
-    // ❌ Handle reject action
     const handleReject = async () => {
         if (!report) return;
         
@@ -90,31 +84,71 @@ export default function AdminReportDetailClient({
         }
 
         setIsActioning(true);
-        try {
-            const payload: UpdateReportRequestDto = {
-                status: 'Rejected',
-                notes: actionNotes
-            };
+            try {
+                const payload: UpdateReportRequestDto = {
+                    status: 'Rejected',
+                    notes: actionNotes
+                };
 
-            // ⚠️ Placeholder - Replace with actual API endpoint
-            await axios.put(`/api/Report/${reportId}`, payload);
-
-            // Show success and redirect
-            alert('Report rejected successfully!');
-            router.push('/admin/reports');
+                const response = await axios.patch(`/api/Report/${reportId}/status`, payload);
+                setReport(response.data);
+                toast.success('Report rejected successfully');
+                router.push('/admin/reports');
         } catch (err) {
+            console.error('Reject error', err);
             if (axios.isAxiosError(err)) {
-                alert(err.response?.data?.message || 'Failed to reject report');
+                toast.error(err.response?.data?.message || 'Failed to reject report');
             } else {
-                alert('An error occurred');
+                toast.error('An error occurred');
             }
         } finally {
             setIsActioning(false);
         }
     };
 
-    // 🎯 Get status badge color
-    const getStatusColor = (status: string) => {
+    const handleDelete = async () => {
+        if (!report) return;
+        if (!confirm('Are you sure you want to delete this report? This action cannot be undone.')) return;
+
+        setIsActioning(true);
+        try {
+            await axios.delete(`/api/Report/${reportId}`);
+            toast.success('Report deleted');
+            router.push('/admin/reports');
+        } catch (err) {
+            console.error('Delete error', err);
+            if (axios.isAxiosError(err)) {
+                toast.error(err.response?.data?.message || 'Failed to delete report');
+            } else {
+                toast.error('An error occurred');
+            }
+        } finally {
+            setIsActioning(false);
+        }
+    };
+
+    const handleMarkNonFlaggable = async () => {
+        if (!report?.documentId) return;
+        setIsActioning(true);
+        try {
+            const resp = await axios.post(`/api/Report/documents/${report.documentId}/mark-non-flaggable`);
+            if (resp.data) {
+                setReport((r) => r ? { ...r, document: { ...(r.document || {}), ...resp.data } } : r);
+            }
+            toast.success('Document marked non-flaggable');
+        } catch (err) {
+            console.error('Mark non-flaggable error', err);
+            if (axios.isAxiosError(err)) {
+                toast.error(err.response?.data?.message || 'Failed to mark document');
+            } else {
+                toast.error('An error occurred');
+            }
+        } finally {
+            setIsActioning(false);
+        }
+    };
+
+        const getStatusColor = (status: string) => {
         switch (status) {
             case 'Pending':
                 return 'bg-yellow-100 text-yellow-800';
@@ -129,7 +163,6 @@ export default function AdminReportDetailClient({
         }
     };
 
-    // Loading state
     if (isLoading) {
         return (
             <div className="flex items-center justify-center min-h-[400px]">
@@ -141,7 +174,6 @@ export default function AdminReportDetailClient({
         );
     }
 
-    // Error state
     if (error || !report) {
         return (
             <div className="space-y-4">
@@ -162,7 +194,6 @@ export default function AdminReportDetailClient({
 
     return (
         <div className="space-y-6">
-            {/* Header */}
             <div>
                 <Link
                     href="/admin/reports"
@@ -174,7 +205,6 @@ export default function AdminReportDetailClient({
                 <h1 className="text-3xl font-bold text-gray-900">Report Details</h1>
             </div>
 
-            {/* Status Info */}
             <div className="bg-white rounded-lg shadow p-6">
                 <div className="flex items-center justify-between">
                     <div>
@@ -191,7 +221,6 @@ export default function AdminReportDetailClient({
             </div>
 
             <div className="grid grid-cols-2 gap-6">
-                {/* Report Information */}
                 <div className="bg-white rounded-lg shadow p-6">
                     <h2 className="text-lg font-bold text-gray-900 mb-4">Report Information</h2>
                     
@@ -218,7 +247,6 @@ export default function AdminReportDetailClient({
                     </div>
                 </div>
 
-                {/* Document Information */}
                 <div className="bg-white rounded-lg shadow p-6">
                     <h2 className="text-lg font-bold text-gray-900 mb-4">Reported Document</h2>
                     
@@ -252,7 +280,6 @@ export default function AdminReportDetailClient({
                 </div>
             </div>
 
-            {/* Action Section - Only show if status is Pending */}
             {report.status === 'Pending' && (
                 <div className="bg-white rounded-lg shadow p-6">
                     <h2 className="text-lg font-bold text-gray-900 mb-4">Take Action</h2>
@@ -292,7 +319,6 @@ export default function AdminReportDetailClient({
                 </div>
             )}
 
-            {/* Info: Already processed */}
             {report.status !== 'Pending' && (
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                     <p className="text-sm text-blue-700">
