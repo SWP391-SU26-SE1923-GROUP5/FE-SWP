@@ -195,8 +195,10 @@ export default function ActionDropdown({ file }: { file: File_ }) {
                 const res = await generateQuiz(file.id, amount);
 
                 data = {
-                    quizTitle: res.quizTitle || `${file.fileName} Quiz`,
+                    id: res.id,
+                    quizTitle: res.title || res.quizTitle || `${file.fileName} Quiz`,
                     questions: res.questions?.map((q: any) => ({
+                        id: q.id,
                         questionTitle: q.title || q.questionTitle,
                         answers: q.answers || []
                     })) || []
@@ -606,6 +608,18 @@ export default function ActionDropdown({ file }: { file: File_ }) {
                                 Go to My Quizzes
                             </Button>
                         )}
+
+                        {value === "flashcards" && (
+                            <Button
+                                onClick={() => {
+                                    closeAllModals();
+                                    router.push("/flashcards");
+                                }}
+                                className="w-full py-2 rounded-full bg-brand text-white hover:bg-emerald-400 transition-colors cursor-pointer shadow-sm"
+                            >
+                                Go to My Flashcards
+                            </Button>
+                        )}
                     </DialogFooter>
                 )}
 
@@ -715,10 +729,10 @@ export default function ActionDropdown({ file }: { file: File_ }) {
                                             20 Questions
                                         </DropdownMenuItem>
                                         <DropdownMenuItem
-                                            onClick={() => triggerAIFeature("quiz", "Quiz Engine", { amount: "50" })}
+                                            onClick={() => triggerAIFeature("quiz", "Quiz Engine", { amount: "15" })}
                                             className="shad-dropdown-item cursor-pointer"
                                         >
-                                            50 Questions
+                                            15 Questions
                                         </DropdownMenuItem>
                                     </DropdownMenuSubContent>
                                 </DropdownMenuPortal>
@@ -743,10 +757,10 @@ export default function ActionDropdown({ file }: { file: File_ }) {
                                             20 Cards
                                         </DropdownMenuItem>
                                         <DropdownMenuItem
-                                            onClick={() => triggerAIFeature("flashcards", "Flashcards", { amount: "50" })}
+                                            onClick={() => triggerAIFeature("flashcards", "Flashcards", { amount: "15" })}
                                             className="shad-dropdown-item cursor-pointer"
                                         >
-                                            50 Cards
+                                            15 Cards
                                         </DropdownMenuItem>
                                     </DropdownMenuSubContent>
                                 </DropdownMenuPortal>

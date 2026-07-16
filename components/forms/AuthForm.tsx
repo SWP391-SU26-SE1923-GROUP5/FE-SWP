@@ -19,6 +19,7 @@ interface AuthFormProps<T extends FieldValues> {
 
 export function formatLabel(key: string) {
     if (key === "email") return "Email Address";
+    if (key === "dateOfBirth") return "Date Of Birth";
     const withSpaces = key.replace(/([A-Z])/g, ' $1');
     return withSpaces.charAt(0).toUpperCase() + withSpaces.slice(1).trim();
 }
@@ -30,7 +31,6 @@ const AuthForm = <T extends FieldValues>({
                                              onSubmit,
                                          }: AuthFormProps<T>) => {
     const form = useForm<T>({
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         resolver: zodResolver(schema as any),
         defaultValues: defaultValues as DefaultValues<T>,
     });

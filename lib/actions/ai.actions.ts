@@ -5,7 +5,10 @@ import {
     SummaryResponse,
     Flashcard,
     QuizResponse,
-    QuizRecord
+    QuizRecord,
+    ReviewFlashcardResult,
+    DueFlashcard,
+    FlashcardReviewStats
 } from "@/types";
 import { revalidatePath } from "next/cache";
 
@@ -162,14 +165,16 @@ export const generateFlashcards = async (docId: string, numberOfFlashcards: numb
     const session = await auth();
     if (!session?.accessToken) throw new Error("Unauthorized. Please log in.");
 
-    const response = await fetch(`${connection_url}/api/flashcard/document/${docId}/ai-gen`, {
+    const safeAmount = Math.min(Math.max(1, numberOfFlashcards), 20);
+
+    const response = await fetch(`${connection_url}/api/AI/flashcards/generate?docId=${docId}`, {
         method: 'POST',
         headers: {
             'Authorization': `Bearer ${session.accessToken}`,
             'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-            numberOfFlashcards: numberOfFlashcards
+            numberOfFlashcards: safeAmount
         })
     });
 
@@ -185,14 +190,16 @@ export const generateQuiz = async (docId: string, numberOfQuestions: number = 5)
     const session = await auth();
     if (!session?.accessToken) throw new Error("Unauthorized. Please log in.");
 
-    const response = await fetch(`${connection_url}/api/quiz/document/${docId}/ai-gen`, {
+    const safeAmount = Math.min(Math.max(1, numberOfQuestions), 20);
+
+    const response = await fetch(`${connection_url}/api/AI/quizzes/generate?docId=${docId}`, {
         method: 'POST',
         headers: {
             'Authorization': `Bearer ${session.accessToken}`,
             'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-            numberOfQuestions: numberOfQuestions
+            numberOfQuestions: safeAmount
         })
     });
 
@@ -208,7 +215,7 @@ export const getCreatedFlashcards = async (): Promise<Flashcard[]> => {
     const session = await auth();
     if (!session?.accessToken) throw new Error("Unauthorized. Please log in.");
 
-    const response = await fetch(`${connection_url}/api/Flashcard`, {
+    const response = await fetch(`${connection_url}/api/Flashcard?limit=100`, {
         method: 'GET',
         headers: {
             'Authorization': `Bearer ${session.accessToken}`,
@@ -225,11 +232,120 @@ export const getCreatedFlashcards = async (): Promise<Flashcard[]> => {
     return data?.items || [];
 };
 
+export const getFlashcardsByDocument = async (docId: string): Promise<Flashcard[]> => {
+    const session = await auth();
+    if (!session?.accessToken) throw new Error("Unauthorized. Please log in.");
+
+    const response = await fetch(`${connection_url}/api/Flashcard/${docId}/flashcards`, {
+        method: 'GET',
+        headers: {
+            'Authorization': `Bearer ${session.accessToken}`,
+            'Content-Type': 'application/json',
+        },
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(`[${response.status}] ${errorData.message || errorData.title || "Failed to fetch flashcards."}`);
+    }
+
+    return await response.json();
+};
+
+export const submitFlashcardReview = async (
+    flashcardId: string,
+    quality: number,
+    timeSpentSeconds?: number
+): Promise<ReviewFlashcardResult> => {
+    const session = await auth();
+    if (!session?.accessToken) throw new Error("Unauthorized. Please log in.");
+
+    const response = await fetch(`${connection_url}/api/FlashcardReview/review`, {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${session.accessToken}`,
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            flashcardId,
+            quality,
+            timeSpentSeconds: timeSpentSeconds || 5,
+        })
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(`[${response.status}] ${errorData.message || errorData.title || "Failed to submit flashcard review."}`);
+    }
+
+    return await response.json();
+};
+
+export const getDueFlashcards = async (limit: number = 50): Promise<DueFlashcard[]> => {
+    const session = await auth();
+    if (!session?.accessToken) throw new Error("Unauthorized. Please log in.");
+
+    const response = await fetch(`${connection_url}/api/FlashcardReview/due?limit=${limit}`, {
+        method: 'GET',
+        headers: {
+            'Authorization': `Bearer ${session.accessToken}`,
+            'Content-Type': 'application/json',
+        },
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(`[${response.status}] ${errorData.message || errorData.title || "Failed to fetch due flashcards."}`);
+    }
+
+    return await response.json();
+};
+
+export const getDueFlashcardsCount = async (): Promise<number> => {
+    const session = await auth();
+    if (!session?.accessToken) throw new Error("Unauthorized. Please log in.");
+
+    const response = await fetch(`${connection_url}/api/FlashcardReview/due/count`, {
+        method: 'GET',
+        headers: {
+            'Authorization': `Bearer ${session.accessToken}`,
+            'Content-Type': 'application/json',
+        },
+    });
+
+    if (!response.ok) {
+        return 0;
+    }
+
+    return await response.json();
+};
+
+export const getFlashcardReviewStats = async (userId?: string): Promise<FlashcardReviewStats> => {
+    const session = await auth();
+    if (!session?.accessToken) throw new Error("Unauthorized. Please log in.");
+    const targetId = userId || session.user?.id || "00000000-0000-0000-0000-000000000000";
+
+    const response = await fetch(`${connection_url}/api/FlashcardReview/stats/${targetId}`, {
+        method: 'GET',
+        headers: {
+            'Authorization': `Bearer ${session.accessToken}`,
+            'Content-Type': 'application/json',
+        },
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(`[${response.status}] ${errorData.message || errorData.title || "Failed to fetch flashcard stats."}`);
+    }
+
+    return await response.json();
+};
+
 export const getCreatedQuizzes = async (): Promise<QuizRecord[]> => {
     const session = await auth();
     if (!session?.accessToken) throw new Error("Unauthorized. Please log in.");
 
-    const response = await fetch(`${connection_url}/api/Quiz`, {
+    const response = await fetch(`${connection_url}/api/Quiz?limit=100`, {
         method: 'GET',
         headers: {
             'Authorization': `Bearer ${session.accessToken}`,
@@ -288,10 +404,41 @@ export const getQuizById = async (quizId: string): Promise<QuizResponse> => {
     return {
         quizTitle: data.title,
         questions: data.questions?.map((q: any) => ({
+            id: q.id || q.Id,
             questionTitle: q.title,
             answers: q.answers || []
         })) || []
     };
+};
+
+export const submitQuiz = async (
+    quizId: string,
+    answers: Record<string, string>,
+    durationSeconds?: number
+): Promise<any> => {
+    const session = await auth();
+    if (!session?.accessToken) throw new Error("Unauthorized. Please log in.");
+
+    const response = await fetch(`${connection_url}/api/Quiz/${quizId}/submit`, {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${session.accessToken}`,
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            userId: session.user?.id || "00000000-0000-0000-0000-000000000000",
+            quizId: quizId,
+            answers: JSON.stringify(answers),
+            durationSeconds: durationSeconds || 60
+        })
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(`[${response.status}] ${errorData.message || "Failed to submit quiz."}`);
+    }
+
+    return await response.json();
 };
 
 export const getSessionMessages = async (sessionId: string): Promise<ChatMessage[]> => {
@@ -340,7 +487,7 @@ export const semanticSearch = async (
     const session = await auth();
     if (!session?.accessToken) throw new Error("Unauthorized. Please log in.");
 
-    const response = await fetch(`${connection_url}/api/Rag/ask`, {
+    const response = await fetch(`${connection_url}/api/AI/rag/ask`, {
         method: 'POST',
         headers: {
             'Authorization': `Bearer ${session.accessToken}`,
@@ -363,7 +510,7 @@ export const summarizeRagDocument = async (documentId: string): Promise<SummaryR
     const session = await auth();
     if (!session?.accessToken) throw new Error("Unauthorized. Please log in.");
 
-    const response = await fetch(`${connection_url}/api/Rag/summarize`, {
+    const response = await fetch(`${connection_url}/api/AI/rag/summarize`, {
         method: 'POST',
         headers: {
             'Authorization': `Bearer ${session.accessToken}`,

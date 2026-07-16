@@ -1,28 +1,51 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import ProgressBar from "@/components/ProgressBar";
-import { ChevronLeft, X, Sparkles } from "lucide-react";
+import { ChevronLeft, X, Sparkles, Clock } from "lucide-react";
 import QuizSubmission from "@/components/QuizSubmission";
 import { useRouter } from "next/navigation";
 import { QuizResponse } from "@/types";
+import { submitQuiz } from "@/lib/actions/ai.actions";
 
 type Props = {
     quizData: QuizResponse;
+    quizId?: string;
 };
 
-export default function QuizQuestions({ quizData }: Props) {
+export default function QuizQuestions({ quizData, quizId }: Props) {
     const [started, setStarted] = useState<boolean>(false);
     const [currentQuestionIdx, setCurrentQuestionIdx] = useState<number>(0);
     const [score, setScore] = useState<number>(0);
     const [userAnswers, setUserAnswers] = useState<Record<number, number>>({});
     const [submitted, setSubmitted] = useState<boolean>(false);
+    const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+    const [xpEarned, setXpEarned] = useState<number>(0);
+    const [newAchievements, setNewAchievements] = useState<any[]>([]);
+    const [startTime] = useState<number>(Date.now());
+    const [elapsedSeconds, setElapsedSeconds] = useState<number>(0);
+
+    useEffect(() => {
+        let interval: any;
+        if (started && !submitted && !isSubmitting) {
+            interval = setInterval(() => {
+                setElapsedSeconds((prev) => prev + 1);
+            }, 1000);
+        }
+        return () => clearInterval(interval);
+    }, [started, submitted, isSubmitting]);
+
+    const formatTime = (secs: number) => {
+        const m = Math.floor(secs / 60);
+        const s = secs % 60;
+        return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
+    };
 
     const router = useRouter();
     const questions = quizData.questions || [];
 
-    const handleNext = () => {
+    const handleNext = async () => {
         if (!started) {
             setStarted(true);
             return;
@@ -31,7 +54,37 @@ export default function QuizQuestions({ quizData }: Props) {
         if (currentQuestionIdx < questions.length - 1) {
             setCurrentQuestionIdx((prev) => prev + 1);
         } else {
-            setSubmitted(true);
+            setIsSubmitting(true);
+            try {
+                if (quizId) {
+                    const formattedAnswers: Record<string, string> = {};
+                    questions.forEach((q, idx) => {
+                        const ansIdx = userAnswers[idx];
+                        if (ansIdx !== undefined && q.answers[ansIdx]) {
+                            const qKey = q.id || String(idx);
+                            formattedAnswers[qKey] = q.answers[ansIdx].selectedOption;
+                        }
+                    });
+                    const durationSeconds = Math.max(1, elapsedSeconds || Math.round((Date.now() - startTime) / 1000));
+                    const result = await submitQuiz(quizId, formattedAnswers, durationSeconds);
+                    if (result) {
+                        if (result.submission) {
+                            if (result.submission.score !== undefined) {
+                                setScore(result.submission.score);
+                            } else if (result.submission.totalCorrect !== undefined) {
+                                setScore(result.submission.totalCorrect);
+                            }
+                        }
+                        if (result.xpEarned !== undefined) setXpEarned(result.xpEarned);
+                        if (result.newAchievements !== undefined) setNewAchievements(result.newAchievements);
+                    }
+                }
+            } catch (error) {
+                console.error(error);
+            } finally {
+                setIsSubmitting(false);
+                setSubmitted(true);
+            }
         }
     };
 
@@ -66,6 +119,8 @@ export default function QuizQuestions({ quizData }: Props) {
                 score={score}
                 scorePercentage={scorePercentage}
                 totalQuestions={questions.length}
+                xpEarned={xpEarned}
+                newAchievements={newAchievements}
             />
         );
     }
@@ -88,8 +143,16 @@ export default function QuizQuestions({ quizData }: Props) {
                         <ChevronLeft className="h-5 w-5" />
                     </Button>
 
-                    <div className="flex-1">
-                        <ProgressBar value={started ? ((currentQuestionIdx + 1) / questions.length) * 100 : 0} />
+                    <div className="flex-1 flex items-center gap-4">
+                        <div className="flex-1">
+                            <ProgressBar value={started ? ((currentQuestionIdx + 1) / questions.length) * 100 : 0} />
+                        </div>
+                        {started && (
+                            <div className="flex items-center gap-1.5 px-3.5 py-1 bg-slate-100 text-slate-700 rounded-full text-xs font-mono font-bold shadow-inner border border-slate-200 shrink-0">
+                                <Clock className="h-3.5 w-3.5 text-brand animate-pulse" />
+                                <span>{formatTime(elapsedSeconds)}</span>
+                            </div>
+                        )}
                     </div>
 
                     <Button
@@ -168,13 +231,15 @@ export default function QuizQuestions({ quizData }: Props) {
                     <Button
                         className="w-full sm:w-auto px-12 py-6 text-lg rounded-full bg-brand text-white hover:bg-brand-100 transition-colors cursor-pointer"
                         onClick={handleNext}
-                        disabled={started && !hasAnswered}
+                        disabled={(started && !hasAnswered) || isSubmitting}
                     >
-                        {!started
-                            ? "Begin Quiz"
-                            : currentQuestionIdx === questions.length - 1
-                                ? "Submit Results"
-                                : "Next Question"}
+                        {isSubmitting
+                            ? "Submitting..."
+                            : !started
+                                ? "Begin Quiz"
+                                : currentQuestionIdx === questions.length - 1
+                                    ? "Submit Results"
+                                    : "Next Question"}
                     </Button>
                 </div>
             </footer>

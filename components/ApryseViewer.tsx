@@ -6,7 +6,7 @@ import { downloadFile, updateEditedFile } from "@/lib/actions/file.actions";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
-export default function ApryseViewer({ file, path, closeModals }: { file: File_, path: string, closeModals: () => void }) {
+export default function ApryseViewer({ file, path, closeModals, readOnly = false }: { file: File_, path: string, closeModals: () => void, readOnly?: boolean }) {
     const viewer = useRef<HTMLDivElement>(null);
     const [isSaving, setIsSaving] = useState(false);
     const instanceRef = useRef<any>(null);
@@ -40,8 +40,10 @@ export default function ApryseViewer({ file, path, closeModals }: { file: File_,
                                 path: '/lib/webviewer',
                                 initialDoc: blobUrlRef.current ?? "",
                                 extension: ext,
-                                enableOfficeEditing: true,
-                                ...(isSpreadsheet && {
+                                enableOfficeEditing: !readOnly,
+                                enableReadOnlyMode: readOnly,
+                                licenseKey: "demo:1782432031639:63f292a203000000006bfbfd2dedd818a75a9704b35fedfc1b98df0080",
+                                ...(isSpreadsheet && !readOnly && {
                                     initialMode: 'spreadsheetEditor',
                                     spreadsheetEditorOptions: {
                                         initialEditMode: 'editing'
@@ -51,6 +53,9 @@ export default function ApryseViewer({ file, path, closeModals }: { file: File_,
                             viewer.current
                         ).then((instance) => {
                             instanceRef.current = instance;
+                            if (readOnly) {
+                                instance.UI.disableElements(['annotationToolbarButton', 'toolsHeader', 'saveButton']);
+                            }
                         });
                     }
                 });
@@ -114,6 +119,14 @@ export default function ApryseViewer({ file, path, closeModals }: { file: File_,
             setIsSaving(false);
         }
     };
+
+    if (readOnly) {
+        return (
+            <div className="relative w-full h-[72vh] bg-white">
+                <div ref={viewer} className="w-full h-full"></div>
+            </div>
+        );
+    }
 
     return (
         <div className="flex flex-col gap-4 w-full">

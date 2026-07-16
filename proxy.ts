@@ -33,7 +33,7 @@ export default auth((req) => {
         return NextResponse.redirect(new URL("/admin/sign-in", nextUrl.origin));
     }
 
-    if (isAuthPage && isLoggedIn) {
+    if (isAuthPage && isLoggedIn && !isAdmin) {
         return NextResponse.redirect(new URL("/home", nextUrl.origin));
     }
 
