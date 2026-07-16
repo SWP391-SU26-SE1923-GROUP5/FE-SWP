@@ -1,6 +1,7 @@
 import { getFlashcardsByDocument, getDueFlashcards } from "@/lib/actions/ai.actions";
 import FlashcardViewer from "./FlashcardViewer";
 import { Flashcard } from "@/types";
+import Link from "next/link";
 
 type Props = { params: Promise<{ flashcardId: string }> };
 
@@ -31,11 +32,11 @@ export default async function FlashcardStudyPage({ params }: Props) {
                 </div>
                 <h2 className="h2 font-bold text-dark100_light900">All caught up!</h2>
                 <p className="body-2 text-light-200 dark:text-dark-400 max-w-md">
-                    No flashcards found or due for review right now. You're doing great! Check back later for your next scheduled reviews.
+                    No flashcards found or due for review right now. You&#39;re doing great! Check back later for your next scheduled reviews.
                 </p>
-                <a href="/flashcards" className="mt-4 px-6 py-3 bg-brand text-white font-bold rounded-full shadow-drop-1 hover:bg-brand-100 transition-all">
+                <Link href="/flashcards" className="mt-4 px-6 py-3 bg-brand text-white font-bold rounded-full shadow-drop-1 hover:bg-brand-100 transition-all">
                     Back to Dashboard
-                </a>
+                </Link>
             </div>
         );
     }

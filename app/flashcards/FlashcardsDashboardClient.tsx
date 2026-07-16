@@ -29,7 +29,6 @@ export default function FlashcardsDashboardClient({ initialDecks, actualDueCount
     const filteredAndSortedDecks = useMemo(() => {
         let result = [...decks];
 
-        // Search Filter (by Document Name or card content)
         if (searchQuery.trim()) {
             const query = searchQuery.toLowerCase();
             result = result.filter((deck) => {
@@ -41,7 +40,6 @@ export default function FlashcardsDashboardClient({ initialDecks, actualDueCount
             });
         }
 
-        // Deck Size Filter
         if (sizeFilter !== "all") {
             result = result.filter((deck) => {
                 const count = deck.cards.length;
@@ -52,7 +50,6 @@ export default function FlashcardsDashboardClient({ initialDecks, actualDueCount
             });
         }
 
-        // Sorting
         result.sort((a, b) => {
             if (sortBy === "most-cards") {
                 return b.cards.length - a.cards.length;
@@ -99,7 +96,6 @@ export default function FlashcardsDashboardClient({ initialDecks, actualDueCount
 
     return (
         <div className="flex flex-col gap-8 pb-20 pt-6 max-w-7xl mx-auto w-full px-5 sm:px-6 animate-in fade-in duration-500">
-            {/* Top Navigation & Header Banner */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-light-700 dark:border-dark-400 pb-5">
                 <div className="flex items-center gap-3.5">
                     <Link
@@ -123,9 +119,7 @@ export default function FlashcardsDashboardClient({ initialDecks, actualDueCount
                 </div>
             </div>
 
-            {/* SM-2 Spaced Repetition Banner & Stats Grid */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* Due Today Hero Card */}
                 <div className="lg:col-span-1 p-6 rounded-3xl bg-gradient-to-br from-brand to-emerald-600 text-white shadow-lg relative overflow-hidden flex flex-col justify-between">
                     <div className="absolute top-0 right-0 -mt-6 -mr-6 w-32 h-32 bg-white/10 rounded-full blur-xl pointer-events-none" />
                     <div>
@@ -154,7 +148,6 @@ export default function FlashcardsDashboardClient({ initialDecks, actualDueCount
                     </div>
                 </div>
 
-                {/* Stats Grid */}
                 <div className="lg:col-span-2 grid grid-cols-2 sm:grid-cols-3 gap-4">
                     <div className="p-5 bg-white dark:bg-dark-200 border border-light-700 dark:border-dark-400 rounded-3xl flex flex-col justify-between shadow-drop-1">
                         <div className="p-3 bg-blue-500/10 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 rounded-2xl w-fit mb-3">
@@ -190,11 +183,9 @@ export default function FlashcardsDashboardClient({ initialDecks, actualDueCount
                 </div>
             </div>
 
-            {/* Search, Filter & Sort Controls Bar */}
             {decks.length > 0 && (
                 <div className="flex flex-col gap-4 bg-white dark:bg-dark-200 border border-light-700 dark:border-dark-400 p-5 rounded-3xl shadow-drop-1">
                     <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-                        {/* Search Bar */}
                         <div className="relative w-full lg:w-96">
                             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-light-200 dark:text-dark-400" />
                             <input
@@ -221,9 +212,7 @@ export default function FlashcardsDashboardClient({ initialDecks, actualDueCount
                             )}
                         </div>
 
-                        {/* Filter & Sort Dropdowns */}
                         <div className="flex flex-wrap items-center gap-3">
-                            {/* Deck Size Filter */}
                             <div className="flex items-center gap-2 px-3.5 py-2 bg-light-800 dark:bg-dark-300 border border-light-700 dark:border-dark-400 rounded-xl text-sm font-medium text-dark200_light800">
                                 <Layers className="h-4 w-4 text-brand shrink-0" />
                                 <span className="text-xs text-light-200 dark:text-dark-400 font-bold uppercase tracking-wider shrink-0">Size:</span>
@@ -242,7 +231,6 @@ export default function FlashcardsDashboardClient({ initialDecks, actualDueCount
                                 </select>
                             </div>
 
-                            {/* Sort By */}
                             <div className="flex items-center gap-2 px-3.5 py-2 bg-light-800 dark:bg-dark-300 border border-light-700 dark:border-dark-400 rounded-xl text-sm font-medium text-dark200_light800">
                                 <ArrowUpDown className="h-4 w-4 text-brand shrink-0" />
                                 <span className="text-xs text-light-200 dark:text-dark-400 font-bold uppercase tracking-wider shrink-0">Sort:</span>
@@ -263,7 +251,6 @@ export default function FlashcardsDashboardClient({ initialDecks, actualDueCount
                                 </select>
                             </div>
 
-                            {/* Page Size Selector */}
                             <div className="flex items-center gap-2 px-3.5 py-2 bg-light-800 dark:bg-dark-300 border border-light-700 dark:border-dark-400 rounded-xl text-sm font-medium text-dark200_light800">
                                 <span className="text-xs text-light-200 dark:text-dark-400 font-bold uppercase tracking-wider shrink-0">Show:</span>
                                 <select
@@ -283,7 +270,6 @@ export default function FlashcardsDashboardClient({ initialDecks, actualDueCount
                         </div>
                     </div>
 
-                    {/* Active Filter Chips */}
                     {hasActiveFilters && (
                         <div className="flex items-center gap-2 flex-wrap pt-3 border-t border-light-700 dark:border-dark-400">
                             <span className="text-xs font-bold text-light-200 dark:text-dark-400">Active Filters:</span>
@@ -319,7 +305,6 @@ export default function FlashcardsDashboardClient({ initialDecks, actualDueCount
                 </div>
             )}
 
-            {/* Document Decks Grid */}
             <div className="space-y-4">
                 <div className="flex items-center justify-between">
                     <h2 className="text-xl font-bold text-dark100_light900">Document Decks</h2>
@@ -363,7 +348,6 @@ export default function FlashcardsDashboardClient({ initialDecks, actualDueCount
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                             {paginatedDecks.map((deck) => (
                                 <Link href={`/flashcards/${deck.documentId}`} key={deck.documentId} className="group relative flex flex-col h-full border border-light-700 dark:border-dark-400 rounded-[2rem] bg-white dark:bg-dark-200 hover:border-brand/40 dark:hover:border-brand/40 shadow-drop-1 hover:shadow-drop-3 transition-all duration-300 hover:-translate-y-1 overflow-hidden min-h-[220px]">
-                                    {/* Gradient Top Accent */}
                                     <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-brand to-emerald-400 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                                     
                                     <div className="flex flex-col flex-1 p-6 z-10 pt-7">
@@ -401,7 +385,6 @@ export default function FlashcardsDashboardClient({ initialDecks, actualDueCount
                             ))}
                         </div>
 
-                        {/* Advanced Pagination Controls */}
                         {totalPages > 1 && (
                             <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-white dark:bg-dark-200 border border-light-700 dark:border-dark-400 p-4 sm:px-6 rounded-3xl shadow-drop-1 mt-6">
                                 <span className="text-xs font-bold text-light-200 dark:text-dark-400">
@@ -411,7 +394,6 @@ export default function FlashcardsDashboardClient({ initialDecks, actualDueCount
                                 </span>
 
                                 <div className="flex items-center gap-1.5 flex-wrap justify-center">
-                                    {/* First Page */}
                                     <button
                                         onClick={() => setCurrentPage(1)}
                                         disabled={activePage === 1}
@@ -421,7 +403,6 @@ export default function FlashcardsDashboardClient({ initialDecks, actualDueCount
                                         <ChevronsLeft className="h-4 w-4" />
                                     </button>
 
-                                    {/* Previous Page */}
                                     <button
                                         onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
                                         disabled={activePage === 1}
@@ -431,7 +412,6 @@ export default function FlashcardsDashboardClient({ initialDecks, actualDueCount
                                         <span className="hidden sm:inline">Prev</span>
                                     </button>
 
-                                    {/* Numbered Page Pills */}
                                     {Array.from({ length: totalPages }, (_, i) => i + 1)
                                         .filter((p) => p === 1 || p === totalPages || Math.abs(p - activePage) <= 1)
                                         .map((p, idx, arr) => {
@@ -455,7 +435,6 @@ export default function FlashcardsDashboardClient({ initialDecks, actualDueCount
                                             );
                                         })}
 
-                                    {/* Next Page */}
                                     <button
                                         onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
                                         disabled={activePage === totalPages}
@@ -465,7 +444,6 @@ export default function FlashcardsDashboardClient({ initialDecks, actualDueCount
                                         <ChevronRight className="h-4 w-4" />
                                     </button>
 
-                                    {/* Last Page */}
                                     <button
                                         onClick={() => setCurrentPage(totalPages)}
                                         disabled={activePage === totalPages}

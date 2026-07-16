@@ -25,11 +25,13 @@ const SignUp = () => {
 
             return { success: false, error: "Failed to create account." };
         } catch (error: any) {
-            const errorMessage = error instanceof Error ? error.message : String(error);
+            const rawMessage = error instanceof Error ? error.message : String(error);
+            const cleanMessage = rawMessage.replace(/^\[\d+\]\s*/, '');
 
             if (
-                errorMessage.toLowerCase().includes("already registered") ||
-                errorMessage.toLowerCase().includes("already exists")
+                cleanMessage.toLowerCase().includes("verify") ||
+                cleanMessage.toLowerCase().includes("already registered") ||
+                cleanMessage.toLowerCase().includes("already exists")
             ) {
                 router.push(`/verify-otp?email=${encodeURIComponent(data.email)}`);
                 return { success: true };
@@ -37,7 +39,7 @@ const SignUp = () => {
 
             return {
                 success: false,
-                error: errorMessage || "An unexpected error occurred during sign up."
+                error: cleanMessage || "An unexpected error occurred during sign up."
             };
         }
     };

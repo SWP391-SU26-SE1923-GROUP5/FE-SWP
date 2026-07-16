@@ -15,8 +15,6 @@ import {
     ArrowUpDown,
     ChevronUp,
     ChevronDown,
-    ChevronLeft,
-    ChevronRight,
     LayoutGrid,
     ListFilter,
     HardDrive
@@ -63,7 +61,6 @@ export default function TrashPage() {
     const [loading, setLoading] = useState(true);
     const [actionLoading, setActionLoading] = useState<string | null>(null);
 
-    // Sorting & Pagination state
     const [sortField, setSortField] = useState<SortField>('daysRemaining');
     const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
     const [currentPage, setCurrentPage] = useState(1);
@@ -107,7 +104,6 @@ export default function TrashPage() {
         loadTrash();
     }, []);
 
-    // Reset pagination when filter/search changes
     useEffect(() => {
         setCurrentPage(1);
     }, [searchQuery, sortField, sortOrder, itemsPerPage]);
@@ -143,7 +139,6 @@ export default function TrashPage() {
         return result;
     }, [trashFiles, searchQuery, sortField, sortOrder]);
 
-    // Pagination calculations
     const totalItems = filteredAndSortedFiles.length;
     const totalPages = Math.max(1, Math.ceil(totalItems / itemsPerPage));
     const paginatedFiles = useMemo(() => {
@@ -223,7 +218,6 @@ export default function TrashPage() {
     return (
         <div className="flex flex-col gap-6 pb-20 pt-6 max-w-7xl mx-auto w-full px-5 sm:px-6">
             
-            {/* Top Navigation & Header Banner */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-light-700 dark:border-dark-400 pb-5">
                 <div className="flex items-center gap-3.5">
                     <Link
@@ -285,10 +279,8 @@ export default function TrashPage() {
                 )}
             </div>
 
-            {/* Action Toolbar (Search, Sort Selector, View Mode & Stats) */}
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white dark:bg-dark-300 p-4 rounded-2xl border border-light-700 dark:border-dark-400 shadow-xs">
                 
-                {/* Left: Reclaimable Quota indicator & Search */}
                 <div className="flex flex-col sm:flex-row sm:items-center gap-4 flex-1">
                     <div className="flex items-center gap-2.5 px-3.5 py-2 rounded-xl bg-light-800 dark:bg-dark-200 border border-light-700 dark:border-dark-400 shrink-0">
                         <HardDrive className="h-4 w-4 text-brand" />
@@ -317,7 +309,6 @@ export default function TrashPage() {
                     </div>
                 </div>
 
-                {/* Right: Quick Sort Selector & View Mode Switcher */}
                 <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0 border-t lg:border-t-0 pt-3 lg:pt-0 border-light-700 dark:border-dark-400">
                     <div className="flex items-center gap-2">
                         <span className="text-xs font-medium text-dark500_light400">Sort by:</span>
@@ -364,7 +355,6 @@ export default function TrashPage() {
                 </div>
             </div>
 
-            {/* Main Content Area */}
             {loading ? (
                 <div className="flex flex-col items-center justify-center py-24 px-4 text-center bg-white dark:bg-dark-300 rounded-2xl border border-light-700 dark:border-dark-400">
                     <div className="w-8 h-8 rounded-full border-3 border-brand border-t-transparent animate-spin mb-3" />
@@ -401,11 +391,7 @@ export default function TrashPage() {
                     </Button>
                 </div>
             ) : viewMode === 'table' ? (
-                /* ==========================================
-                   STRUCTURED DATA TABLE VIEW (Exact Grid Columns)
-                   ========================================== */
                 <div className="rounded-2xl border border-light-700 dark:border-dark-400 bg-white dark:bg-dark-300 shadow-xs overflow-hidden">
-                    {/* Clickable Table Header Grid */}
                     <div className="grid grid-cols-12 gap-4 px-6 py-3.5 bg-light-800/90 dark:bg-dark-200/90 border-b border-light-700 dark:border-dark-400 text-[11px] font-bold uppercase tracking-wider text-dark500_light400 select-none">
                         <button
                             onClick={() => handleSort('name')}
@@ -440,7 +426,6 @@ export default function TrashPage() {
                         </div>
                     </div>
 
-                    {/* Table Rows */}
                     <div className="divide-y divide-light-700/60 dark:divide-dark-400/60">
                         {paginatedFiles.map((file) => {
                             const { type, extension } = getFileType(file.name);
@@ -453,7 +438,6 @@ export default function TrashPage() {
                                     key={file.id}
                                     className="grid grid-cols-12 gap-4 px-6 py-4 items-center hover:bg-light-800/40 dark:hover:bg-dark-200/40 transition-colors group"
                                 >
-                                    {/* Col 1 (Span 5): Thumbnail, Name & Subject */}
                                     <div className="col-span-12 sm:col-span-5 flex items-center gap-3.5 min-w-0">
                                         <Thumbnail
                                             type={type}
@@ -474,17 +458,14 @@ export default function TrashPage() {
                                         </div>
                                     </div>
 
-                                    {/* Col 2 (Span 2): File Size */}
                                     <div className="col-span-6 sm:col-span-2 text-xs font-semibold text-dark200_light800">
                                         {sizeMB} MB
                                     </div>
 
-                                    {/* Col 3 (Span 2): Deleted Date */}
                                     <div className="col-span-6 sm:col-span-2 text-xs text-dark500_light400">
                                         {file.deletedAt}
                                     </div>
 
-                                    {/* Col 4 (Span 2): Urgency Countdown Pill */}
                                     <div className="col-span-6 sm:col-span-2">
                                         <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold ${
                                             isUrgent
@@ -496,7 +477,6 @@ export default function TrashPage() {
                                         </span>
                                     </div>
 
-                                    {/* Col 5 (Span 1): Action Buttons (Restore & Delete) */}
                                     <div className="col-span-6 sm:col-span-1 flex items-center justify-end gap-1.5">
                                         <button
                                             type="button"
@@ -550,7 +530,6 @@ export default function TrashPage() {
                         })}
                     </div>
 
-                    {/* Pagination Bar */}
                     <div className="px-6 pb-4">
                         <Pagination
                             page={currentPage}
@@ -563,9 +542,6 @@ export default function TrashPage() {
                     </div>
                 </div>
             ) : (
-                /* ==========================================
-                   GRID VIEW (Cards Mode with Pagination)
-                   ========================================== */
                 <div className="space-y-6">
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
                         {paginatedFiles.map((file) => {
@@ -665,7 +641,6 @@ export default function TrashPage() {
                         })}
                     </div>
 
-                    {/* Grid Pagination Footer */}
                     <div className="px-6 pb-4">
                         <Pagination
                             page={currentPage}

@@ -278,12 +278,12 @@ export class LocalAuth implements IAuthService {
         }
     }
 
-    async resetPassword({ email, otp, newPassword }: { email: string; otp: string; newPassword: string }): Promise<string> {
+    async resetPassword({ email, newPassword }: { email: string; newPassword: string }): Promise<string> {
         try {
             const res = await fetch(`${connection_url}/api/Auth/reset-password`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, otp, newPassword })
+                body: JSON.stringify({ email, newPassword })
             });
 
             const data = await res.json().catch(() => ({}));

@@ -46,7 +46,6 @@ export default function AIInsightsPage() {
 
     return (
         <div className="flex flex-col gap-8 pb-20 pt-6 max-w-5xl mx-auto w-full px-5 sm:px-6 animate-in fade-in duration-500">
-            {/* Top Navigation & Header Banner (Matching Trash/Analytics Pattern) */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-light-700 dark:border-dark-400 pb-5">
                 <div className="flex items-center gap-3.5">
                     <Link

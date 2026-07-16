@@ -84,7 +84,6 @@ export default function AnalyticsPage() {
 
     return (
         <div className="flex flex-col gap-8 pb-20 pt-6 max-w-7xl mx-auto w-full px-5 sm:px-6 animate-in fade-in duration-500">
-            {/* Top Navigation & Header Banner (Matching Trash Page Pattern) */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-light-700 dark:border-dark-400 pb-5">
                 <div className="flex items-center gap-3.5">
                     <Link
@@ -103,9 +102,7 @@ export default function AnalyticsPage() {
                 </div>
             </div>
 
-            {/* KPI Cards Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                {/* Study Time Card */}
                 <div className="bg-white dark:bg-dark-200 rounded-3xl p-6 border border-light-700 dark:border-dark-400 shadow-drop-1 hover:shadow-drop-3 hover:border-brand/40 transition-all duration-300 flex flex-col justify-between group">
                     <div>
                         <div className="flex items-center justify-between mb-4">
@@ -126,7 +123,6 @@ export default function AnalyticsPage() {
                     </div>
                 </div>
 
-                {/* Cards Reviewed Card */}
                 <div className="bg-white dark:bg-dark-200 rounded-3xl p-6 border border-light-700 dark:border-dark-400 shadow-drop-1 hover:shadow-drop-3 hover:border-blue-500/40 transition-all duration-300 flex flex-col justify-between group">
                     <div>
                         <div className="flex items-center justify-between mb-4">
@@ -147,7 +143,6 @@ export default function AnalyticsPage() {
                     </div>
                 </div>
 
-                {/* Accuracy Card */}
                 <div className="bg-white dark:bg-dark-200 rounded-3xl p-6 border border-light-700 dark:border-dark-400 shadow-drop-1 hover:shadow-drop-3 hover:border-amber-500/40 transition-all duration-300 flex flex-col justify-between group">
                     <div>
                         <div className="flex items-center justify-between mb-4">
@@ -168,7 +163,6 @@ export default function AnalyticsPage() {
                     </div>
                 </div>
 
-                {/* Efficiency & Streak Card */}
                 <div className="bg-white dark:bg-dark-200 rounded-3xl p-6 border border-light-700 dark:border-dark-400 shadow-drop-1 hover:shadow-drop-3 hover:border-purple-500/40 transition-all duration-300 flex flex-col justify-between group">
                     <div>
                         <div className="flex items-center justify-between mb-4">
@@ -192,7 +186,6 @@ export default function AnalyticsPage() {
                 </div>
             </div>
 
-            {/* Row 1: Accuracy Trend (Left 2 cols) + Subject Mastery (Right 1 col) */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
                 <div className="lg:col-span-2 bg-white dark:bg-dark-200 rounded-3xl p-6 sm:p-8 border border-light-700 dark:border-dark-400 shadow-drop-1 flex flex-col justify-between">
                     <div>
@@ -262,7 +255,6 @@ export default function AnalyticsPage() {
                 </div>
             </div>
 
-            {/* Row 2: Cards Reviewed Per Day (Left 2 cols) + AI Recommendations (Right 1 col) */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
                 <div className="lg:col-span-2 bg-white dark:bg-dark-200 rounded-3xl p-6 sm:p-8 border border-light-700 dark:border-dark-400 shadow-drop-1 flex flex-col justify-between">
                     <div>
@@ -368,4 +360,4 @@ export default function AnalyticsPage() {
             </div>
         </div>
     );
-}
+}

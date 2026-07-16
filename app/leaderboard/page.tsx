@@ -8,7 +8,6 @@ import {
     Crown,
     Medal,
     Zap,
-    Sparkles
 } from 'lucide-react';
 import { getLeaderboard, getMyStats } from '@/lib/actions/gamification.actions';
 import { getCurrentUser } from '@/lib/actions/user.actions';
@@ -58,7 +57,6 @@ export default function LeaderboardPage() {
     const myLevel = myEntry ? myEntry.currentLevel : (myStats?.currentLevel || 1);
     const myStreak = myEntry ? myEntry.currentStreak : (myStats?.currentStreak || 0);
 
-    // Limit main list to Top 10
     const top10Leaderboard = leaderboard.slice(0, 10);
 
     if (loading && leaderboard.length === 0) {
@@ -74,7 +72,6 @@ export default function LeaderboardPage() {
 
     return (
         <div className="flex flex-col gap-8 pb-20 pt-6 max-w-5xl mx-auto w-full px-5 sm:px-6 animate-in fade-in duration-500">
-            {/* Top Navigation & Header Banner (Matching Trash/Analytics Pattern) */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-light-700 dark:border-dark-400 pb-5">
                 <div className="flex items-center gap-3.5">
                     <Link
@@ -99,9 +96,7 @@ export default function LeaderboardPage() {
                 </div>
             </div>
 
-            {/* Main Content Area */}
             <div className="w-full space-y-6">
-                {/* Time Period Tabs */}
                 <div className="bg-light-800 dark:bg-dark-300 p-1.5 rounded-2xl border border-light-700 dark:border-dark-400 grid grid-cols-3 gap-1 shadow-inner">
                     {[
                         { id: 'weekly', label: 'Weekly' },
@@ -122,7 +117,6 @@ export default function LeaderboardPage() {
                     ))}
                 </div>
 
-                {/* Highlighted Current User Ranking Card */}
                 <div className="bg-gradient-to-r from-brand/15 via-emerald-500/10 to-transparent border-2 border-brand/40 dark:border-brand/30 rounded-3xl p-5 sm:px-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-drop-2">
                     <div className="flex items-center gap-4">
                         <div className="w-12 h-12 rounded-2xl bg-brand text-white font-black text-lg flex items-center justify-center shrink-0 shadow-md">
@@ -154,7 +148,6 @@ export default function LeaderboardPage() {
                     </div>
                 </div>
 
-                {/* Top 10 Leaderboard List */}
                 <div className="space-y-3">
                     <div className="flex items-center justify-between px-2 pt-2">
                         <span className="text-xs font-bold text-dark500_light400 uppercase tracking-wider">

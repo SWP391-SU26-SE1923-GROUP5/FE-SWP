@@ -5,7 +5,6 @@ import Link from 'next/link';
 import {
   Trophy,
   Zap,
-  CheckCircle2,
   Check,
   Sparkles,
   CreditCard,
@@ -95,7 +94,6 @@ export default function ProfilePage() {
   return (
       <div className="flex flex-col gap-8 pb-20 pt-6 max-w-7xl mx-auto w-full px-5 sm:px-6 animate-in fade-in duration-500">
         <div className="max-w-6xl mx-auto w-full">
-          {/* Top Navigation & Header Banner (Matching Trash/Analytics Pattern) */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-light-700 dark:border-dark-400 pb-5 mb-8">
             <div className="flex items-center gap-3.5">
               <Link

@@ -5,15 +5,13 @@ import {
     Sparkles, 
     Plus, 
     Trash2, 
-    MessageSquare, 
-    Send, 
+    Send,
     Loader2, 
     BookOpen, 
     FileText, 
     X, 
     RefreshCw,
     FolderPlus,
-    Check,
     Pencil
 } from 'lucide-react';
 import { 
@@ -97,36 +95,30 @@ const MessageWithCitations = ({
 };
 
 export default function AIChatPage() {
-    // 1. Session State
     const [sessions, setSessions] = useState<ChatSession[]>([]);
     const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
     const [isSessionsLoading, setIsSessionsLoading] = useState<boolean>(true);
 
-    // 1.1 Session Edit/Delete State
     const [isRenameModalOpen, setIsRenameModalOpen] = useState(false);
     const [renameTitleInput, setRenameTitleInput] = useState('');
     const [isRenaming, setIsRenaming] = useState(false);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
 
-    // 2. Documents in CURRENT Session
     const [sessionDocuments, setSessionDocuments] = useState<ChatSessionDocument[]>([]);
     const [isSourcesLoading, setIsSourcesLoading] = useState<boolean>(false);
 
-    // 3. Messages in CURRENT Session
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [chatInput, setChatInput] = useState<string>('');
     const [isSending, setIsSending] = useState<boolean>(false);
     const [isMessagesLoading, setIsMessagesLoading] = useState<boolean>(false);
 
-    // 4. Library (for Add Sources Modal)
     const [isAddModalOpen, setIsAddModalOpen] = useState<boolean>(false);
     const [libraryDocs, setLibraryDocs] = useState<LibraryFile[]>([]);
     const [isLibraryLoading, setIsLibraryLoading] = useState<boolean>(false);
     const [isAddingDocId, setIsAddingDocId] = useState<string | null>(null);
     const [isRefetchingLibrary, setIsRefetchingLibrary] = useState<boolean>(false);
 
-    // 5. PDF Citation Viewer
     const [activeCitationDocId, setActiveCitationDocId] = useState<string | null>(null);
     const [activeCitationPage, setActiveCitationPage] = useState<number | undefined>(undefined);
     const [activeCitationSnippet, setActiveCitationSnippet] = useState<string | undefined>(undefined);
@@ -240,7 +232,6 @@ export default function AIChatPage() {
             setIsDeleteModalOpen(false);
             toast.success("Notebook deleted successfully.");
             
-            // Auto select another session if available
             const remaining = sessions.filter(s => s.id !== currentSessionId);
             if (remaining.length > 0) {
                 selectSession(remaining[0].id);
@@ -341,9 +332,7 @@ export default function AIChatPage() {
 
     return (
         <div className="flex-1 flex flex-col lg:flex-row h-full w-full overflow-hidden bg-white dark:bg-dark-100 border-t border-light-700 dark:border-dark-400">
-            {/* LEFT COLUMN: SOURCES SIDEBAR (WORKSPACE) */}
             <aside className="w-full lg:w-96 shrink-0 border-b lg:border-b-0 lg:border-r border-light-700 dark:border-dark-400 bg-white dark:bg-dark-200 flex flex-col h-1/3 lg:h-full overflow-hidden">
-                {/* Chat Session Switcher */}
                 <div className="p-4 border-b border-light-700 dark:border-dark-400 bg-light-800/50 dark:bg-dark-300/40 space-y-2">
                     <div className="flex items-center justify-between gap-2">
                         <div className="flex-1 min-w-0">
@@ -376,7 +365,6 @@ export default function AIChatPage() {
                             <span>New</span>
                         </button>
                     </div>
-                    {/* Session Actions (Rename / Delete) */}
                     {currentSessionId && (
                         <div className="flex items-center gap-2 pt-1">
                             <button
@@ -400,7 +388,6 @@ export default function AIChatPage() {
                     )}
                 </div>
 
-                {/* Sources Header */}
                 <div className="p-4 border-b border-light-700 dark:border-dark-400 flex items-center justify-between">
                     <div className="flex items-center gap-2">
                         <BookOpen className="w-4 h-4 text-brand" />
@@ -421,7 +408,6 @@ export default function AIChatPage() {
                     </button>
                 </div>
 
-                {/* Sources List for Current Session */}
                 <div className="flex-1 overflow-y-auto p-3 space-y-2 custom-scrollbar bg-slate-50/50 dark:bg-dark-300/20">
                     {isSourcesLoading || isSessionsLoading ? (
                         <div className="flex items-center justify-center h-40">
@@ -480,9 +466,7 @@ export default function AIChatPage() {
                 </div>
             </aside>
 
-            {/* RIGHT / MIDDLE COLUMN: CHAT STUDIO */}
             <main className={cn("flex flex-col h-2/3 lg:h-full bg-light-800 dark:bg-dark-100 relative overflow-hidden transition-all duration-300", activeCitationDocId ? "lg:w-1/3 xl:w-[40%]" : "flex-1")}>
-                {/* Chat Studio Top Banner */}
                 <div className="h-16 px-6 border-b border-light-700 dark:border-dark-400 bg-white/80 dark:bg-dark-200/80 backdrop-blur-md flex items-center justify-between shrink-0">
                     <div className="flex items-center gap-3 min-w-0">
                         <div className="w-9 h-9 rounded-xl bg-brand/10 dark:bg-brand/20 flex items-center justify-center text-brand shrink-0">
@@ -508,7 +492,6 @@ export default function AIChatPage() {
                     </button>
                 </div>
 
-                {/* Chat Messages Area */}
                 <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
                     {isMessagesLoading || isSessionsLoading ? (
                         <div className="flex items-center justify-center h-full">
@@ -523,7 +506,7 @@ export default function AIChatPage() {
                                 Create a Session
                             </h2>
                             <p className="text-xs leading-relaxed text-slate-500 dark:text-slate-400 mb-6">
-                                Click the "+ New" button on the left panel to create a new Chat Session.
+                                Click the &#34;+ New&#34; button on the left panel to create a new Chat Session.
                             </p>
                             <button
                                 onClick={handleCreateNewNotebook}
@@ -602,7 +585,6 @@ export default function AIChatPage() {
                     <div ref={messagesEndRef} />
                 </div>
 
-                {/* Bottom Chat Input Bar */}
                 <div className="p-4 border-t border-light-700 dark:border-dark-400 bg-white dark:bg-dark-200 shrink-0">
                     <div className="max-w-3xl mx-auto flex items-end gap-2 bg-light-800 dark:bg-dark-300 border border-light-700 dark:border-dark-400 rounded-2xl p-2 focus-within:border-brand/60 focus-within:ring-2 focus-within:ring-brand/10 transition-all shadow-xs">
                         <textarea
@@ -648,7 +630,6 @@ export default function AIChatPage() {
                 </div>
             </main>
 
-            {/* FAR RIGHT COLUMN: APRYSE VIEWER */}
             {activeCitationDocId && (() => {
                 const doc = sessionDocuments.find(s => s.documentId === activeCitationDocId);
                 if (!doc) return null;
@@ -695,7 +676,6 @@ export default function AIChatPage() {
                 );
             })()}
 
-            {/* ADD SOURCES MODAL */}
             <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
                 <DialogContent className="shad-dialog max-w-xl p-6 bg-white dark:bg-dark-200 rounded-3xl border border-light-700 dark:border-dark-400 shadow-drop-3">
                     <DialogHeader>
@@ -784,7 +764,6 @@ export default function AIChatPage() {
                 </DialogContent>
             </Dialog>
 
-            {/* RENAME MODAL */}
             <Dialog open={isRenameModalOpen} onOpenChange={setIsRenameModalOpen}>
                 <DialogContent className="shad-dialog bg-white dark:bg-dark-200 rounded-3xl border border-light-700 dark:border-dark-400">
                     <DialogHeader>
@@ -820,7 +799,6 @@ export default function AIChatPage() {
                 </DialogContent>
             </Dialog>
 
-            {/* DELETE MODAL */}
             <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
                 <DialogContent className="shad-dialog bg-white dark:bg-dark-200 rounded-3xl border border-light-700 dark:border-dark-400">
                     <DialogHeader>

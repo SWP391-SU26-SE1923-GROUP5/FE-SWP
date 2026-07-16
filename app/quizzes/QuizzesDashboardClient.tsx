@@ -22,13 +22,11 @@ export default function QuizzesDashboardClient({ initialQuizzes }: Props) {
     const filteredAndSortedQuizzes = useMemo(() => {
         let result = [...quizzes];
 
-        // Search Filter
         if (searchQuery.trim()) {
             const query = searchQuery.toLowerCase();
             result = result.filter((q) => q.title?.toLowerCase().includes(query));
         }
 
-        // Time Range Filter
         if (timeFilter !== "all") {
             const now = new Date().getTime();
             const daysMs = timeFilter === "7d" ? 7 * 24 * 60 * 60 * 1000 : 30 * 24 * 60 * 60 * 1000;
@@ -38,7 +36,6 @@ export default function QuizzesDashboardClient({ initialQuizzes }: Props) {
             });
         }
 
-        // Sorting
         result.sort((a, b) => {
             if (sortBy === "newest") {
                 return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
@@ -57,7 +54,6 @@ export default function QuizzesDashboardClient({ initialQuizzes }: Props) {
 
     const totalPages = Math.max(1, Math.ceil(filteredAndSortedQuizzes.length / pageSize));
     
-    // Ensure activePage remains valid if filter results shrink
     const activePage = Math.min(currentPage, totalPages);
 
     const paginatedQuizzes = useMemo(() => {
@@ -92,7 +88,6 @@ export default function QuizzesDashboardClient({ initialQuizzes }: Props) {
 
     return (
         <div className="flex flex-col gap-8 pb-20 pt-6 max-w-7xl mx-auto w-full px-5 sm:px-6 animate-in fade-in duration-500">
-            {/* Top Navigation & Header Banner */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-light-700 dark:border-dark-400 pb-5">
                 <div className="flex items-center gap-3.5">
                     <Link
@@ -116,11 +111,9 @@ export default function QuizzesDashboardClient({ initialQuizzes }: Props) {
                 </div>
             </div>
 
-            {/* Search, Filter & Sort Controls Bar */}
             {quizzes.length > 0 && (
                 <div className="flex flex-col gap-4 bg-white dark:bg-dark-200 border border-light-700 dark:border-dark-400 p-5 rounded-3xl shadow-drop-1">
                     <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-                        {/* Search Bar */}
                         <div className="relative w-full lg:w-96">
                             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-light-200 dark:text-dark-400" />
                             <input
@@ -147,9 +140,7 @@ export default function QuizzesDashboardClient({ initialQuizzes }: Props) {
                             )}
                         </div>
 
-                        {/* Filter & Sort Dropdowns */}
                         <div className="flex flex-wrap items-center gap-3">
-                            {/* Time Filter */}
                             <div className="flex items-center gap-2 px-3.5 py-2 bg-light-800 dark:bg-dark-300 border border-light-700 dark:border-dark-400 rounded-xl text-sm font-medium text-dark200_light800">
                                 <Calendar className="h-4 w-4 text-brand shrink-0" />
                                 <span className="text-xs text-light-200 dark:text-dark-400 font-bold uppercase tracking-wider shrink-0">Time:</span>
@@ -167,7 +158,6 @@ export default function QuizzesDashboardClient({ initialQuizzes }: Props) {
                                 </select>
                             </div>
 
-                            {/* Sort By */}
                             <div className="flex items-center gap-2 px-3.5 py-2 bg-light-800 dark:bg-dark-300 border border-light-700 dark:border-dark-400 rounded-xl text-sm font-medium text-dark200_light800">
                                 <ArrowUpDown className="h-4 w-4 text-brand shrink-0" />
                                 <span className="text-xs text-light-200 dark:text-dark-400 font-bold uppercase tracking-wider shrink-0">Sort:</span>
@@ -186,7 +176,6 @@ export default function QuizzesDashboardClient({ initialQuizzes }: Props) {
                                 </select>
                             </div>
 
-                            {/* Page Size Selector */}
                             <div className="flex items-center gap-2 px-3.5 py-2 bg-light-800 dark:bg-dark-300 border border-light-700 dark:border-dark-400 rounded-xl text-sm font-medium text-dark200_light800">
                                 <span className="text-xs text-light-200 dark:text-dark-400 font-bold uppercase tracking-wider shrink-0">Show:</span>
                                 <select
@@ -206,7 +195,6 @@ export default function QuizzesDashboardClient({ initialQuizzes }: Props) {
                         </div>
                     </div>
 
-                    {/* Active Filter Chips */}
                     {hasActiveFilters && (
                         <div className="flex items-center gap-2 flex-wrap pt-3 border-t border-light-700 dark:border-dark-400">
                             <span className="text-xs font-bold text-light-200 dark:text-dark-400">Active Filters:</span>
@@ -280,7 +268,6 @@ export default function QuizzesDashboardClient({ initialQuizzes }: Props) {
                                 key={quiz.id}
                                 className="relative group flex flex-col h-full border border-light-700 dark:border-dark-400 rounded-[2rem] bg-white dark:bg-dark-200 hover:border-brand/40 dark:hover:border-brand/40 shadow-drop-1 hover:shadow-drop-3 transition-all duration-300 hover:-translate-y-1 overflow-hidden"
                             >
-                                {/* Gradient Top Accent */}
                                 <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-brand to-emerald-400 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                                 
                                 <Link href={`/quizzes/${quiz.id}`} className="flex flex-col flex-1 p-6 z-10 pt-7">
@@ -306,7 +293,6 @@ export default function QuizzesDashboardClient({ initialQuizzes }: Props) {
                                     </div>
                                 </Link>
 
-                                {/* Bottom Action Strip: Start & History */}
                                 <div className="px-6 pb-6 pt-4 flex items-center justify-between gap-3 relative z-10">
                                     <Link
                                         href={`/quizzes/${quiz.id}/history`}
@@ -337,7 +323,6 @@ export default function QuizzesDashboardClient({ initialQuizzes }: Props) {
                         ))}
                     </div>
 
-                    {/* Advanced Pagination Controls */}
                     {totalPages > 1 && (
                         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-white dark:bg-dark-200 border border-light-700 dark:border-dark-400 p-4 sm:px-6 rounded-3xl shadow-drop-1">
                             <span className="text-xs font-bold text-light-200 dark:text-dark-400">
@@ -347,7 +332,6 @@ export default function QuizzesDashboardClient({ initialQuizzes }: Props) {
                             </span>
 
                             <div className="flex items-center gap-1.5 flex-wrap justify-center">
-                                {/* First Page */}
                                 <button
                                     onClick={() => setCurrentPage(1)}
                                     disabled={activePage === 1}
@@ -357,7 +341,6 @@ export default function QuizzesDashboardClient({ initialQuizzes }: Props) {
                                     <ChevronsLeft className="h-4 w-4" />
                                 </button>
 
-                                {/* Previous Page */}
                                 <button
                                     onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
                                     disabled={activePage === 1}
@@ -367,7 +350,6 @@ export default function QuizzesDashboardClient({ initialQuizzes }: Props) {
                                     <span className="hidden sm:inline">Prev</span>
                                 </button>
 
-                                {/* Numbered Page Pills */}
                                 {Array.from({ length: totalPages }, (_, i) => i + 1)
                                     .filter((p) => p === 1 || p === totalPages || Math.abs(p - activePage) <= 1)
                                     .map((p, idx, arr) => {
@@ -391,7 +373,6 @@ export default function QuizzesDashboardClient({ initialQuizzes }: Props) {
                                         );
                                     })}
 
-                                {/* Next Page */}
                                 <button
                                     onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
                                     disabled={activePage === totalPages}
@@ -401,7 +382,6 @@ export default function QuizzesDashboardClient({ initialQuizzes }: Props) {
                                     <ChevronRight className="h-4 w-4" />
                                 </button>
 
-                                {/* Last Page */}
                                 <button
                                     onClick={() => setCurrentPage(totalPages)}
                                     disabled={activePage === totalPages}

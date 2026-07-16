@@ -49,7 +49,6 @@ export default async function QuizHistoryPage({ params }: Props) {
 
     return (
         <div className="flex flex-col gap-8 pb-20 pt-6 max-w-7xl mx-auto w-full px-5 sm:px-6 animate-in fade-in duration-500">
-            {/* Top Navigation & Header */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 border-b border-light-700 dark:border-dark-400 pb-6">
                 <div className="flex items-start gap-4 min-w-0 flex-1 overflow-hidden">
                     <Link
@@ -86,9 +85,7 @@ export default async function QuizHistoryPage({ params }: Props) {
                 </div>
             </div>
 
-            {/* Summary Statistics Cards Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-                {/* Total Attempts Card */}
                 <div className="bg-white dark:bg-dark-200 rounded-3xl p-6 sm:p-7 border border-light-700 dark:border-dark-400 shadow-drop-1 hover:shadow-drop-3 hover:border-blue-500/40 transition-all duration-300 flex flex-col justify-between group">
                     <div className="flex items-center gap-3.5">
                         <div className="p-3.5 bg-blue-500/10 dark:bg-blue-500/20 rounded-2xl text-blue-600 dark:text-blue-400 shrink-0">
@@ -106,7 +103,6 @@ export default async function QuizHistoryPage({ params }: Props) {
                     </div>
                 </div>
 
-                {/* Personal Best Card */}
                 <div className="bg-white dark:bg-dark-200 rounded-3xl p-6 sm:p-7 border border-light-700 dark:border-dark-400 shadow-drop-1 hover:shadow-drop-3 hover:border-amber-500/40 transition-all duration-300 flex flex-col justify-between group">
                     <div className="flex items-center gap-3.5">
                         <div className="p-3.5 bg-amber-500/10 dark:bg-amber-500/20 rounded-2xl text-amber-600 dark:text-amber-400 shrink-0">
@@ -124,7 +120,6 @@ export default async function QuizHistoryPage({ params }: Props) {
                     </div>
                 </div>
 
-                {/* Average Score Card */}
                 <div className="bg-white dark:bg-dark-200 rounded-3xl p-6 sm:p-7 border border-light-700 dark:border-dark-400 shadow-drop-1 hover:shadow-drop-3 hover:border-emerald-500/40 transition-all duration-300 flex flex-col justify-between group">
                     <div className="flex items-center gap-3.5">
                         <div className="p-3.5 bg-emerald-500/10 dark:bg-emerald-500/20 rounded-2xl text-emerald-600 dark:text-emerald-400 shrink-0">
@@ -143,7 +138,6 @@ export default async function QuizHistoryPage({ params }: Props) {
                 </div>
             </div>
 
-            {/* Submission History Logs Section */}
             <div className="bg-white dark:bg-dark-200 border border-light-700 dark:border-dark-400 rounded-3xl p-6 sm:p-8 shadow-drop-1 space-y-6">
                 <div className="flex items-center justify-between border-b border-light-700 dark:border-dark-400 pb-5">
                     <div className="flex items-center gap-3">
@@ -167,7 +161,7 @@ export default async function QuizHistoryPage({ params }: Props) {
                         </div>
                         <h3 className="text-lg font-bold text-dark100_light900">No Attempts Recorded Yet</h3>
                         <p className="text-sm font-medium text-light-200 dark:text-dark-400 max-w-md mx-auto">
-                            You haven't submitted any answers for this quiz. Jump in and take your first attempt to start building your study streak!
+                            You haven&#39;t submitted any answers for this quiz. Jump in and take your first attempt to start building your study streak!
                         </p>
                         <div className="pt-2">
                             <Link
@@ -224,7 +218,6 @@ export default async function QuizHistoryPage({ params }: Props) {
                                             )}
                                         </div>
 
-                                        {/* Progress Bar */}
                                         <div className="w-full max-w-md h-2 rounded-full bg-light-700 dark:bg-dark-400 overflow-hidden mt-1">
                                             <div
                                                 className={`h-full rounded-full transition-all duration-500 ${

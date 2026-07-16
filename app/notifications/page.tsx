@@ -141,7 +141,6 @@ export default function NotificationsPage() {
 
     return (
         <div className="flex flex-col gap-8 pb-20 pt-6 max-w-5xl mx-auto w-full px-5 sm:px-6 animate-in fade-in duration-500">
-            {/* Top Navigation & Header Banner (Matching Trash/Analytics Pattern) */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-light-700 dark:border-dark-400 pb-5">
                 <div className="flex items-center gap-3.5">
                     <Link
@@ -178,9 +177,7 @@ export default function NotificationsPage() {
                 )}
             </div>
 
-            {/* Main Content Area */}
             <div className="w-full space-y-6">
-                {/* Filter Tabs */}
                 <div className="flex items-center justify-between border-b border-light-700 dark:border-dark-400">
                     <div className="flex gap-6">
                         <button
@@ -216,7 +213,6 @@ export default function NotificationsPage() {
                     </span>
                 </div>
 
-                {/* Notifications List */}
                 <div className="space-y-3.5">
                     {paginatedNotifications.map((item) => {
                         const style = getNotificationStyle(item.type, item.message);
@@ -286,7 +282,6 @@ export default function NotificationsPage() {
                     )}
                 </div>
 
-                {/* Pagination Controls */}
                 {totalPages > 1 && (
                     <div className="mt-8 pt-6 border-t border-light-700 dark:border-dark-400">
                         <Pagination
@@ -300,4 +295,4 @@ export default function NotificationsPage() {
             </div>
         </div>
     );
-}
+}

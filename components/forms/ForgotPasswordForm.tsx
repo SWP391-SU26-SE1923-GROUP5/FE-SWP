@@ -83,7 +83,6 @@ const ForgotPasswordForm = () => {
         try {
             await resetPassword({
                 email,
-                otp,
                 newPassword: data.newPassword
             });
             setStep("SUCCESS");

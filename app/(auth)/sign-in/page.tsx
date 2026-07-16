@@ -20,14 +20,18 @@ const SignIn = () => {
             });
 
             if (result?.error) {
-                if (result.error.toLowerCase().includes("verify your email")) {
+                const cleanError = result.error.replace(/^\[\d+\]\s*/, '');
+
+                if (cleanError.toLowerCase().includes("verify your email")) {
                     router.push(`/verify-otp?email=${encodeURIComponent(data.email)}`);
                     return { success: true };
                 }
 
+                const isGenericError = ["CredentialsSignin", "Configuration", "AccessDenied"].includes(cleanError);
+
                 return {
                     success: false,
-                    error: "Invalid email or password.",
+                    error: isGenericError ? "Invalid email or password." : cleanError,
                 };
             }
 

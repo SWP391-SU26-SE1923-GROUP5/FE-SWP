@@ -62,13 +62,14 @@ const HighlightedText = ({ text, highlight }: { text: string, highlight: string 
     if (terms.length === 0) return <>{text}</>;
 
     const escapedTerms = terms.map(t => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
-    const regex = new RegExp(`(${escapedTerms.join('|')})`, 'gi');
-    const parts = text.split(regex);
+    const splitRegex = new RegExp(`(${escapedTerms.join('|')})`, 'gi');
+    const testRegex = new RegExp(`^(?:${escapedTerms.join('|')})$`, 'i');
+    const parts = text.split(splitRegex);
 
     return (
         <>
             {parts.map((part, i) => 
-                regex.test(part) ? (
+                testRegex.test(part) ? (
                     <mark key={i} className="bg-brand/20 text-brand font-bold rounded-sm px-0.5">{part}</mark>
                 ) : (
                     <span key={i}>{part}</span>
@@ -97,6 +98,7 @@ const Search = () => {
     const [debouncedQuery] = useDebounce(query, 300);
     const prevQueryRef = useRef(debouncedQuery);
     const isNavigating = useRef(false);
+    const abortControllerRef = useRef<AbortController | null>(null);
 
     useEffect(() => {
         const isNewTyping = prevQueryRef.current !== debouncedQuery;
@@ -142,6 +144,13 @@ const Search = () => {
     const handleAISearch = async (searchQueryText: string) => {
         if (!searchQueryText.trim()) return;
 
+        // Cancel any in-flight AI search request
+        if (abortControllerRef.current) {
+            abortControllerRef.current.abort();
+        }
+        const controller = new AbortController();
+        abortControllerRef.current = controller;
+
         setDropdownOpen(false);
         setIsModalOpen(true);
         setIsLoadingAI(true);
@@ -149,12 +158,17 @@ const Search = () => {
 
         try {
             const response: SemanticSearchResponse = await semanticSearch(searchQueryText);
+            if (controller.signal.aborted) return;
             setAiResult(response);
         } catch (error: any) {
+            if (controller.signal.aborted) return;
             console.error("AI Search Error:", error);
-            setAiResult(error.message || "Sorry, I encountered an error searching inside your documents.");
+            const cleanMsg = (error.message || "").replace(/^\[\d+\]\s*/, '');
+            setAiResult(cleanMsg || "Sorry, I encountered an error searching inside your documents.");
         } finally {
-            setIsLoadingAI(false);
+            if (!controller.signal.aborted) {
+                setIsLoadingAI(false);
+            }
         }
     };
 
