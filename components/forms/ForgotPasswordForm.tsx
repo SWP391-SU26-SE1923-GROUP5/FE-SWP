@@ -24,7 +24,7 @@ import {
     ResetPasswordSchema,
 } from "@/lib/validations";
 import ROUTES from "@/constants/routes";
-import { forgotPassword, resetPassword } from "@/lib/actions/user.actions";
+import { forgotPassword, resetPassword, verifyPasswordResetOtp } from "@/lib/actions/user.actions";
 
 type StepType = "EMAIL" | "OTP" | "RESET" | "SUCCESS";
 
@@ -65,9 +65,17 @@ const ForgotPasswordForm = () => {
     };
 
     const handleOtpSubmit = async (data: z.infer<typeof ForgotPasswordOtpSchema>) => {
-        setOtp(data.otp);
-        setStep("RESET");
-        toast.success("Please enter your new password.");
+        setIsLoading(true);
+        try {
+            await verifyPasswordResetOtp({ email, otp: data.otp });
+            setOtp(data.otp);
+            setStep("RESET");
+            toast.success("OTP verified. Please enter your new password.");
+        } catch (error: any) {
+            toast.error(error?.message || "Invalid or expired verification code.");
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     const handleResetSubmit = async (data: z.infer<typeof ResetPasswordSchema>) => {

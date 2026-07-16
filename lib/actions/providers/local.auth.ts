@@ -258,6 +258,26 @@ export class LocalAuth implements IAuthService {
         }
     }
 
+    async verifyPasswordResetOtp({ email, otp }: { email: string; otp: string }): Promise<string> {
+        try {
+            const res = await fetch(`${connection_url}/api/Auth/verify-password-reset-otp`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, otp })
+            });
+
+            const data = await res.json().catch(() => ({}));
+
+            if (!res.ok) {
+                throw new Error(`[${res.status}] ${data.message || "OTP verification failed"}`);
+            }
+
+            return parseStringify(data.message || "OTP verified successfully.");
+        } catch (error) {
+            this.handleError(error, "verifyPasswordResetOtp");
+        }
+    }
+
     async resetPassword({ email, otp, newPassword }: { email: string; otp: string; newPassword: string }): Promise<string> {
         try {
             const res = await fetch(`${connection_url}/api/Auth/reset-password`, {

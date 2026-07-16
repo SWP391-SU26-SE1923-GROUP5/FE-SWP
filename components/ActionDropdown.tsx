@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
@@ -57,6 +57,7 @@ import {
     addDocumentToSession,
     renameChatSession,
     deleteChatSession,
+    getSuggestedPrompts,
     ChatSession,
     ChatMessage
 } from "@/lib/actions/ai.actions";
@@ -147,6 +148,14 @@ export default function ActionDropdown({ file }: { file: File_ }) {
     const [isChatLoading, setIsChatLoading] = useState(false);
     const [isSending, setIsSending] = useState(false);
     
+    const [suggestedPrompts, setSuggestedPrompts] = useState<string[]>([]);
+    const messagesEndRef = useRef<HTMLDivElement>(null);
+
+    // Auto-scroll chat to bottom
+    useEffect(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, [chatMessages, isSending]);
+
     // AI session management states
     const [isRenameSessionModalOpen, setIsRenameSessionModalOpen] = useState(false);
     const [renameSessionTitle, setRenameSessionTitle] = useState("");
@@ -299,6 +308,14 @@ export default function ActionDropdown({ file }: { file: File_ }) {
                     const msgs = await getSessionMessages(firstSession.id);
                     setChatMessages(msgs);
                 }
+                
+                try {
+                    const prompts = await getSuggestedPrompts(file.id);
+                    setSuggestedPrompts(prompts);
+                } catch (e) {
+                    console.error("Failed to fetch suggested prompts", e);
+                }
+                
                 data = { ready: true };
             }
 
@@ -343,8 +360,9 @@ export default function ActionDropdown({ file }: { file: File_ }) {
         }
     };
 
-    const handleSendMessage = async () => {
-        if (!chatInput.trim()) return;
+    const handleSendMessage = async (promptText?: string) => {
+        const textToSend = promptText || chatInput;
+        if (!textToSend.trim()) return;
 
         let currentSessionId = selectedSessionId;
 
@@ -367,21 +385,21 @@ export default function ActionDropdown({ file }: { file: File_ }) {
             id: Date.now().toString(),
             chatSessionId: currentSessionId,
             sender: "user",
-            content: chatInput,
+            content: textToSend,
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString()
         };
 
         setChatMessages((prev) => [...prev, userMessage as any]);
-        setChatInput("");
+        if (typeof promptText !== 'string') setChatInput("");
         setIsSending(true);
 
         try {
-            const aiResponse = await sendChatMessage(currentSessionId, userMessage.content);
+            const aiResponse = await sendChatMessage(currentSessionId, textToSend);
             setChatMessages((prev) => [...prev, aiResponse]);
         } catch (error: unknown) {
             setChatMessages((prev) => prev.filter(msg => msg.id !== userMessage.id));
-            setChatInput(userMessage.content);
+            if (typeof promptText !== 'string') setChatInput(textToSend);
             if (error instanceof Error) {
                 toast.error(error.message);
             } else {
@@ -629,8 +647,29 @@ export default function ActionDropdown({ file }: { file: File_ }) {
                                                 <Loader2 className="animate-spin text-brand h-6 w-6" />
                                             </div>
                                         ) : chatMessages.length === 0 ? (
-                                            <div className="flex-1 flex items-center justify-center text-light-400 text-sm">
-                                                Start asking questions about this document.
+                                            <div className="flex-1 flex flex-col items-center justify-center p-4">
+                                                <div className="w-16 h-16 bg-brand/10 text-brand rounded-full flex items-center justify-center mb-4 text-2xl">
+                                                    💬
+                                                </div>
+                                                <p className="text-light-400 text-sm mb-6 text-center">
+                                                    Start asking questions about this document or try one of these prompts:
+                                                </p>
+                                                {suggestedPrompts.length > 0 ? (
+                                                    <div className="flex flex-col gap-3 w-full max-w-md">
+                                                        {suggestedPrompts.map((prompt, idx) => (
+                                                            <button
+                                                                key={idx}
+                                                                onClick={() => handleSendMessage(prompt)}
+                                                                className="text-left text-sm bg-white border border-slate-200 p-3 rounded-xl hover:border-brand hover:shadow-sm transition-all text-slate-700 cursor-pointer flex items-start"
+                                                            >
+                                                                <Sparkles className="w-4 h-4 text-brand inline-block mr-2 mt-0.5 shrink-0" />
+                                                                <span>{prompt}</span>
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                ) : (
+                                                    <p className="text-sm text-slate-400 italic">No suggested prompts available.</p>
+                                                )}
                                             </div>
                                         ) : (
                                             chatMessages.map((msg) => {
@@ -655,19 +694,25 @@ export default function ActionDropdown({ file }: { file: File_ }) {
                                                 <span className="text-sm text-light-400">AI is thinking...</span>
                                             </div>
                                         )}
+                                        <div ref={messagesEndRef} />
                                     </div>
 
                                     <div className="flex gap-2">
                                         <Input
                                             value={chatInput}
                                             onChange={(e) => setChatInput(e.target.value)}
-                                            onKeyDown={(e) => e.key === "Enter" && handleSendMessage()}
+                                            onKeyDown={(e) => {
+                                                if (e.key === "Enter" && !e.nativeEvent.isComposing) {
+                                                    e.preventDefault();
+                                                    handleSendMessage();
+                                                }
+                                            }}
                                             placeholder="Ask a question about this document..."
                                             disabled={isSending || isChatLoading}
                                             className="flex-1"
                                         />
                                         <Button
-                                            onClick={handleSendMessage}
+                                            onClick={() => handleSendMessage()}
                                             disabled={isSending || isChatLoading || !chatInput.trim()}
                                             className="bg-brand text-white px-6 hover:bg-emerald-500"
                                         >

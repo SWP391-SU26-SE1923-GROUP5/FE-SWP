@@ -712,3 +712,22 @@ export const deleteChatSession = async (sessionId: string): Promise<void> => {
         throw new Error(`[${response.status}] ${errorData.message || errorData.title || "Failed to delete session."}`);
     }
 };
+
+export const getSuggestedPrompts = async (documentId: string): Promise<string[]> => {
+    const session = await auth();
+    if (!session?.accessToken) throw new Error("Unauthorized. Please log in.");
+
+    const response = await fetch(`${connection_url}/api/Document/${documentId}/suggested-prompts`, {
+        method: 'GET',
+        headers: {
+            'Authorization': `Bearer ${session.accessToken}`,
+            'Content-Type': 'application/json',
+        },
+    });
+
+    if (!response.ok) {
+        return [];
+    }
+
+    return await response.json();
+};

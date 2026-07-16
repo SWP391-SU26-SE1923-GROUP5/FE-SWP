@@ -469,7 +469,7 @@ export default function AIChatPage() {
                                 </div>
                                 <button
                                     onClick={() => handleRemoveSource(doc.documentId)}
-                                    className="p-1.5 ml-2 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100 cursor-pointer shrink-0"
+                                    className="p-1.5 ml-2 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition-colors cursor-pointer shrink-0"
                                     title="Remove from Session"
                                 >
                                     <Trash2 className="w-4 h-4" />
