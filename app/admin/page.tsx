@@ -2,6 +2,7 @@ import Link from "next/link";
 import {
     ArrowRight,
     CalendarClock,
+    FileText,
     Flag,
     ShieldCheck,
     Sparkles,
