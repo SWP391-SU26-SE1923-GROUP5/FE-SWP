@@ -63,7 +63,12 @@ export default function AnalyticsPage() {
         accuracy: point.accuracyPercent ?? null
     }));
 
-    const cardsReviewedTrend = (dashboardData?.cardsReviewedTrend || []).map(point => ({
+    const flashcardVolumeTrend = (dashboardData?.cardsReviewedTrend || []).map(point => ({
+        day: point.date,
+        count: point.cardsCount
+    }));
+
+    const quizVolumeTrend = (dashboardData?.accuracyTrend || []).map(point => ({
         day: point.date,
         count: point.cardsCount
     }));
@@ -192,7 +197,7 @@ export default function AnalyticsPage() {
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-6">
                             <div>
                                 <h2 className="h3 font-bold text-dark100_light900">Accuracy Trend</h2>
-                                <p className="body-2 text-light-200 dark:text-dark-400">Your average quiz and flashcard precision over the past 14 days</p>
+                                <p className="body-2 text-light-200 dark:text-dark-400">Your average quiz precision over the past 14 days</p>
                             </div>
                             <span className="px-3 py-1 rounded-full text-xs font-semibold bg-light-800 dark:bg-dark-300 text-dark200_light800 border border-light-700 dark:border-dark-400 self-start sm:self-center">
                                 14-Day Window
@@ -256,29 +261,52 @@ export default function AnalyticsPage() {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
-                <div className="lg:col-span-2 bg-white dark:bg-dark-200 rounded-3xl p-6 sm:p-8 border border-light-700 dark:border-dark-400 shadow-drop-1 flex flex-col justify-between">
+                <div className="bg-white dark:bg-dark-200 rounded-3xl p-6 sm:p-8 border border-light-700 dark:border-dark-400 shadow-drop-1 flex flex-col justify-between">
                     <div>
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-6">
                             <div>
-                                <h2 className="h3 font-bold text-dark100_light900">Daily Review Volume</h2>
-                                <p className="body-2 text-light-200 dark:text-dark-400">Number of flashcards and quiz questions completed per day</p>
+                                <h2 className="text-xl font-bold text-dark100_light900">Flashcards Volume</h2>
+                                <p className="text-xs text-light-200 dark:text-dark-400 mt-1">Cards reviewed daily</p>
                             </div>
-                            <span className="px-3 py-1 rounded-full text-xs font-semibold bg-light-800 dark:bg-dark-300 text-dark200_light800 border border-light-700 dark:border-dark-400 self-start sm:self-center">
-                                Daily Activity
-                            </span>
                         </div>
-                        <div className="h-72 w-full">
+                        <div className="h-64 w-full">
                             <ResponsiveContainer width="100%" height="100%">
-                                <BarChart data={cardsReviewedTrend} margin={{ top: 10, right: 20, bottom: 5, left: -15 }}>
+                                <BarChart data={flashcardVolumeTrend} margin={{ top: 10, right: 0, bottom: 5, left: -25 }}>
                                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" strokeOpacity={0.4} />
-                                    <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748b' }} />
-                                    <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748b' }} />
+                                    <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#64748b' }} />
+                                    <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#64748b' }} />
                                     <Tooltip
                                         cursor={{ fill: 'rgba(16, 185, 129, 0.08)' }}
                                         contentStyle={{ backgroundColor: '#0f1117', borderRadius: '16px', border: '1px solid #334155', color: '#fff', padding: '12px 16px' }}
                                         formatter={(value) => [value, 'Cards Reviewed']}
                                     />
-                                    <Bar dataKey="count" fill="#10b981" radius={[6, 6, 0, 0]} barSize={24} />
+                                    <Bar dataKey="count" fill="#10b981" radius={[4, 4, 0, 0]} maxBarSize={30} />
+                                </BarChart>
+                            </ResponsiveContainer>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="bg-white dark:bg-dark-200 rounded-3xl p-6 sm:p-8 border border-light-700 dark:border-dark-400 shadow-drop-1 flex flex-col justify-between">
+                    <div>
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-6">
+                            <div>
+                                <h2 className="text-xl font-bold text-dark100_light900">Quiz Volume</h2>
+                                <p className="text-xs text-light-200 dark:text-dark-400 mt-1">Quizzes completed daily</p>
+                            </div>
+                        </div>
+                        <div className="h-64 w-full">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <BarChart data={quizVolumeTrend} margin={{ top: 10, right: 0, bottom: 5, left: -25 }}>
+                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" strokeOpacity={0.4} />
+                                    <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#64748b' }} />
+                                    <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#64748b' }} />
+                                    <Tooltip
+                                        cursor={{ fill: 'rgba(59, 130, 246, 0.08)' }}
+                                        contentStyle={{ backgroundColor: '#0f1117', borderRadius: '16px', border: '1px solid #334155', color: '#fff', padding: '12px 16px' }}
+                                        formatter={(value) => [value, 'Quizzes Completed']}
+                                    />
+                                    <Bar dataKey="count" fill="#3b82f6" radius={[4, 4, 0, 0]} maxBarSize={30} />
                                 </BarChart>
                             </ResponsiveContainer>
                         </div>
