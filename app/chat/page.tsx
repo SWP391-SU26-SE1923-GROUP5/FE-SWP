@@ -2,42 +2,18 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { 
-    Sparkles, 
-    Plus, 
-    Trash2, 
-    Send,
-    Loader2, 
-    BookOpen, 
-    FileText, 
-    X, 
-    RefreshCw,
-    FolderPlus,
-    Pencil
+    Sparkles, Plus, Trash2, Send, Loader2, BookOpen, 
+    FileText, X, RefreshCw, FolderPlus, Pencil
 } from 'lucide-react';
 import { 
-    getUserSessions, 
-    createChatSession, 
-    getSessionDocuments, 
-    addDocumentToSession, 
-    removeDocumentFromSession, 
-    getSessionMessages, 
-    sendChatMessage, 
-    deleteChatSession,
-    renameChatSession,
-    ChatSession, 
-    ChatSessionDocument, 
-    ChatMessage 
+    getUserSessions, createChatSession, getSessionDocuments, 
+    addDocumentToSession, removeDocumentFromSession, getSessionMessages, 
+    sendChatMessage, deleteChatSession, renameChatSession,
+    ChatSession, ChatSessionDocument, ChatMessage 
 } from '@/lib/actions/ai.actions';
 import { getFiles } from '@/lib/actions/file.actions';
 import { cn } from '@/lib/utils';
-import { 
-    Dialog, 
-    DialogContent, 
-    DialogHeader, 
-    DialogTitle, 
-    DialogDescription,
-    DialogFooter
-} from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import FileUploader from '@/components/FileUploader';
 import { toast } from 'sonner';
 import ApryseViewer from '@/components/ApryseViewer';
@@ -65,185 +41,189 @@ const MessageWithCitations = ({
 
     const parts = content.split(/(\[\d+\])/g);
     return (
-        <span>
-            {parts.map((part, i) => {
-                const match = part.match(/\[(\d+)\]/);
-                if (match) {
-                    const idx = parseInt(match[1]) - 1;
-                    if (idx >= 0 && idx < citations.length) {
-                        const cit = citations[idx];
-                        return (
-                            <button 
-                                key={i}
-                                onClick={() => onCitationClick(
-                                    cit.documentId || cit.DocumentId, 
-                                    cit.pageNumber || cit.PageNumber, 
-                                    cit.snippet || cit.Snippet
-                                )}
-                                className="inline-flex items-center justify-center px-1.5 py-0.5 mx-1 rounded-sm bg-brand/20 text-brand text-[10px] font-bold cursor-pointer hover:bg-brand hover:text-white transition-colors align-super"
-                                title={`Source: ${cit.source || cit.Source}`}
-                            >
-                                {match[1]}
-                            </button>
-                        );
+        <div className="flex flex-col gap-2">
+            <span>
+                {parts.map((part, i) => {
+                    const match = part.match(/\[(\d+)\]/);
+                    if (match) {
+                        const idx = parseInt(match[1]) - 1;
+                        if (idx >= 0 && idx < citations.length) {
+                            const cit = citations[idx];
+                            return (
+                                <button 
+                                    key={i}
+                                    onClick={() => onCitationClick(
+                                        cit.documentId || cit.DocumentId, 
+                                        cit.pageNumber || cit.PageNumber, 
+                                        cit.snippet || cit.Snippet
+                                    )}
+                                    className="inline-flex items-center justify-center px-1.5 py-0.5 mx-1 rounded-sm bg-brand/20 text-brand text-[10px] font-bold cursor-pointer hover:bg-brand hover:text-white transition-colors align-super"
+                                    title={`Source: ${cit.source || cit.Source}`}
+                                >
+                                    {match[1]}
+                                </button>
+                            );
+                        }
                     }
-                }
-                return <span key={i}>{part}</span>;
-            })}
-        </span>
+                    return <span key={i}>{part}</span>;
+                })}
+            </span>
+            
+            <div className="mt-2 pt-2 border-t border-slate-200/60 dark:border-dark-400/60 flex flex-wrap gap-2">
+                <span className="text-[11px] font-semibold text-slate-500/80 w-full mb-0.5 uppercase tracking-wider">Sources</span>
+                {citations.map((cit, idx) => (
+                    <button
+                        key={idx}
+                        onClick={() => onCitationClick(
+                            cit.documentId || cit.DocumentId, 
+                            cit.pageNumber || cit.PageNumber, 
+                            cit.isHighlightable || cit.IsHighlightable ? (cit.snippet || cit.Snippet) : undefined
+                        )}
+                        className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-light-800 dark:bg-dark-300 border border-light-700 dark:border-dark-400 hover:border-brand/50 hover:bg-brand/10 hover:text-brand transition-all text-left max-w-[200px] cursor-pointer"
+                        title={cit.snippet || cit.Snippet || cit.source || cit.Source}
+                    >
+                        <span className="flex items-center justify-center w-3.5 h-3.5 rounded-full bg-brand/10 text-brand text-[9px] font-bold shrink-0">
+                            {idx + 1}
+                        </span>
+                        <span className="text-[11px] text-slate-600 dark:text-slate-300 truncate">
+                            {cit.source || cit.Source}
+                        </span>
+                    </button>
+                ))}
+            </div>
+        </div>
     );
 };
 
 export default function AIChatPage() {
     const [sessions, setSessions] = useState<ChatSession[]>([]);
     const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
-    const [isSessionsLoading, setIsSessionsLoading] = useState<boolean>(true);
-
-    const [isRenameModalOpen, setIsRenameModalOpen] = useState(false);
-    const [renameTitleInput, setRenameTitleInput] = useState('');
-    const [isRenaming, setIsRenaming] = useState(false);
-    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-    const [isDeleting, setIsDeleting] = useState(false);
-
     const [sessionDocuments, setSessionDocuments] = useState<ChatSessionDocument[]>([]);
-    const [isSourcesLoading, setIsSourcesLoading] = useState<boolean>(false);
-
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [chatInput, setChatInput] = useState<string>('');
-    const [isSending, setIsSending] = useState<boolean>(false);
-    const [isMessagesLoading, setIsMessagesLoading] = useState<boolean>(false);
-
-    const [isAddModalOpen, setIsAddModalOpen] = useState<boolean>(false);
     const [libraryDocs, setLibraryDocs] = useState<LibraryFile[]>([]);
-    const [isLibraryLoading, setIsLibraryLoading] = useState<boolean>(false);
-    const [isAddingDocId, setIsAddingDocId] = useState<string | null>(null);
-    const [isRefetchingLibrary, setIsRefetchingLibrary] = useState<boolean>(false);
+    
+    const [isLoading, setIsLoading] = useState({
+        sessions: true,
+        messages: false,
+        sources: false,
+        sending: false,
+        library: false,
+        refetchingLibrary: false,
+        action: false
+    });
 
-    const [activeCitationDocId, setActiveCitationDocId] = useState<string | null>(null);
-    const [activeCitationPage, setActiveCitationPage] = useState<number | undefined>(undefined);
-    const [activeCitationSnippet, setActiveCitationSnippet] = useState<string | undefined>(undefined);
+    const [modalState, setModalState] = useState({
+        rename: false,
+        delete: false,
+        addDocs: false
+    });
+    const [renameTitleInput, setRenameTitleInput] = useState('');
+    const [isAddingDocId, setIsAddingDocId] = useState<string | null>(null);
+
+    const [activeCitation, setActiveCitation] = useState<{
+        docId: string;
+        page?: number;
+        snippet?: string;
+    } | null>(null);
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
+    const currentSession = sessions.find(s => s.id === currentSessionId);
 
-    const scrollToBottom = () => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    const handleSelectSession = async (sessionId: string) => {
+        setCurrentSessionId(sessionId);
+        setIsLoading(p => ({ ...p, messages: true, sources: true, sessions: false }));
+        try {
+            const [docs, msgs] = await Promise.all([
+                getSessionDocuments(sessionId).catch(() => []),
+                getSessionMessages(sessionId).catch(() => [])
+            ]);
+            setSessionDocuments(docs);
+            setMessages(msgs);
+        } catch (error) {
+            toast.error("Failed to load session data");
+        } finally {
+            setIsLoading(p => ({ ...p, messages: false, sources: false }));
+        }
     };
 
     useEffect(() => {
-        scrollToBottom();
-    }, [messages, isSending]);
-
-    useEffect(() => {
-        loadSessions();
+        const initSessions = async () => {
+            setIsLoading(p => ({ ...p, sessions: true }));
+            try {
+                const data = await getUserSessions();
+                const sorted = data.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+                setSessions(sorted);
+                
+                if (sorted.length > 0) {
+                    await handleSelectSession(sorted[0].id);
+                } else {
+                    setIsLoading(p => ({ ...p, sessions: false }));
+                }
+            } catch (error) {
+                toast.error("Failed to load AI Notebook sessions.");
+                setIsLoading(p => ({ ...p, sessions: false }));
+            }
+        };
+        initSessions();
     }, []);
 
-    const loadSessions = async () => {
-        setIsSessionsLoading(true);
-        try {
-            const data = await getUserSessions();
-            const sorted = data.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-            setSessions(sorted);
-            
-            if (sorted.length > 0) {
-                await selectSession(sorted[0].id);
-            } else {
-                setCurrentSessionId(null);
-                setSessionDocuments([]);
-                setMessages([]);
-            }
-        } catch (error: unknown) {
-            toast.error("Failed to load AI Notebook sessions.");
-        } finally {
-            setIsSessionsLoading(false);
-        }
-    };
-
-    const selectSession = async (sessionId: string) => {
-        setCurrentSessionId(sessionId);
-        await Promise.all([
-            loadAttachedSources(sessionId),
-            loadMessages(sessionId)
-        ]);
-    };
-
-    const loadAttachedSources = async (sessionId: string) => {
-        setIsSourcesLoading(true);
-        try {
-            const docs = await getSessionDocuments(sessionId);
-            setSessionDocuments(docs);
-        } catch (error: unknown) {
-            toast.error("Failed to load attached sources.");
-            setSessionDocuments([]);
-        } finally {
-            setIsSourcesLoading(false);
-        }
-    };
-
-    const loadMessages = async (sessionId: string) => {
-        setIsMessagesLoading(true);
-        try {
-            const msgs = await getSessionMessages(sessionId);
-            setMessages(msgs);
-        } catch (error: unknown) {
-            toast.error("Failed to load chat history.");
-            setMessages([]);
-        } finally {
-            setIsMessagesLoading(false);
-        }
-    };
+    useEffect(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, [messages, isLoading.sending]);
 
     const handleCreateNewNotebook = async () => {
+        setIsLoading(p => ({ ...p, sessions: true }));
         try {
             const newTitle = `AI Notebook ${new Date().toLocaleDateString()}`;
             const newSession = await createChatSession(newTitle);
             
             setSessions(prev => [newSession, ...prev]);
-            setCurrentSessionId(newSession.id);
-            setSessionDocuments([]);
-            setMessages([]);
-            
+            await handleSelectSession(newSession.id);
             toast.success("Created new notebook session!");
-        } catch (error: unknown) {
+        } catch (error) {
             toast.error("Failed to create new notebook session.");
+            setIsLoading(p => ({ ...p, sessions: false }));
         }
     };
 
     const handleRenameSession = async () => {
         if (!currentSessionId || !renameTitleInput.trim()) return;
-        setIsRenaming(true);
+        setIsLoading(p => ({ ...p, action: true }));
         try {
             const updatedSession = await renameChatSession(currentSessionId, renameTitleInput.trim());
             setSessions(prev => prev.map(s => s.id === currentSessionId ? updatedSession : s));
-            setIsRenameModalOpen(false);
+            setModalState(p => ({ ...p, rename: false }));
             toast.success("Notebook renamed!");
-        } catch (error: unknown) {
+        } catch (error) {
             toast.error("Failed to rename notebook.");
         } finally {
-            setIsRenaming(false);
+            setIsLoading(p => ({ ...p, action: false }));
         }
     };
 
     const handleDeleteSession = async () => {
         if (!currentSessionId) return;
-        setIsDeleting(true);
+        setIsLoading(p => ({ ...p, action: true }));
         try {
             await deleteChatSession(currentSessionId);
-            setSessions(prev => prev.filter(s => s.id !== currentSessionId));
-            setIsDeleteModalOpen(false);
+            const remaining = sessions.filter(s => s.id !== currentSessionId);
+            setSessions(remaining);
+            setModalState(p => ({ ...p, delete: false }));
             toast.success("Notebook deleted successfully.");
             
-            const remaining = sessions.filter(s => s.id !== currentSessionId);
             if (remaining.length > 0) {
-                selectSession(remaining[0].id);
+                await handleSelectSession(remaining[0].id);
             } else {
                 setCurrentSessionId(null);
                 setSessionDocuments([]);
                 setMessages([]);
+                setActiveCitation(null);
             }
-        } catch (error: unknown) {
+        } catch (error) {
             toast.error("Failed to delete notebook.");
         } finally {
-            setIsDeleting(false);
+            setIsLoading(p => ({ ...p, action: false }));
         }
     };
 
@@ -253,32 +233,29 @@ export default function AIChatPage() {
             await removeDocumentFromSession(currentSessionId, documentId);
             setSessionDocuments(prev => prev.filter(s => s.documentId !== documentId));
             toast.success("Source removed from notebook.");
-        } catch (error: unknown) {
+            if (activeCitation?.docId === documentId) setActiveCitation(null);
+        } catch (error) {
             toast.error("Failed to remove source.");
         }
     };
 
-    const loadLibrary = async () => {
-        setIsLibraryLoading(true);
-        try {
-            const res = await getFiles({ types: ["document"], limit: 50 });
-            setLibraryDocs(res.documents || []);
-        } catch (e) {
-            toast.error("Failed to load library.");
-        } finally {
-            setIsLibraryLoading(false);
-        }
-    };
-
-    const handleOpenAddModal = () => {
+    const handleOpenAddModal = async () => {
         if (!currentSessionId) {
             toast.error("Please select or create a Notebook first!");
             return;
         }
+        setModalState(p => ({ ...p, addDocs: true }));
         if (libraryDocs.length === 0) {
-            loadLibrary();
+            setIsLoading(p => ({ ...p, library: true }));
+            try {
+                const res = await getFiles({ types: ["document"], limit: 50 });
+                setLibraryDocs(res.documents || []);
+            } catch (e) {
+                toast.error("Failed to load library.");
+            } finally {
+                setIsLoading(p => ({ ...p, library: false }));
+            }
         }
-        setIsAddModalOpen(true);
     };
 
     const handleAddSourceToSession = async (docId: string) => {
@@ -291,19 +268,20 @@ export default function AIChatPage() {
                 return [...prev, addedDoc];
             });
             toast.success("Document attached to notebook!");
-        } catch (error: unknown) {
-            toast.error("Failed to attach document. It might already be attached.");
+        } catch (error) {
+            toast.error("Failed to attach document.");
         } finally {
             setIsAddingDocId(null);
         }
     };
 
     const handleSendMessage = async () => {
-        if (!chatInput.trim() || !currentSessionId || isSending) return;
+        if (!chatInput.trim() || !currentSessionId || isLoading.sending) return;
 
         const content = chatInput.trim();
+        const tempId = Date.now().toString();
         const tempMsg: ChatMessage = {
-            id: Date.now().toString(),
+            id: tempId,
             chatSessionId: currentSessionId,
             sender: 'user',
             content,
@@ -313,7 +291,7 @@ export default function AIChatPage() {
 
         setMessages(prev => [...prev, tempMsg]);
         setChatInput('');
-        setIsSending(true);
+        setIsLoading(p => ({ ...p, sending: true }));
 
         try {
             if (sessionDocuments.length === 0) {
@@ -321,18 +299,18 @@ export default function AIChatPage() {
             }
             const aiResponse = await sendChatMessage(currentSessionId, content);
             setMessages(prev => [...prev, aiResponse]);
-        } catch (error: unknown) {
+        } catch (error) {
             toast.error("Failed to get AI response. Please try again.");
+            setMessages(prev => prev.filter(m => m.id !== tempId));
+            setChatInput(content);
         } finally {
-            setIsSending(false);
+            setIsLoading(p => ({ ...p, sending: false }));
         }
     };
 
-    const currentSession = sessions.find(s => s.id === currentSessionId);
-
     return (
         <div className="flex-1 flex flex-col lg:flex-row h-full w-full overflow-hidden bg-white dark:bg-dark-100 border-t border-light-700 dark:border-dark-400">
-            <aside className="w-full lg:w-96 shrink-0 border-b lg:border-b-0 lg:border-r border-light-700 dark:border-dark-400 bg-white dark:bg-dark-200 flex flex-col h-1/3 lg:h-full overflow-hidden">
+            <aside className={cn("w-full lg:w-96 shrink-0 border-b lg:border-b-0 lg:border-r border-light-700 dark:border-dark-400 bg-white dark:bg-dark-200 flex flex-col h-1/3 lg:h-full overflow-hidden transition-all", activeCitation ? "hidden" : "flex")}>
                 <div className="p-4 border-b border-light-700 dark:border-dark-400 bg-light-800/50 dark:bg-dark-300/40 space-y-2">
                     <div className="flex items-center justify-between gap-2">
                         <div className="flex-1 min-w-0">
@@ -343,8 +321,8 @@ export default function AIChatPage() {
                                 <select
                                     className="flex-1 min-w-0 bg-white dark:bg-dark-200 border border-light-700 dark:border-dark-400 rounded-xl px-3 py-2 text-sm font-semibold text-dark-200 dark:text-light-100 outline-none focus:border-brand transition-colors truncate cursor-pointer shadow-2xs"
                                     value={currentSessionId || ''}
-                                    onChange={(e) => selectSession(e.target.value)}
-                                    disabled={isSessionsLoading || sessions.length === 0}
+                                    onChange={(e) => handleSelectSession(e.target.value)}
+                                    disabled={isLoading.sessions || sessions.length === 0}
                                 >
                                     {sessions.length === 0 ? (
                                         <option value="">No sessions exist</option>
@@ -370,7 +348,7 @@ export default function AIChatPage() {
                             <button
                                 onClick={() => {
                                     setRenameTitleInput(currentSession?.sessionTitle || '');
-                                    setIsRenameModalOpen(true);
+                                    setModalState(p => ({ ...p, rename: true }));
                                 }}
                                 className="flex-1 flex items-center justify-center gap-1.5 py-1.5 px-2 bg-white dark:bg-dark-300 hover:bg-slate-100 dark:hover:bg-dark-400 border border-light-700 dark:border-dark-400 rounded-lg text-[11px] font-semibold text-slate-500 transition-colors cursor-pointer"
                             >
@@ -378,7 +356,7 @@ export default function AIChatPage() {
                                 Rename
                             </button>
                             <button
-                                onClick={() => setIsDeleteModalOpen(true)}
+                                onClick={() => setModalState(p => ({ ...p, delete: true }))}
                                 className="flex-1 flex items-center justify-center gap-1.5 py-1.5 px-2 bg-white dark:bg-dark-300 hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-500/10 border border-light-700 dark:border-dark-400 rounded-lg text-[11px] font-semibold text-slate-500 transition-colors cursor-pointer"
                             >
                                 <Trash2 className="w-3 h-3" />
@@ -409,7 +387,7 @@ export default function AIChatPage() {
                 </div>
 
                 <div className="flex-1 overflow-y-auto p-3 space-y-2 custom-scrollbar bg-slate-50/50 dark:bg-dark-300/20">
-                    {isSourcesLoading || isSessionsLoading ? (
+                    {isLoading.sources || isLoading.sessions ? (
                         <div className="flex items-center justify-center h-40">
                             <Loader2 className="w-6 h-6 animate-spin text-brand" />
                         </div>
@@ -466,7 +444,7 @@ export default function AIChatPage() {
                 </div>
             </aside>
 
-            <main className={cn("flex flex-col h-2/3 lg:h-full bg-light-800 dark:bg-dark-100 relative overflow-hidden transition-all duration-300", activeCitationDocId ? "lg:w-1/3 xl:w-[40%]" : "flex-1")}>
+            <main className={cn("flex flex-col h-2/3 lg:h-full bg-light-800 dark:bg-dark-100 relative overflow-hidden transition-all duration-300 border-r border-light-700 dark:border-dark-400", activeCitation ? "lg:w-[400px] xl:w-[450px] shrink-0" : "flex-1")}>
                 <div className="h-16 px-6 border-b border-light-700 dark:border-dark-400 bg-white/80 dark:bg-dark-200/80 backdrop-blur-md flex items-center justify-between shrink-0">
                     <div className="flex items-center gap-3 min-w-0">
                         <div className="w-9 h-9 rounded-xl bg-brand/10 dark:bg-brand/20 flex items-center justify-center text-brand shrink-0">
@@ -483,17 +461,17 @@ export default function AIChatPage() {
                     </div>
 
                     <button
-                        onClick={() => currentSessionId && loadMessages(currentSessionId)}
-                        disabled={isMessagesLoading || !currentSessionId}
+                        onClick={() => currentSessionId && handleSelectSession(currentSessionId)}
+                        disabled={isLoading.messages || !currentSessionId}
                         className="p-2 hover:bg-light-700 dark:hover:bg-dark-300 rounded-xl text-slate-400 hover:text-dark-200 dark:hover:text-light-100 transition-colors cursor-pointer disabled:opacity-50"
                         title="Refresh Messages"
                     >
-                        <RefreshCw className={cn("w-4 h-4", isMessagesLoading && "animate-spin")} />
+                        <RefreshCw className={cn("w-4 h-4", isLoading.messages && "animate-spin")} />
                     </button>
                 </div>
 
                 <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
-                    {isMessagesLoading || isSessionsLoading ? (
+                    {isLoading.messages || isLoading.sessions ? (
                         <div className="flex items-center justify-center h-full">
                             <Loader2 className="w-8 h-8 animate-spin text-brand" />
                         </div>
@@ -506,7 +484,7 @@ export default function AIChatPage() {
                                 Create a Session
                             </h2>
                             <p className="text-xs leading-relaxed text-slate-500 dark:text-slate-400 mb-6">
-                                Click the &#34;+ New&#34; button on the left panel to create a new Chat Session.
+                                Click the "New" button on the left panel to create a new Chat Session.
                             </p>
                             <button
                                 onClick={handleCreateNewNotebook}
@@ -556,11 +534,7 @@ export default function AIChatPage() {
                                             <MessageWithCitations 
                                                 content={msg.content} 
                                                 citations={msg.citations || (msg as any).Citations} 
-                                                onCitationClick={(docId, page, snippet) => {
-                                                    setActiveCitationDocId(docId);
-                                                    setActiveCitationPage(page);
-                                                    setActiveCitationSnippet(snippet);
-                                                }}
+                                                onCitationClick={(docId, page, snippet) => setActiveCitation({ docId, page, snippet })}
                                             />
                                         ) : (
                                             msg.content
@@ -570,7 +544,7 @@ export default function AIChatPage() {
                             );
                         })
                     )}
-                    {isSending && (
+                    {isLoading.sending && (
                         <div className="flex gap-3 max-w-3xl animate-in fade-in duration-300 mr-auto justify-start">
                             <div className="w-8 h-8 rounded-xl bg-brand text-white flex items-center justify-center shrink-0 mt-1 shadow-2xs">
                                 <Sparkles className="w-4 h-4" />
@@ -604,20 +578,20 @@ export default function AIChatPage() {
                                     handleSendMessage();
                                 }
                             }}
-                            disabled={isSending || !currentSessionId}
+                            disabled={isLoading.sending || !currentSessionId}
                             className="flex-1 bg-transparent border-0 outline-none px-3 py-2 text-xs sm:text-sm text-dark-200 dark:text-light-100 placeholder:text-slate-400 resize-none max-h-32 custom-scrollbar disabled:cursor-not-allowed"
                         />
                         <button
                             onClick={handleSendMessage}
-                            disabled={!chatInput.trim() || isSending || !currentSessionId}
+                            disabled={!chatInput.trim() || isLoading.sending || !currentSessionId}
                             className={cn(
                                 "h-10 w-10 rounded-xl flex items-center justify-center transition-all shrink-0",
-                                chatInput.trim() && !isSending && currentSessionId
+                                chatInput.trim() && !isLoading.sending && currentSessionId
                                     ? "bg-brand text-white shadow-sm hover:bg-brand/90 hover:scale-105 cursor-pointer"
                                     : "bg-light-700 dark:bg-dark-400 text-slate-400 cursor-not-allowed"
                             )}
                         >
-                            {isSending ? (
+                            {isLoading.sending ? (
                                 <Loader2 className="w-4 h-4 animate-spin text-white" />
                             ) : (
                                 <Send className="w-4 h-4" />
@@ -630,8 +604,8 @@ export default function AIChatPage() {
                 </div>
             </main>
 
-            {activeCitationDocId && (() => {
-                const doc = sessionDocuments.find(s => s.documentId === activeCitationDocId);
+            {activeCitation && (() => {
+                const doc = sessionDocuments.find(s => s.documentId === activeCitation.docId);
                 if (!doc) return null;
                 const fakeFile: File_ = {
                     id: doc.documentId,
@@ -649,34 +623,34 @@ export default function AIChatPage() {
                 };
                 return (
                     <aside className="hidden lg:flex flex-1 flex-col h-full bg-white dark:bg-dark-200 border-l border-light-700 dark:border-dark-400 z-10 transition-all shadow-[-4px_0_24px_rgba(0,0,0,0.02)]">
-                        <div className="h-16 px-4 border-b border-light-700 dark:border-dark-400 flex items-center justify-between shrink-0 bg-white">
+                        <div className="h-16 px-4 border-b border-light-700 dark:border-dark-400 flex items-center justify-between shrink-0 bg-white dark:bg-dark-200">
                             <div className="flex items-center gap-2 min-w-0">
                                 <BookOpen className="w-5 h-5 text-brand" />
-                                <h2 className="text-sm font-bold text-slate-800 truncate">{doc.fileName || doc.title}</h2>
+                                <h2 className="text-sm font-bold text-slate-800 dark:text-light-100 truncate">{doc.fileName || doc.title}</h2>
                             </div>
                             <button 
-                                onClick={() => setActiveCitationDocId(null)}
-                                className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-500 cursor-pointer transition-colors"
+                                onClick={() => setActiveCitation(null)}
+                                className="p-1.5 hover:bg-slate-100 dark:hover:bg-dark-300 rounded-lg text-slate-500 cursor-pointer transition-colors"
                             >
                                 <X className="w-5 h-5" />
                             </button>
                         </div>
-                        <div className="flex-1 w-full relative bg-slate-50">
+                        <div className="flex-1 w-full relative bg-slate-50 dark:bg-dark-100">
                             <ApryseViewer 
-                                key={`${fakeFile.id}-${activeCitationPage}`}
+                                key={fakeFile.id}
                                 file={fakeFile} 
                                 path="/chat" 
-                                closeModals={() => setActiveCitationDocId(null)} 
+                                closeModals={() => setActiveCitation(null)} 
                                 readOnly={true} 
-                                targetPage={activeCitationPage}
-                                searchSnippet={activeCitationSnippet}
+                                targetPage={activeCitation.page}
+                                searchSnippet={activeCitation.snippet}
                             />
                         </div>
                     </aside>
                 );
             })()}
 
-            <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
+            <Dialog open={modalState.addDocs} onOpenChange={(v) => setModalState(p => ({ ...p, addDocs: v }))}>
                 <DialogContent className="shad-dialog max-w-xl p-6 bg-white dark:bg-dark-200 rounded-3xl border border-light-700 dark:border-dark-400 shadow-drop-3">
                     <DialogHeader>
                         <DialogTitle className="text-lg font-extrabold text-dark-200 dark:text-light-100 flex items-center gap-2">
@@ -689,7 +663,7 @@ export default function AIChatPage() {
                     </DialogHeader>
 
                     <div className="mt-4 flex flex-col gap-4 max-h-[60vh] overflow-hidden">
-                        {isLibraryLoading ? (
+                        {isLoading.library ? (
                             <div className="flex items-center justify-center py-10">
                                 <Loader2 className="w-8 h-8 animate-spin text-brand" />
                             </div>
@@ -742,7 +716,7 @@ export default function AIChatPage() {
                             <FileUploader className="w-full" />
                             <button
                                 onClick={async () => {
-                                    setIsRefetchingLibrary(true);
+                                    setIsLoading(p => ({ ...p, refetchingLibrary: true }));
                                     try {
                                         const res = await getFiles({ types: ["document"], limit: 50 });
                                         setLibraryDocs(res.documents || []);
@@ -750,13 +724,13 @@ export default function AIChatPage() {
                                     } catch (e) {
                                         toast.error("Failed to refresh library");
                                     } finally {
-                                        setIsRefetchingLibrary(false);
+                                        setIsLoading(p => ({ ...p, refetchingLibrary: false }));
                                     }
                                 }}
-                                disabled={isRefetchingLibrary}
+                                disabled={isLoading.refetchingLibrary}
                                 className="w-full py-2 bg-light-700 dark:bg-dark-400 hover:bg-light-600 dark:hover:bg-dark-300 rounded-xl text-xs font-bold text-dark-200 dark:text-light-100 transition-colors flex items-center justify-center gap-2 cursor-pointer"
                             >
-                                <RefreshCw className={cn("w-3.5 h-3.5", isRefetchingLibrary && "animate-spin")} />
+                                <RefreshCw className={cn("w-3.5 h-3.5", isLoading.refetchingLibrary && "animate-spin")} />
                                 Refresh Library after Upload
                             </button>
                         </div>
@@ -764,7 +738,7 @@ export default function AIChatPage() {
                 </DialogContent>
             </Dialog>
 
-            <Dialog open={isRenameModalOpen} onOpenChange={setIsRenameModalOpen}>
+            <Dialog open={modalState.rename} onOpenChange={(v) => setModalState(p => ({ ...p, rename: v }))}>
                 <DialogContent className="shad-dialog bg-white dark:bg-dark-200 rounded-3xl border border-light-700 dark:border-dark-400">
                     <DialogHeader>
                         <DialogTitle className="text-dark-200 dark:text-light-100">Rename Notebook</DialogTitle>
@@ -778,28 +752,28 @@ export default function AIChatPage() {
                             value={renameTitleInput}
                             onChange={(e) => setRenameTitleInput(e.target.value)}
                             placeholder="Notebook Title"
-                            className="w-full bg-light-800 dark:bg-dark-300 border border-light-700 dark:border-dark-400 rounded-xl px-4 py-3 text-sm font-semibold outline-none focus:border-brand transition-colors"
+                            className="w-full bg-light-800 dark:bg-dark-300 border border-light-700 dark:border-dark-400 rounded-xl px-4 py-3 text-sm font-semibold outline-none focus:border-brand transition-colors text-dark-200 dark:text-light-100"
                         />
                     </div>
                     <DialogFooter>
                         <button
-                            onClick={() => setIsRenameModalOpen(false)}
+                            onClick={() => setModalState(p => ({ ...p, rename: false }))}
                             className="px-4 py-2 rounded-xl text-sm font-bold text-slate-500 hover:bg-slate-100 dark:hover:bg-dark-400 transition-colors cursor-pointer"
                         >
                             Cancel
                         </button>
                         <button
                             onClick={handleRenameSession}
-                            disabled={isRenaming || !renameTitleInput.trim()}
+                            disabled={isLoading.action || !renameTitleInput.trim()}
                             className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-brand hover:bg-brand/90 disabled:opacity-50 transition-colors"
                         >
-                            {isRenaming ? "Renaming..." : "Save"}
+                            {isLoading.action ? "Renaming..." : "Save"}
                         </button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
 
-            <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
+            <Dialog open={modalState.delete} onOpenChange={(v) => setModalState(p => ({ ...p, delete: v }))}>
                 <DialogContent className="shad-dialog bg-white dark:bg-dark-200 rounded-3xl border border-light-700 dark:border-dark-400">
                     <DialogHeader>
                         <DialogTitle className="text-dark-200 dark:text-light-100">Delete Session</DialogTitle>
@@ -809,17 +783,17 @@ export default function AIChatPage() {
                     </DialogHeader>
                     <DialogFooter className="mt-4">
                         <button
-                            onClick={() => setIsDeleteModalOpen(false)}
+                            onClick={() => setModalState(p => ({ ...p, delete: false }))}
                             className="px-4 py-2 rounded-xl text-sm font-bold text-slate-500 hover:bg-slate-100 dark:hover:bg-dark-400 transition-colors cursor-pointer"
                         >
                             Cancel
                         </button>
                         <button
                             onClick={handleDeleteSession}
-                            disabled={isDeleting}
+                            disabled={isLoading.action}
                             className="px-4 py-2 bg-red-500 text-white rounded-xl text-sm font-bold hover:bg-red-600 transition-colors flex items-center gap-2 cursor-pointer disabled:opacity-50"
                         >
-                            {isDeleting && <Loader2 className="w-4 h-4 animate-spin" />}
+                            {isLoading.action && <Loader2 className="w-4 h-4 animate-spin" />}
                             Delete Permanently
                         </button>
                     </DialogFooter>

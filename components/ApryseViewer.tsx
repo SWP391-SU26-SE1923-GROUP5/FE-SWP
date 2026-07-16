@@ -18,35 +18,15 @@ export default function ApryseViewer({ file, path, closeModals, readOnly = false
         
         try {
             const instance = instanceRef.current;
-            if (targetPage) {
-                const pageNum = parseInt(targetPage.toString(), 10);
+            if (targetPage !== undefined && targetPage !== null) {
+                let pageNum = parseInt(targetPage.toString(), 10);
+                if (pageNum === 0) pageNum = 1; // Backend might return 0-based indexing
                 if (!isNaN(pageNum) && pageNum > 0) {
                     instance.UI.setCurrentPageNumber(pageNum);
                 }
             }
             if (searchSnippet) {
-                let searchPattern = searchSnippet;
-                let useRegex = false;
-                try {
-                    // Extract first 10 alphanumeric words (including Vietnamese characters)
-                    const tokens = searchSnippet.match(/[a-zA-Z0-9À-ỹ]+/g);
-                    if (tokens && tokens.length > 0) {
-                        const firstTokens = tokens.slice(0, Math.min(10, tokens.length));
-                        // Create a regex pattern that ignores any non-alphanumeric characters between words
-                        searchPattern = firstTokens.join('[^a-zA-Z0-9À-ỹ]+');
-                        useRegex = true;
-                    } else {
-                        searchPattern = searchSnippet.substring(0, 30).trim();
-                    }
-                } catch (e) {
-                    searchPattern = searchSnippet.substring(0, 30).trim();
-                }
-
-                if (useRegex) {
-                    instance.UI.searchTextFull(searchPattern, { regex: true });
-                } else {
-                    instance.UI.searchTextFull(searchPattern);
-                }
+                instance.UI.searchTextFull(searchSnippet);
             }
         } catch (error) {
             console.error("Error jumping to citation:", error);
@@ -101,33 +81,15 @@ export default function ApryseViewer({ file, path, closeModals, readOnly = false
                             
                             // Listen for document load to jump to target page
                             instance.Core.documentViewer.addEventListener('documentLoaded', () => {
-                                if (targetPage) {
-                                    const pageNum = parseInt(targetPage.toString(), 10);
+                                if (targetPage !== undefined && targetPage !== null) {
+                                    let pageNum = parseInt(targetPage.toString(), 10);
+                                    if (pageNum === 0) pageNum = 1; // Backend might return 0-based indexing
                                     if (!isNaN(pageNum) && pageNum > 0) {
                                         instance.Core.documentViewer.setCurrentPage(pageNum, true);
                                     }
                                 }
                                 if (searchSnippet) {
-                                    let searchPattern = searchSnippet;
-                                    let useRegex = false;
-                                    try {
-                                        const tokens = searchSnippet.match(/[a-zA-Z0-9À-ỹ]+/g);
-                                        if (tokens && tokens.length > 0) {
-                                            const firstTokens = tokens.slice(0, Math.min(10, tokens.length));
-                                            searchPattern = firstTokens.join('[^a-zA-Z0-9À-ỹ]+');
-                                            useRegex = true;
-                                        } else {
-                                            searchPattern = searchSnippet.substring(0, 30).trim();
-                                        }
-                                    } catch (e) {
-                                        searchPattern = searchSnippet.substring(0, 30).trim();
-                                    }
-                                    
-                                    if (useRegex) {
-                                        instance.UI.searchTextFull(searchPattern, { regex: true });
-                                    } else {
-                                        instance.UI.searchTextFull(searchPattern);
-                                    }
+                                    instance.UI.searchTextFull(searchSnippet);
                                 }
                             });
                         });

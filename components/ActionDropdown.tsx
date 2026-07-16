@@ -66,6 +66,70 @@ import { FileDetails, ShareInput } from "@/components/ActionsModalContent";
 import ApryseViewer from "./ApryseViewer";
 import { toast } from "sonner";
 
+const MiniMessageWithCitations = ({ content, citations }: { content: string; citations?: any[] }) => {
+    const [activeSnippet, setActiveSnippet] = useState<string | null>(null);
+
+    if (!citations || citations.length === 0) return <div className="whitespace-pre-wrap">{content}</div>;
+
+    const parts = content.split(/(\[\d+\])/g);
+    return (
+        <div className="flex flex-col gap-2 relative">
+            <div className="whitespace-pre-wrap">
+                {parts.map((part, i) => {
+                    const match = part.match(/\[(\d+)\]/);
+                    if (match) {
+                        const idx = parseInt(match[1]) - 1;
+                        if (idx >= 0 && idx < citations.length) {
+                            const cit = citations[idx];
+                            return (
+                                <button 
+                                    key={i}
+                                    onClick={() => setActiveSnippet(activeSnippet === cit.snippet ? null : cit.snippet)}
+                                    className="inline-flex items-center justify-center px-1.5 py-0.5 mx-0.5 rounded-sm bg-brand/20 text-brand text-[10px] font-bold cursor-pointer hover:bg-brand hover:text-white transition-colors align-super"
+                                    title="Click to view snippet"
+                                >
+                                    {match[1]}
+                                </button>
+                            );
+                        }
+                    }
+                    return <span key={i}>{part}</span>;
+                })}
+            </div>
+            
+            <div className="mt-2 pt-2 border-t border-slate-200/60 dark:border-dark-400/60 flex flex-wrap gap-2">
+                <span className="text-[11px] font-semibold text-slate-500/80 w-full mb-0.5 uppercase tracking-wider">Sources</span>
+                {citations.map((cit, idx) => (
+                    <button
+                        key={`source-${idx}`}
+                        onClick={() => setActiveSnippet(activeSnippet === cit.snippet ? null : cit.snippet)}
+                        className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-white dark:bg-dark-300 border border-slate-200 dark:border-dark-400 hover:border-brand dark:hover:border-brand transition-colors cursor-pointer group shadow-sm"
+                        title={cit.source || cit.Source || "Document source"}
+                    >
+                        <FileText className="w-3 h-3 text-slate-400 group-hover:text-brand" />
+                        <span className="text-[10px] font-medium text-slate-600 dark:text-slate-300 truncate max-w-[120px]">
+                            {cit.source || cit.Source || `Source ${idx + 1}`}
+                        </span>
+                    </button>
+                ))}
+            </div>
+
+            {activeSnippet && (
+                <div className="mt-2 p-3 bg-slate-50 dark:bg-dark-300 border border-slate-200 dark:border-dark-400 rounded-lg relative animate-in fade-in zoom-in duration-200">
+                    <button 
+                        onClick={() => setActiveSnippet(null)}
+                        className="absolute top-2 right-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 cursor-pointer"
+                    >
+                        <X className="w-3 h-3" />
+                    </button>
+                    <p className="text-xs text-slate-600 dark:text-slate-400 font-bold mb-1">Source Snippet:</p>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 italic leading-relaxed">"...{activeSnippet}..."</p>
+                </div>
+            )}
+        </div>
+    );
+};
+
 const SUPPORTED_EDIT_EXTENSIONS = [
     ".pdf", "pdf",
     ".docx", "docx",
@@ -680,10 +744,14 @@ export default function ActionDropdown({ file }: { file: File_ }) {
                                                         className={`p-3 rounded-xl max-w-[85%] text-sm ${
                                                             isUserMsg
                                                                 ? "bg-brand text-white self-end ml-auto rounded-tr-sm"
-                                                                : "bg-white text-dark-200 border light-border self-start mr-auto rounded-tl-sm whitespace-pre-wrap"
+                                                                : "bg-white dark:bg-dark-200 text-dark-200 dark:text-light-100 border light-border self-start mr-auto rounded-tl-sm"
                                                         }`}
                                                     >
-                                                        {msg.content}
+                                                        {isUserMsg ? (
+                                                            <div className="whitespace-pre-wrap">{msg.content}</div>
+                                                        ) : (
+                                                            <MiniMessageWithCitations content={msg.content} citations={msg.citations} />
+                                                        )}
                                                     </div>
                                                 );
                                             })

@@ -30,6 +30,8 @@ export interface ChatMessage {
         pageNumber?: number;
         relevance: number;
         matchType: string;
+        isHighlightable: boolean;
+        reason?: string;
     }[];
 }
 
@@ -152,7 +154,12 @@ export const sendChatMessage = async (
         throw new Error(`[${response.status}] ${errorData.message || "Failed to send message."}`);
     }
 
-    return await response.json();
+    const data = await response.json();
+    return {
+        ...data,
+        sender: data.sender?.toLowerCase() === 'user' ? 'user' : 'ai',
+        citations: data.citations ?? data.Citations
+    };
 };
 
 export const deleteFlashcard = async (flashcardId: string): Promise<void> => {
@@ -526,16 +533,11 @@ export const getSessionMessages = async (sessionId: string): Promise<ChatMessage
     }
 
     const data = await response.json();
-    const arr = Array.isArray(data) ? data : (data?.messages || data?.data || data?.items || []);
-    return arr.map((msg: any) => {
-        const rawSender = (msg.sender || msg.Sender || msg.role || msg.Role || "").toString().toLowerCase();
-        const isUser = rawSender === "user" || msg.isUser === true || (rawSender !== "" && rawSender !== "ai" && rawSender !== "assistant" && rawSender !== "system" && rawSender !== "bot");
-        return {
-            ...msg,
-            sender: isUser ? "user" : "ai",
-            content: msg.content || msg.Content || msg.text || msg.Text || ""
-        };
-    });
+    return data.map((msg: any) => ({
+        ...msg,
+        sender: msg.sender?.toLowerCase() === 'user' ? 'user' : 'ai',
+        citations: msg.citations ?? msg.Citations
+    }));
 };
 
 export const getUserSessions = async (): Promise<ChatSession[]> => {
@@ -555,7 +557,14 @@ export const getUserSessions = async (): Promise<ChatSession[]> => {
         throw new Error(`[${response.status}] ${errorData.message || errorData.title || "Failed to fetch chat sessions."}`);
     }
 
-    return await response.json();
+    const data: ChatSession[] = await response.json();
+    const currentUserId = session.user?.id;
+    
+    if (currentUserId) {
+        return data.filter(s => s.userId === currentUserId);
+    }
+    
+    return data;
 };
 
 export const semanticSearch = async (
@@ -632,15 +641,14 @@ export const getSessionDocuments = async (sessionId: string): Promise<ChatSessio
         throw new Error(`[${response.status}] ${errorData.message || errorData.title || "Failed to fetch session documents."}`);
     }
 
-    const data = await response.json();
-    return Array.isArray(data) ? data : (data?.items || []);
+    return await response.json();
 };
 
 export const addDocumentToSession = async (sessionId: string, documentId: string): Promise<ChatSessionDocument> => {
     const session = await auth();
     if (!session?.accessToken) throw new Error("Unauthorized. Please log in.");
 
-    const response = await fetch(`${connection_url}/api/Chat/sessions/${sessionId}/documents?documentId=${documentId}`, {
+    const response = await fetch(`${connection_url}/api/Chat/sessions/${sessionId}/documents`, {
         method: 'POST',
         headers: {
             'Authorization': `Bearer ${session.accessToken}`,
