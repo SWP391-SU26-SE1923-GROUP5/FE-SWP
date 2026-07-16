@@ -19,26 +19,29 @@ const SignIn = () => {
                 callbackUrl: ROUTES.HOME
             });
 
-            if (result?.error) {
-                const cleanError = result.error.replace(/^\[\d+\]\s*/, '');
+            if (result?.ok && result.url) {
+                const url = result.url.replace(window.location.origin, '');
 
-                if (cleanError.toLowerCase().includes("verify your email")) {
-                    router.push(`/verify-otp?email=${encodeURIComponent(data.email)}`);
-                    return { success: true };
+                if (url.includes("verify-otp")) {
+                    router.push(url);
+                    return { success: true, message: "Please verify your email to continue." };
                 }
 
-                const isGenericError = ["CredentialsSignin", "Configuration", "AccessDenied"].includes(cleanError);
+                const errorMatch = url.match(/[?&]error=([^&]+)/);
+                if (errorMatch) {
+                    return { success: false, error: decodeURIComponent(errorMatch[1]) };
+                }
 
-                return {
-                    success: false,
-                    error: isGenericError ? "Invalid email or password." : cleanError,
-                };
-            }
-
-            if (result?.ok) {
                 router.push(ROUTES.HOME);
                 router.refresh();
                 return { success: true };
+            }
+
+            if (result?.error) {
+                return {
+                    success: false,
+                    error: "Invalid email or password."
+                };
             }
 
             return {

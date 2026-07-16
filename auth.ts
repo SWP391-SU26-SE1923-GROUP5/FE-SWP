@@ -5,12 +5,6 @@ import Google from "next-auth/providers/google";
 import { LocalAuth } from "@/lib/actions/providers/local.auth";
 import { JWT } from "next-auth/jwt";
 
-class CustomAuthError extends AuthError {
-    constructor(message: string) {
-        super();
-        this.type = message as any;
-    }
-}
 
 declare global {
     var _pendingRefreshRequests: Map<string, Promise<any>> | undefined;
@@ -82,7 +76,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             },
             async authorize(credentials) {
                 if (!credentials?.email || !credentials?.password) {
-                    throw new CustomAuthError("Email and password is required");
+                    return { id: "AUTH_ERROR", email: credentials?.email as string, name: "Email and password is required" };
                 }
 
                 const authService = new LocalAuth();
@@ -94,7 +88,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
                     });
 
                     if (!result || !result.user) {
-                        throw new CustomAuthError("Invalid email or password");
+                        return { id: "AUTH_ERROR", email: credentials.email as string, name: "Invalid email or password" };
                     }
 
                     return {
@@ -108,13 +102,20 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
                     refreshToken: result.refreshToken,
                     };
                 } catch (error: any) {
-                    throw new CustomAuthError(error.message);
+                    return { id: "AUTH_ERROR", email: credentials.email as string, name: error.message };
                 }
             }
         })
     ],
     callbacks: {
-        async signIn({ account }) {
+        async signIn({ user }) {
+            if (user?.id === "AUTH_ERROR") {
+                const errMsg = user.name || "";
+                if (errMsg.toLowerCase().includes("verify your email")) {
+                    return `/verify-otp?email=${encodeURIComponent(user.email || "")}`;
+                }
+                return `/?error=${encodeURIComponent(errMsg)}`;
+            }
             return true;
         },
 

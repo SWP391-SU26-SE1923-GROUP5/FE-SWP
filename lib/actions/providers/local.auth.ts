@@ -29,7 +29,7 @@ export class LocalAuth implements IAuthService {
             const data = await res.json().catch(() => ({}));
 
             if (!res.ok) {
-                throw new Error(`[${res.status}] ${data.message || "Failed to register account"}`);
+                throw new Error(`[${res.status}] ${data.message || data.error || data.title || "Failed to register account"}`);
             }
 
             return parseStringify({ email: data.email });
@@ -52,7 +52,7 @@ export class LocalAuth implements IAuthService {
             const data = await res.json().catch(() => ({}));
 
             if (!res.ok) {
-                throw new Error(`[${res.status}] ${data.message || "Invalid email or password"}`);
+                throw new Error(`[${res.status}] ${data.message || data.error || data.title || "Invalid email or password"}`);
             }
 
             const sessionData = {
@@ -130,7 +130,7 @@ export class LocalAuth implements IAuthService {
 
             if (!res.ok) {
                 const errorData = await res.json().catch(() => ({}));
-                throw new Error(`[${res.status}] ${errorData.message || "Failed to fetch users"}`);
+                throw new Error(`[${res.status}] ${errorData.message || errorData.error || errorData.title || "Failed to fetch users"}`);
             }
 
             const usersData: User[] = await res.json();
@@ -162,7 +162,7 @@ export class LocalAuth implements IAuthService {
             const res = await fetch(url, { method: 'GET', headers });
             if (!res.ok) {
                 const errorData = await res.json().catch(() => ({}));
-                throw new Error(`[${res.status}] ${errorData.message || "Failed to fetch shareable users"}`);
+                throw new Error(`[${res.status}] ${errorData.message || errorData.error || errorData.title || "Failed to fetch shareable users"}`);
             }
             const data: User[] = await res.json();
             return parseStringify(data || []);
@@ -189,7 +189,7 @@ export class LocalAuth implements IAuthService {
             const data = await res.json().catch(() => ({}));
 
             if (!res.ok) {
-                throw new Error(`[${res.status}] ${data.message || "Failed to refresh token"}`);
+                throw new Error(`[${res.status}] ${data.message || data.error || data.title || "Failed to refresh token"}`);
             }
 
             return parseStringify(data);
@@ -209,7 +209,7 @@ export class LocalAuth implements IAuthService {
             const data = await res.json().catch(() => ({}));
 
             if (!res.ok) {
-                throw new Error(`[${res.status}] ${data.message || "Verification failed"}`);
+                throw new Error(`[${res.status}] ${data.message || data.error || data.title || "Verification failed"}`);
             }
 
             return parseStringify(data.message || "Verification successful");
@@ -229,7 +229,7 @@ export class LocalAuth implements IAuthService {
             const data = await res.json().catch(() => ({}));
 
             if (!res.ok) {
-                throw new Error(`[${res.status}] ${data.message || "Resend OTP failed"}`);
+                throw new Error(`[${res.status}] ${data.message || data.error || data.title || "Resend OTP failed"}`);
             }
 
             return parseStringify(data.message || "OTP resent successfully.");
@@ -249,7 +249,7 @@ export class LocalAuth implements IAuthService {
             const data = await res.json().catch(() => ({}));
 
             if (!res.ok) {
-                throw new Error(`[${res.status}] ${data.message || "Forgot password request failed"}`);
+                throw new Error(`[${res.status}] ${data.message || data.error || data.title || "Forgot password request failed"}`);
             }
 
             return parseStringify(data.message || "If the email exists, an OTP has been sent.");
@@ -269,7 +269,7 @@ export class LocalAuth implements IAuthService {
             const data = await res.json().catch(() => ({}));
 
             if (!res.ok) {
-                throw new Error(`[${res.status}] ${data.message || "OTP verification failed"}`);
+                throw new Error(`[${res.status}] ${data.message || data.error || data.title || "OTP verification failed"}`);
             }
 
             return parseStringify(data.message || "OTP verified successfully.");
@@ -289,7 +289,7 @@ export class LocalAuth implements IAuthService {
             const data = await res.json().catch(() => ({}));
 
             if (!res.ok) {
-                throw new Error(`[${res.status}] ${data.message || "Password reset failed"}`);
+                throw new Error(`[${res.status}] ${data.message || data.error || data.title || "Password reset failed"}`);
             }
 
             return parseStringify(data.message || "Password reset successfully.");

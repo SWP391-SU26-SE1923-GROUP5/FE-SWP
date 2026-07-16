@@ -29,12 +29,13 @@ const SignUp = () => {
             const cleanMessage = rawMessage.replace(/^\[\d+\]\s*/, '');
 
             if (
-                cleanMessage.toLowerCase().includes("verify") ||
                 cleanMessage.toLowerCase().includes("already registered") ||
                 cleanMessage.toLowerCase().includes("already exists")
             ) {
-                router.push(`/verify-otp?email=${encodeURIComponent(data.email)}`);
-                return { success: true };
+                return {
+                    success: false,
+                    error: "Email is already registered. Please sign in instead."
+                };
             }
 
             return {

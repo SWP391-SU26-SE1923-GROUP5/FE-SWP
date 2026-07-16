@@ -13,7 +13,7 @@ import { toast } from "sonner";
 interface AuthFormProps<T extends FieldValues> {
     schema: ZodType<T>;
     defaultValues: DefaultValues<T>;
-    onSubmit: (data: T) => Promise<{ success: boolean; error?: string }>;
+    onSubmit: (data: T) => Promise<{ success: boolean; error?: string; message?: string }>;
     formType: "SIGN_IN" | "SIGN_UP";
 }
 
@@ -40,7 +40,9 @@ const AuthForm = <T extends FieldValues>({
             const result = await onSubmit(data);
 
             if (result.success) {
-                if (formType === "SIGN_UP") {
+                if (result.message) {
+                    toast.success(result.message);
+                } else if (formType === "SIGN_UP") {
                     toast.success("Account created! Redirecting to verification...");
                 } else {
                     toast.success("Signed in successfully!");
