@@ -1,6 +1,5 @@
-import { CheckCircle2, Database, HardDrive, KeyRound, Server, Shield } from "lucide-react";
+import { CheckCircle2, HardDrive, KeyRound, Server, Shield } from "lucide-react";
 import { getAdminEmails } from "@/lib/admin/roles";
-import { getSystemStats } from "@/lib/actions/admin.actions";
 import { getCurrentUser } from "@/lib/actions/user.actions";
 import { getUserRole } from "@/lib/admin/roles";
 
@@ -9,10 +8,7 @@ export const metadata = {
 };
 
 export default async function AdminSettingsPage() {
-    const [stats, currentUser] = await Promise.all([
-        getSystemStats().catch(() => null),
-        getCurrentUser(),
-    ]);
+    const currentUser = await getCurrentUser();
     const adminEmails = getAdminEmails();
     const currentRole = getUserRole(currentUser);
 
@@ -67,26 +63,6 @@ export default async function AdminSettingsPage() {
                         </li>
                     ))}
                 </ul>
-            </section>
-
-            <section className="admin-card">
-                <div className="admin-card-header">
-                    <div>
-                        <h2 className="admin-card-title">Quick stats</h2>
-                        <p className="admin-card-subtitle">Synced with the dashboard</p>
-                    </div>
-                    <Database className="size-5 text-light-400" />
-                </div>
-                {stats ? (
-                    <dl className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                <DetailRow label="Total users" value={String(stats.totalUsers)} />
-                <DetailRow label="Total documents" value={String(stats.totalDocuments)} />
-                <DetailRow label="Total reports" value={String(stats.totalReports)} />
-                <DetailRow label="Payments" value={`${stats.completedPayments}/${stats.totalPayments} completed`} />
-                    </dl>
-                ) : (
-                    <p className="text-sm text-light-400">Database is unreachable.</p>
-                )}
             </section>
 
             <section className="admin-card">

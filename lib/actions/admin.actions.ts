@@ -603,26 +603,20 @@ const computeLocalUserCounts = async (): Promise<{total: number; admins: number}
 export const getSystemStats = async (): Promise<AdminDashboard> => {
     await requireAdmin();
     try {
-        const [dashboard, local] = await Promise.all([
-            backendFetch<any>("/api/Admin/dashboard", { method: "GET" }),
-            computeLocalUserCounts(),
-        ]);
+        const dashboard = await backendFetch<any>("/api/Admin/dashboard", { method: "GET" });
         const mapped: AdminDashboard = {
-            totalUsers: dashboard.totalUsers ?? dashboard.TotalUsers ?? local.total,
+            totalUsers: dashboard.totalUsers ?? dashboard.TotalUsers ?? 0,
             totalDocuments: dashboard.totalDocuments ?? dashboard.TotalDocuments ?? 0,
+            totalPayments: dashboard.totalPayments ?? dashboard.TotalPayments ?? 0,
+            pendingPayments: dashboard.pendingPayments ?? dashboard.PendingPayments ?? 0,
+            completedPayments: dashboard.completedPayments ?? dashboard.CompletedPayments ?? 0,
             totalReports: dashboard.totalReports ?? dashboard.TotalReports ?? 0,
+            totalFlashcards: dashboard.totalFlashcards ?? dashboard.TotalFlashcards ?? 0,
+            totalQuizzes: dashboard.totalQuizzes ?? dashboard.TotalQuizzes ?? 0,
+            generatedAt: dashboard.generatedAt ?? dashboard.GeneratedAt ?? new Date().toISOString(),
         };
         return parseStringify(mapped);
     } catch (error) {
-        if (error instanceof BackendApiError) {
-            // Fall back to local-only stats when the backend isn't reachable.
-            const local = await computeLocalUserCounts();
-            return parseStringify({
-                totalUsers: local.total,
-                totalDocuments: 0,
-                totalReports: 0,
-            });
-        }
         wrapBackendError(error);
     }
     throw new AdminBackendError("Unexpected error while loading stats.", 500, null);

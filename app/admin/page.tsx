@@ -1,54 +1,72 @@
 import Link from "next/link";
-import {
-    FileText,
-    Flag,
-    Users,
-} from "lucide-react";
+import { Flag, Users, FileText, CreditCard, BrainCircuit, BookOpen } from "lucide-react";
 import { getSystemStats, getAdminReports } from "@/lib/actions/admin.actions";
 import StatsCard from "@/components/admin/StatsCard";
 import EmptyState from "@/components/admin/EmptyState";
 import FormattedDateTime from "@/components/FormattedDateTime";
-import type { AdminDashboard, AdminReport } from "@/types/admin";
+import type { AdminReport } from "@/types/admin";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminDashboardPage() {
-    const fallback: AdminDashboard = {
-        totalUsers: 0,
-        totalDocuments: 0,
-        totalReports: 0,
-    };
-
     const [statsResult, reportsResult] = await Promise.allSettled([
         getSystemStats(),
         getAdminReports({ limit: 5, sort: "$createdAt-desc" }),
     ]);
 
-    const stats = statsResult.status === "fulfilled" ? statsResult.value : fallback;
+    const stats = statsResult.status === "fulfilled" ? statsResult.value : null;
     const recentReports: AdminReport[] =
         reportsResult.status === "fulfilled" ? reportsResult.value.documents.slice(0, 5) : [];
 
     return (
         <div className="flex flex-col gap-6" data-testid="admin-dashboard">
-            {/* Top stats: only platform-level counters */}
+            {/* Top stats grid - using data from /api/Admin/dashboard */}
             <div className="admin-stats-grid">
                 <StatsCard
                     label="Total Users"
-                    value={stats.totalUsers}
+                    value={stats?.totalUsers ?? 0}
                     icon={Users}
                     description="Registered accounts on the platform"
                 />
                 <StatsCard
-                    label="Documents"
-                    value={stats.totalDocuments}
+                    label="Total Documents"
+                    value={stats?.totalDocuments ?? 0}
                     icon={FileText}
-                    description="Total documents uploaded (not reported)"
+                    description="All documents uploaded to the platform"
                 />
                 <StatsCard
-                    label="Reports"
-                    value={stats.totalReports}
+                    label="Total Reports"
+                    value={stats?.totalReports ?? 0}
                     icon={Flag}
                     description="Documents flagged for moderator review"
+                />
+                <StatsCard
+                    label="Pending Payments"
+                    value={stats?.pendingPayments ?? 0}
+                    icon={CreditCard}
+                    description="Payments awaiting approval"
+                />
+            </div>
+
+            {/* Secondary stats */}
+            <div className="admin-stats-grid">
+                <StatsCard
+                    label="Completed Payments"
+                    value={stats?.completedPayments ?? 0}
+                    icon={CreditCard}
+                    description="Approved payment transactions"
+                />
+                <StatsCard
+                    label="Total Flashcards"
+                    value={stats?.totalFlashcards ?? 0}
+                    icon={BrainCircuit}
+                    description="Flashcards created by users"
+                />
+                <StatsCard
+                    label="Total Quizzes"
+                    value={stats?.totalQuizzes ?? 0}
+                    icon={BookOpen}
+                    description="Quizzes taken by users"
                 />
             </div>
 
