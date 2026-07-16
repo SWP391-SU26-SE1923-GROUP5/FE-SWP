@@ -15,7 +15,8 @@ import {
     Pencil,
     Trash2,
     Check,
-    X
+    X,
+    Copy
 } from "lucide-react";
 
 import {
@@ -501,11 +502,30 @@ export default function ActionDropdown({ file }: { file: File_ }) {
                             <h2 className="h2-bold text-dark-100 mb-6">{label}</h2>
 
                             {value === "summarize" && aiResult.data?.summary && (
-                                <div className="space-y-4">
-                                    <div className="p-6 border light-border rounded-xl bg-light-800">
-                                        <p className="text-dark-200 leading-relaxed whitespace-pre-wrap">
+                                <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                                    <div className="flex items-center gap-3 px-1">
+                                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-brand to-emerald-500 flex items-center justify-center shadow-lg shadow-brand/20 text-white shrink-0">
+                                            <Sparkles className="w-5 h-5" />
+                                        </div>
+                                        <div>
+                                            <h3 className="text-lg font-bold text-slate-800">AI Summary</h3>
+                                            <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Key Insights Extracted</p>
+                                        </div>
+                                    </div>
+                                    <div className="p-6 md:p-8 border border-slate-200/60 rounded-2xl bg-gradient-to-b from-slate-50/50 to-white shadow-sm relative overflow-hidden group">
+                                        <div className="absolute top-0 right-0 w-32 h-32 bg-brand/5 rounded-bl-full -mr-10 -mt-10 transition-transform group-hover:scale-110 duration-700 pointer-events-none" />
+                                        <p className="text-slate-700 leading-relaxed whitespace-pre-wrap relative z-10 font-medium text-[15px]">
                                             {aiResult.data.summary as string}
                                         </p>
+                                    </div>
+                                    <div className="flex justify-end pt-2">
+                                        <Button 
+                                            onClick={() => navigator.clipboard.writeText(aiResult.data.summary as string)}
+                                            variant="outline" 
+                                            className="gap-2 rounded-xl text-slate-600 hover:text-brand hover:bg-brand/5 border-slate-200 cursor-pointer shadow-2xs"
+                                        >
+                                            <Copy className="w-4 h-4" /> Copy Summary
+                                        </Button>
                                     </div>
                                 </div>
                             )}
@@ -658,127 +678,22 @@ export default function ActionDropdown({ file }: { file: File_ }) {
                             )}
 
                             {value === "quiz" && aiResult.data?.questions && (
-                                <div className="space-y-6">
-                                    <h3 className="h3-bold text-brand">{aiResult.data.quizTitle}</h3>
-                                    {aiResult.data.questions.map((q: QuizQuestion, idx: number) => {
-                                        const hasAnswered = userAnswers[idx] !== undefined;
-                                        const selectedIndex = Number(userAnswers[idx]);
-                                        const isCorrect = hasAnswered ? q.answers[selectedIndex]?.isCorrect : false;
-                                        const correctText = q.answers.find((a) => a.isCorrect)?.selectedOption;
-
-                                        return (
-                                            <div
-                                                key={idx}
-                                                className="p-4 border light-border rounded-xl bg-light-800 space-y-2"
-                                            >
-                                                <p className="font-semibold text-dark-200">
-                                                    {idx + 1}. {q.questionTitle}
-                                                </p>
-                                                <div className="grid gap-2 mt-3">
-                                                    {q.answers.map((ans, i: number) => {
-                                                        let optionClass =
-                                                            "text-sm p-3 bg-white rounded-lg border light-border flex items-center gap-2 transition-all duration-200";
-                                                        let circleClass =
-                                                            "h-4 w-4 rounded-full border light-border shrink-0 transition-colors";
-
-                                                        if (!hasAnswered) {
-                                                            optionClass += " cursor-pointer hover:bg-brand/10 hover:border-brand";
-                                                        } else {
-                                                            if (ans.isCorrect) {
-                                                                optionClass +=
-                                                                    " bg-emerald-50 border-emerald-500 text-emerald-800 font-medium";
-                                                                circleClass =
-                                                                    "h-4 w-4 rounded-full border-emerald-500 bg-emerald-500 shrink-0";
-                                                            } else if (i === selectedIndex) {
-                                                                optionClass += " bg-red/10 border-red text-red font-medium";
-                                                                circleClass =
-                                                                    "h-4 w-4 rounded-full border-red bg-red shrink-0";
-                                                            } else {
-                                                                optionClass += " opacity-40 cursor-default";
-                                                            }
-                                                        }
-                                                        return (
-                                                            <div
-                                                                key={i}
-                                                                className={optionClass}
-                                                                onClick={() => {
-                                                                    if (!hasAnswered)
-                                                                        setUserAnswers((prev) => ({
-                                                                            ...prev,
-                                                                            [idx]: i.toString()
-                                                                        }));
-                                                                }}
-                                                            >
-                                                                <div className={circleClass} />
-                                                                <p>{ans.selectedOption}</p>
-                                                            </div>
-                                                        );
-                                                    })}
-                                                </div>
-                                                {hasAnswered && (
-                                                    <div
-                                                        className={`mt-3 pt-3 border-t light-border text-sm font-medium ${
-                                                            isCorrect ? "text-emerald-600" : "text-red"
-                                                        }`}
-                                                    >
-                                                        {isCorrect
-                                                            ? "✨ Correct!"
-                                                            : `❌ Incorrect. The right answer is: ${correctText}`}
-                                                    </div>
-                                                )}
-                                            </div>
-                                        );
-                                    })}
+                                <div className="flex flex-col items-center justify-center space-y-4 py-8 text-center">
+                                    <div className="w-16 h-16 bg-emerald-100 dark:bg-emerald-500/20 text-emerald-500 rounded-full flex items-center justify-center mb-2 text-3xl">
+                                        ✨
+                                    </div>
+                                    <h3 className="h3-bold text-dark-100">{aiResult.data.quizTitle}</h3>
+                                    <p className="text-light-400">Successfully generated {aiResult.data.questions.length} questions for this document.</p>
                                 </div>
                             )}
 
                             {value === "flashcards" && aiResult.data?.cards && (
-                                <div className="space-y-6">
-                                    <div className="flex items-center justify-between">
-                                        <h3 className="h3-bold text-brand">{aiResult.data.deckTitle}</h3>
-                                        <span className="caption text-light-400">Click a card to flip</span>
+                                <div className="flex flex-col items-center justify-center space-y-4 py-8 text-center">
+                                    <div className="w-16 h-16 bg-emerald-100 dark:bg-emerald-500/20 text-emerald-500 rounded-full flex items-center justify-center mb-2 text-3xl">
+                                        ✨
                                     </div>
-
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                        {aiResult.data.cards.map((card: Flashcard, idx: number) => {
-                                            const isFlipped = flippedCards[idx];
-                                            return (
-                                                <div
-                                                    key={idx}
-                                                    onClick={() =>
-                                                        setFlippedCards((prev) => ({ ...prev, [idx]: !prev[idx] }))
-                                                    }
-                                                    className={`relative cursor-pointer min-h-[160px] p-6 rounded-2xl border flex items-center justify-center text-center transition-all duration-300 transform ${
-                                                        isFlipped
-                                                            ? "bg-brand text-white border-brand shadow-drop-1"
-                                                            : "bg-white text-dark-200 border-slate-200 hover:border-brand hover:shadow-sm"
-                                                    }`}
-                                                >
-                                                    <div className="absolute top-3 right-3 opacity-30">
-                                                        <RotateCcw
-                                                            className={`h-4 w-4 transition-transform duration-300 ${
-                                                                isFlipped ? "rotate-180" : ""
-                                                            }`}
-                                                        />
-                                                    </div>
-
-                                                    <div className="flex flex-col items-center gap-2">
-                                                        <span
-                                                            className="uppercase text-[10px] font-bold tracking-widest opacity-60">
-                                                            {isFlipped ? "Definition" : "Term"}
-                                                        </span>
-                                                        <p
-                                                            className={`font-medium ${
-                                                                isFlipped ? "text-sm" : "text-lg"
-                                                            }`}
-                                                        >
-                                                            {isFlipped ? card.back : card.front}
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
+                                    <h3 className="h3-bold text-dark-100">{aiResult.data.deckTitle}</h3>
+                                    <p className="text-light-400">Successfully generated {aiResult.data.cards.length} flashcards for this document.</p>
                                 </div>
                             )}
                         </div>
@@ -835,18 +750,18 @@ export default function ActionDropdown({ file }: { file: File_ }) {
                             onClick={closeAllModals}
                             className="btn-secondary w-full py-2 rounded-full text-dark-100 font-semibold hover:bg-light-700 transition-colors cursor-pointer"
                         >
-                            Close Workspace
+                            Close
                         </Button>
 
                         {value === "quiz" && (
                             <Button
                                 onClick={() => {
                                     closeAllModals();
-                                    router.push("/quizzes");
+                                    router.push(`/quizzes/${aiResult.data?.id}`);
                                 }}
                                 className="w-full py-2 rounded-full bg-brand text-white hover:bg-emerald-400 transition-colors cursor-pointer shadow-sm"
                             >
-                                Go to My Quizzes
+                                Take Quiz Now
                             </Button>
                         )}
 
@@ -854,11 +769,11 @@ export default function ActionDropdown({ file }: { file: File_ }) {
                             <Button
                                 onClick={() => {
                                     closeAllModals();
-                                    router.push("/flashcards");
+                                    router.push(`/flashcards/${file.id}`);
                                 }}
                                 className="w-full py-2 rounded-full bg-brand text-white hover:bg-emerald-400 transition-colors cursor-pointer shadow-sm"
                             >
-                                Go to My Flashcards
+                                Review Flashcards
                             </Button>
                         )}
                     </DialogFooter>

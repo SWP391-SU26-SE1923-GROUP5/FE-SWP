@@ -55,7 +55,7 @@ export const navItems: NavItem[] = [
         section: "insights",
     },
     {
-        name: "AI Notebook",
+        name: "AI Chat",
         icon: "/assets/icons/others.svg",
         url: "/chat",
         section: "ai",

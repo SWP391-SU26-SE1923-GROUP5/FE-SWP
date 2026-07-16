@@ -25,7 +25,28 @@ export default function ApryseViewer({ file, path, closeModals, readOnly = false
                 }
             }
             if (searchSnippet) {
-                instance.UI.searchTextFull(searchSnippet);
+                let searchPattern = searchSnippet;
+                let useRegex = false;
+                try {
+                    // Extract first 10 alphanumeric words (including Vietnamese characters)
+                    const tokens = searchSnippet.match(/[a-zA-Z0-9À-ỹ]+/g);
+                    if (tokens && tokens.length > 0) {
+                        const firstTokens = tokens.slice(0, Math.min(10, tokens.length));
+                        // Create a regex pattern that ignores any non-alphanumeric characters between words
+                        searchPattern = firstTokens.join('[^a-zA-Z0-9À-ỹ]+');
+                        useRegex = true;
+                    } else {
+                        searchPattern = searchSnippet.substring(0, 30).trim();
+                    }
+                } catch (e) {
+                    searchPattern = searchSnippet.substring(0, 30).trim();
+                }
+
+                if (useRegex) {
+                    instance.UI.searchTextFull(searchPattern, { regex: true });
+                } else {
+                    instance.UI.searchTextFull(searchPattern);
+                }
             }
         } catch (error) {
             console.error("Error jumping to citation:", error);
@@ -87,7 +108,26 @@ export default function ApryseViewer({ file, path, closeModals, readOnly = false
                                     }
                                 }
                                 if (searchSnippet) {
-                                    instance.UI.searchTextFull(searchSnippet);
+                                    let searchPattern = searchSnippet;
+                                    let useRegex = false;
+                                    try {
+                                        const tokens = searchSnippet.match(/[a-zA-Z0-9À-ỹ]+/g);
+                                        if (tokens && tokens.length > 0) {
+                                            const firstTokens = tokens.slice(0, Math.min(10, tokens.length));
+                                            searchPattern = firstTokens.join('[^a-zA-Z0-9À-ỹ]+');
+                                            useRegex = true;
+                                        } else {
+                                            searchPattern = searchSnippet.substring(0, 30).trim();
+                                        }
+                                    } catch (e) {
+                                        searchPattern = searchSnippet.substring(0, 30).trim();
+                                    }
+                                    
+                                    if (useRegex) {
+                                        instance.UI.searchTextFull(searchPattern, { regex: true });
+                                    } else {
+                                        instance.UI.searchTextFull(searchPattern);
+                                    }
                                 }
                             });
                         });

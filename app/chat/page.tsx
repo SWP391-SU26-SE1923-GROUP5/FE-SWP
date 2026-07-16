@@ -343,12 +343,12 @@ export default function AIChatPage() {
         <div className="flex-1 flex flex-col lg:flex-row h-full w-full overflow-hidden bg-white dark:bg-dark-100 border-t border-light-700 dark:border-dark-400">
             {/* LEFT COLUMN: SOURCES SIDEBAR (WORKSPACE) */}
             <aside className="w-full lg:w-96 shrink-0 border-b lg:border-b-0 lg:border-r border-light-700 dark:border-dark-400 bg-white dark:bg-dark-200 flex flex-col h-1/3 lg:h-full overflow-hidden">
-                {/* Notebook Session Switcher */}
+                {/* Chat Session Switcher */}
                 <div className="p-4 border-b border-light-700 dark:border-dark-400 bg-light-800/50 dark:bg-dark-300/40 space-y-2">
                     <div className="flex items-center justify-between gap-2">
                         <div className="flex-1 min-w-0">
                             <label className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block mb-1">
-                                Current Workspace
+                                Current Session
                             </label>
                             <div className="flex items-center gap-1">
                                 <select
@@ -358,7 +358,7 @@ export default function AIChatPage() {
                                     disabled={isSessionsLoading || sessions.length === 0}
                                 >
                                     {sessions.length === 0 ? (
-                                        <option value="">No notebooks exist</option>
+                                        <option value="">No sessions exist</option>
                                     ) : (
                                         sessions.map(s => (
                                             <option key={s.id} value={s.id}>{s.sessionTitle}</option>
@@ -370,7 +370,7 @@ export default function AIChatPage() {
                         <button
                             onClick={handleCreateNewNotebook}
                             className="h-10 px-3 mt-4 bg-brand hover:bg-brand/90 text-white rounded-xl flex items-center gap-1.5 text-xs font-bold transition-all shadow-xs shrink-0 cursor-pointer"
-                            title="Create New Notebook"
+                            title="Create New Session"
                         >
                             <Plus className="w-4 h-4" />
                             <span>New</span>
@@ -394,7 +394,7 @@ export default function AIChatPage() {
                                 className="flex-1 flex items-center justify-center gap-1.5 py-1.5 px-2 bg-white dark:bg-dark-300 hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-500/10 border border-light-700 dark:border-dark-400 rounded-lg text-[11px] font-semibold text-slate-500 transition-colors cursor-pointer"
                             >
                                 <Trash2 className="w-3 h-3" />
-                                Delete Workspace
+                                Delete Session
                             </button>
                         </div>
                     )}
@@ -405,7 +405,7 @@ export default function AIChatPage() {
                     <div className="flex items-center gap-2">
                         <BookOpen className="w-4 h-4 text-brand" />
                         <span className="font-extrabold text-sm text-dark-200 dark:text-light-100">
-                            Notebook Sources
+                            Session Documents
                         </span>
                         <span className="bg-brand/10 text-brand text-[11px] font-bold px-2 py-0.5 rounded-full">
                             {sessionDocuments.length}
@@ -430,17 +430,17 @@ export default function AIChatPage() {
                     ) : !currentSessionId ? (
                         <div className="flex flex-col items-center justify-center text-center p-6 h-full border-2 border-dashed border-light-700 dark:border-dark-400 rounded-2xl text-slate-400">
                             <BookOpen className="w-10 h-10 stroke-1 mb-2 opacity-50" />
-                            <p className="text-xs font-semibold mb-1 text-dark-200 dark:text-light-100">No Workspace Active</p>
+                            <p className="text-xs font-semibold mb-1 text-dark-200 dark:text-light-100">No Session Active</p>
                             <p className="text-[11px] leading-relaxed max-w-[200px]">
-                                Create a new notebook to start attaching sources.
+                                Create a new session to start attaching documents.
                             </p>
                         </div>
                     ) : sessionDocuments.length === 0 ? (
                         <div className="flex flex-col items-center justify-center text-center p-6 h-full border-2 border-dashed border-light-700 dark:border-dark-400 rounded-2xl text-slate-400">
                             <FolderPlus className="w-10 h-10 stroke-1 mb-2 opacity-50" />
-                            <p className="text-xs font-semibold mb-1 text-dark-200 dark:text-light-100">Workspace is empty</p>
+                            <p className="text-xs font-semibold mb-1 text-dark-200 dark:text-light-100">Session is empty</p>
                             <p className="text-[11px] leading-relaxed max-w-[200px]">
-                                Add documents from your library to start studying with AI.
+                                Add documents from your library to start chatting.
                             </p>
                             <button
                                 onClick={handleOpenAddModal}
@@ -470,7 +470,7 @@ export default function AIChatPage() {
                                 <button
                                     onClick={() => handleRemoveSource(doc.documentId)}
                                     className="p-1.5 ml-2 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100 cursor-pointer shrink-0"
-                                    title="Remove from Workspace"
+                                    title="Remove from Session"
                                 >
                                     <Trash2 className="w-4 h-4" />
                                 </button>
@@ -490,7 +490,7 @@ export default function AIChatPage() {
                         </div>
                         <div className="min-w-0">
                             <h1 className="text-sm font-extrabold text-dark-200 dark:text-light-100 truncate">
-                                {currentSession?.sessionTitle || "AI Notebook Studio"}
+                                {currentSession?.sessionTitle || "AI Chat Studio"}
                             </h1>
                             <p className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1.5 mt-0.5">
                                 <span>{sessionDocuments.length} document(s) in context</span>
@@ -520,17 +520,17 @@ export default function AIChatPage() {
                                 <BookOpen className="w-8 h-8" />
                             </div>
                             <h2 className="text-lg font-extrabold text-dark-200 dark:text-light-100 mb-2">
-                                Create a Workspace
+                                Create a Session
                             </h2>
                             <p className="text-xs leading-relaxed text-slate-500 dark:text-slate-400 mb-6">
-                                Click the "+ New" button on the left panel to create a new Notebook Session.
+                                Click the "+ New" button on the left panel to create a new Chat Session.
                             </p>
                             <button
                                 onClick={handleCreateNewNotebook}
                                 className="bg-brand text-white px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 shadow-sm hover:bg-brand/90 hover:scale-105 transition-all cursor-pointer"
                             >
                                 <Plus className="w-4 h-4" />
-                                <span>Create New Notebook</span>
+                                <span>Create New Session</span>
                             </button>
                         </div>
                     ) : messages.length === 0 ? (
@@ -539,10 +539,10 @@ export default function AIChatPage() {
                                 <Sparkles className="w-8 h-8" />
                             </div>
                             <h2 className="text-lg font-extrabold text-dark-200 dark:text-light-100 mb-2">
-                                Start Your Notebook Conversation
+                                Start Your Chat Conversation
                             </h2>
                             <p className="text-xs leading-relaxed text-slate-500 dark:text-slate-400">
-                                Ask questions, request summaries, or generate study notes based on the {sessionDocuments.length} document(s) in this workspace.
+                                Ask questions, request summaries, or generate study notes based on the {sessionDocuments.length} document(s) in this session.
                             </p>
                         </div>
                     ) : (
@@ -609,10 +609,10 @@ export default function AIChatPage() {
                             rows={1}
                             placeholder={
                                 !currentSessionId
-                                    ? "Create a notebook session first..."
+                                    ? "Create a chat session first..."
                                     : sessionDocuments.length === 0
                                     ? "Add documents to ask specific questions..."
-                                    : "Ask anything about your workspace documents..."
+                                    : "Ask anything about your session documents..."
                             }
                             value={chatInput}
                             onChange={(e) => setChatInput(e.target.value)}
@@ -643,7 +643,7 @@ export default function AIChatPage() {
                         </button>
                     </div>
                     <p className="text-[10px] text-center text-slate-400 mt-2">
-                        AI Notebook can make mistakes. Double-check citations across your workspace documents.
+                        AI Chat can make mistakes. Double-check citations across your session documents.
                     </p>
                 </div>
             </main>
@@ -701,10 +701,10 @@ export default function AIChatPage() {
                     <DialogHeader>
                         <DialogTitle className="text-lg font-extrabold text-dark-200 dark:text-light-100 flex items-center gap-2">
                             <BookOpen className="w-5 h-5 text-brand" />
-                            <span>Add Sources to Workspace</span>
+                            <span>Add Documents to Session</span>
                         </DialogTitle>
                         <DialogDescription className="text-xs text-slate-400">
-                            Select documents from your library to attach to the current Notebook Session.
+                            Select documents from your library to attach to the current Chat Session.
                         </DialogDescription>
                     </DialogHeader>
 
@@ -748,7 +748,7 @@ export default function AIChatPage() {
                                                 ) : isAlreadyAttached ? (
                                                     "Attached"
                                                 ) : (
-                                                    "Add to Workspace"
+                                                    "Add to Session"
                                                 )}
                                             </button>
                                         </div>
@@ -811,11 +811,10 @@ export default function AIChatPage() {
                         </button>
                         <button
                             onClick={handleRenameSession}
-                            disabled={!renameTitleInput.trim() || isRenaming}
-                            className="px-4 py-2 bg-brand text-white rounded-xl text-sm font-bold hover:bg-brand/90 transition-colors flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                            disabled={isRenaming || !renameTitleInput.trim()}
+                            className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-brand hover:bg-brand/90 disabled:opacity-50 transition-colors"
                         >
-                            {isRenaming && <Loader2 className="w-4 h-4 animate-spin" />}
-                            Save
+                            {isRenaming ? "Renaming..." : "Save"}
                         </button>
                     </DialogFooter>
                 </DialogContent>
@@ -823,14 +822,11 @@ export default function AIChatPage() {
 
             {/* DELETE MODAL */}
             <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
-                <DialogContent className="shad-dialog bg-white dark:bg-dark-200 rounded-3xl border border-red-500/20">
+                <DialogContent className="shad-dialog bg-white dark:bg-dark-200 rounded-3xl border border-light-700 dark:border-dark-400">
                     <DialogHeader>
-                        <DialogTitle className="text-red-500 flex items-center gap-2">
-                            <Trash2 className="w-5 h-5" />
-                            Delete Notebook
-                        </DialogTitle>
-                        <DialogDescription className="text-slate-500 pt-2">
-                            Are you sure you want to delete this notebook? All chat history in this session will be permanently deleted. Your source documents in the library will <b>not</b> be affected.
+                        <DialogTitle className="text-dark-200 dark:text-light-100">Delete Session</DialogTitle>
+                        <DialogDescription className="text-slate-500">
+                            Are you sure you want to delete this session and all its history? This action cannot be undone.
                         </DialogDescription>
                     </DialogHeader>
                     <DialogFooter className="mt-4">

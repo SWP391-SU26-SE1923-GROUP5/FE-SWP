@@ -191,7 +191,7 @@ export default function NotificationsPage() {
                                     : 'text-dark500_light400 hover:text-dark100_light900'
                             }`}
                         >
-                            Tất cả ({notifications.length})
+                            All ({notifications.length})
                             {filter === 'all' && (
                                 <span className="absolute bottom-[-1px] left-0 w-full h-0.5 bg-brand rounded-t-full" />
                             )}
@@ -204,7 +204,7 @@ export default function NotificationsPage() {
                                     : 'text-dark500_light400 hover:text-dark100_light900'
                             }`}
                         >
-                            Chưa đọc ({unreadCount})
+                            Unread ({unreadCount})
                             {filter === 'unread' && (
                                 <span className="absolute bottom-[-1px] left-0 w-full h-0.5 bg-brand rounded-t-full" />
                             )}
@@ -245,7 +245,7 @@ export default function NotificationsPage() {
                                             </h3>
                                             {!item.isRead && (
                                                 <span className="px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider bg-brand text-white shadow-sm flex items-center gap-1">
-                                                    Mới
+                                                    New
                                                 </span>
                                             )}
                                         </div>
@@ -265,11 +265,11 @@ export default function NotificationsPage() {
                                                 e.stopPropagation();
                                                 handleItemClick(item.id, item.isRead);
                                             }}
-                                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand/10 hover:bg-brand/20 text-brand text-xs font-bold transition-colors"
-                                            title="Đánh dấu đã đọc"
+                                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-brand/10 text-brand text-xs font-bold transition-all hover:bg-brand hover:text-white hover:shadow-drop-1 hover:scale-105"
+                                            title="Mark as read"
                                         >
                                             <CheckCircle2 className="w-3.5 h-3.5" />
-                                            Đã đọc
+                                            Read
                                         </button>
                                     )}
                                 </div>

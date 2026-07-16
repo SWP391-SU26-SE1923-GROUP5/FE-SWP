@@ -73,10 +73,21 @@ export interface RAGResponse {
     neighbors?: any[];
 }
 
+export interface SemanticSearchResult {
+    content: string;
+    score: number;
+    documentId: string;
+    fileName: string;
+    pageNumber?: number;
+    chunkIndex?: number;
+    matchType: string;
+    isHighlightable: boolean;
+}
+
 export interface SemanticSearchResponse {
-    answer: string;
-    citations: Citation[];
-    confidence: number;
+    query: string;
+    count: number;
+    results: SemanticSearchResult[];
 }
 
 export const createChatSession = async (

@@ -25,9 +25,17 @@ export default async function FlashcardStudyPage({ params }: Props) {
 
     if (!deckCards || deckCards.length === 0) {
         return (
-            <div className="flex flex-col justify-center items-center h-[50vh] text-center gap-3">
-                <p className="text-xl font-bold text-dark-100">🎉 All caught up!</p>
-                <p className="text-slate-500 max-w-sm">No flashcards found or due for review right now. Check back later!</p>
+            <div className="flex flex-col justify-center items-center h-[70vh] text-center gap-4 animate-in fade-in duration-500">
+                <div className="p-6 bg-brand/10 rounded-full mb-2">
+                    <span className="text-4xl">🎉</span>
+                </div>
+                <h2 className="h2 font-bold text-dark100_light900">All caught up!</h2>
+                <p className="body-2 text-light-200 dark:text-dark-400 max-w-md">
+                    No flashcards found or due for review right now. You're doing great! Check back later for your next scheduled reviews.
+                </p>
+                <a href="/flashcards" className="mt-4 px-6 py-3 bg-brand text-white font-bold rounded-full shadow-drop-1 hover:bg-brand-100 transition-all">
+                    Back to Dashboard
+                </a>
             </div>
         );
     }

@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo } from "react";
 import Link from "next/link";
-import { Layers, ArrowLeft, Sparkles, Clock, Award, BrainCircuit, Search, ArrowUpDown, Filter, X, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, BookOpen } from "lucide-react";
+import { Layers, ArrowLeft, Sparkles, Clock, Award, BrainCircuit, Search, ArrowUpDown, Filter, X, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, BookOpen, Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export type DeckItem = {

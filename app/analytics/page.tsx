@@ -215,7 +215,15 @@ export default function AnalyticsPage() {
                                         contentStyle={{ backgroundColor: '#0f1117', borderRadius: '16px', border: '1px solid #334155', color: '#fff', padding: '12px 16px' }}
                                         formatter={(value) => [`${value}%`, 'Accuracy']}
                                     />
-                                    <Line type="monotone" dataKey="accuracy" stroke="#10b981" strokeWidth={3} dot={false} activeDot={{ r: 6, fill: '#10b981', stroke: '#fff', strokeWidth: 2 }} />
+                                    <Line 
+                                        type="monotone" 
+                                        dataKey="accuracy" 
+                                        stroke="#10b981" 
+                                        strokeWidth={3} 
+                                        connectNulls={true}
+                                        dot={{ r: 4, fill: '#10b981', strokeWidth: 0 }} 
+                                        activeDot={{ r: 6, fill: '#10b981', stroke: '#fff', strokeWidth: 2 }} 
+                                    />
                                 </LineChart>
                             </ResponsiveContainer>
                         </div>

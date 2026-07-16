@@ -29,7 +29,7 @@ const renderNavIcon = (name: string, icon: string, isActive: boolean) => {
     if (name === "Trash Bin" || name === "Trash") {
         return <Trash2 className={cn("w-[22px] h-[22px] text-red-500/80 transition-colors shrink-0", isActive && "text-white")} />;
     }
-    if (name === "AI Notebook") {
+    if (name === "AI Chat") {
         return <Sparkles className={cn("w-[22px] h-[22px] text-brand transition-colors shrink-0", isActive && "text-white")} />;
     }
     return (
