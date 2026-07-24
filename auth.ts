@@ -2,15 +2,14 @@ import NextAuth, { AuthError } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import GitHub from "next-auth/providers/github";
 import Google from "next-auth/providers/google";
-import { LocalAuth } from "@/lib/actions/providers/local.auth";
+import { signInUser, refreshSessionToken } from "@/lib/actions/user.actions";
 import { JWT } from "next-auth/jwt";
 
-
 declare global {
-    var _pendingRefreshRequests: Map<string, Promise<any>> | undefined;
+    var _pendingRefreshRequests: Map<string, Promise<JWT>> | undefined;
 }
 
-const pendingRefreshRequests = globalThis._pendingRefreshRequests ?? new Map<string, Promise<any>>();
+const pendingRefreshRequests = globalThis._pendingRefreshRequests ?? new Map<string, Promise<JWT>>();
 
 if (process.env.NODE_ENV !== "production") {
     globalThis._pendingRefreshRequests = pendingRefreshRequests;
@@ -25,8 +24,7 @@ async function refreshAccessToken(token: JWT) {
 
     const refreshPromise = (async () => {
         try {
-            const authService = new LocalAuth();
-            const refreshedTokens = await authService.refreshSessionToken(
+            const refreshedTokens = await refreshSessionToken(
                 refreshToken,
                 token.accessToken as string
             );
@@ -76,33 +74,32 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             },
             async authorize(credentials) {
                 if (!credentials?.email || !credentials?.password) {
-                    return { id: "AUTH_ERROR", email: credentials?.email as string, name: "Email and password is required" };
+                    return { id: "AUTH_ERROR", email: credentials?.email as string, name: "Email and password is required", role: "" };
                 }
 
-                const authService = new LocalAuth();
-
                 try {
-                    const result = await authService.signInUser({
+                    const result = await signInUser({
                         email: credentials.email as string,
                         password: credentials.password as string
                     });
 
                     if (!result || !result.user) {
-                        return { id: "AUTH_ERROR", email: credentials.email as string, name: "Invalid email or password" };
+                        return { id: "AUTH_ERROR", email: credentials.email as string, name: "Invalid email or password", role: "" };
                     }
 
                     return {
-                    id: result.user.id,
-                    email: result.user.email,
-                    name: result.user.fullName,
-                    role: result.user.role,
-                    currentStorageCapacity: result.user.currentStorageCapacity,
-                    tierStorageLimitMb: result.user.tierStorageLimitMb,
-                    accessToken: result.accessToken,
-                    refreshToken: result.refreshToken,
+                        id: result.user.id,
+                        email: result.user.email,
+                        name: result.user.fullName,
+                        role: result.user.role,
+                        currentStorageCapacity: result.user.currentStorageCapacity,
+                        tierStorageLimitMb: result.user.tierStorageLimitMb,
+                        accessToken: result.accessToken,
+                        refreshToken: result.refreshToken,
                     };
-                } catch (error: any) {
-                    return { id: "AUTH_ERROR", email: credentials.email as string, name: error.message };
+                } catch (error: unknown) {
+                    const err = error as Error;
+                    return { id: "AUTH_ERROR", email: credentials.email as string, name: err.message, role: "" };
                 }
             }
         })
@@ -123,14 +120,14 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             if (user) {
                 token.id = user.id as string;
                 token.role = user.role as string;
-                token.currentStorageCapacity = (user as any).currentStorageCapacity;
-                token.tierStorageLimitMb = (user as any).tierStorageLimitMb;
+                token.currentStorageCapacity = user.currentStorageCapacity;
+                token.tierStorageLimitMb = user.tierStorageLimitMb;
                 token.provider = account?.provider ?? "credentials";
 
                 if (token.provider === "credentials") {
-                    token.accessToken = (user as any).accessToken;
-                    token.refreshToken = (user as any).refreshToken;
-                    token.accessTokenExpiresAt = (user as any).accessTokenExpiresAt;
+                    token.accessToken = user.accessToken;
+                    token.refreshToken = user.refreshToken;
+                    token.accessTokenExpiresAt = user.accessTokenExpiresAt;
                 }
             }
 
@@ -166,8 +163,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             if (token && session.user) {
                 session.user.id = token.id as string;
                 session.user.role = token.role as string;
-                (session.user as any).currentStorageCapacity = token.currentStorageCapacity;
-                (session.user as any).tierStorageLimitMb = token.tierStorageLimitMb;
+                session.user.currentStorageCapacity = token.currentStorageCapacity;
+                session.user.tierStorageLimitMb = token.tierStorageLimitMb;
 
                 const provider = token.provider || "credentials";
                 if (provider === "credentials") {

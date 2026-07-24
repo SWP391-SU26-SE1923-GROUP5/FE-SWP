@@ -1,4 +1,4 @@
-'use client'
+"use client";
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
@@ -20,32 +20,33 @@ import {
     Bar,
     XAxis,
     YAxis,
-    CartesianGrid,
-    Tooltip,
-    ResponsiveContainer
+    CartesianGrid
 } from "recharts";
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { getAnalyticsDashboard } from "@/lib/actions/analytics.actions";
 import { DashboardDto } from "@/types";
 
 export default function AnalyticsPage() {
     const [dashboardData, setDashboardData] = useState<DashboardDto | null>(null);
-    const [loading, setLoading] = useState<boolean>(true);
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        async function loadData() {
-            setLoading(true);
+        let isMounted = true;
+        const fetchDashboard = async () => {
             try {
                 const data = await getAnalyticsDashboard();
-                if (data) {
+                if (isMounted && data) {
                     setDashboardData(data);
                 }
             } catch (error) {
-                console.error("Failed to fetch analytics dashboard:", error);
+                console.error("Failed to fetch analytics dashboard", error);
             } finally {
-                setLoading(false);
+                if (isMounted) setLoading(false);
             }
-        }
-        loadData();
+        };
+
+        fetchDashboard();
+        return () => { isMounted = false; };
     }, []);
 
     const kpis = dashboardData?.kpis || {
@@ -76,12 +77,47 @@ export default function AnalyticsPage() {
     const subjectMasteries = dashboardData?.subjectMasteries || [];
     const aiTips = dashboardData?.aiTips || [];
 
+    const accuracyConfig = { accuracy: { label: "Accuracy", color: "#10b981" } };
+    const flashcardConfig = { count: { label: "Cards", color: "#10b981" } };
+    const quizConfig = { count: { label: "Quizzes", color: "#3b82f6" } };
+
     if (loading) {
         return (
-            <div className="flex flex-col gap-6 pb-20 pt-6 max-w-7xl mx-auto w-full px-5 sm:px-6 min-h-[70vh] items-center justify-center">
-                <div className="flex flex-col items-center gap-3">
-                    <div className="w-10 h-10 rounded-full border-4 border-brand border-t-transparent animate-spin" />
-                    <p className="body-2 text-light-200 dark:text-dark-400 font-medium">Loading your AI study analytics...</p>
+            <div className="flex flex-col gap-8 pb-20 pt-6 max-w-7xl mx-auto w-full px-5 sm:px-6 animate-in fade-in duration-500">
+                {/* Header Skeleton */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-light-700 dark:border-dark-400 pb-5">
+                    <div className="flex items-center gap-3.5">
+                        <div className="h-10 w-10 shrink-0 rounded-xl bg-light-800 dark:bg-dark-300 animate-pulse" />
+                        <div>
+                            <div className="h-8 w-48 bg-light-800 dark:bg-dark-300 rounded-md animate-pulse mb-2" />
+                            <div className="h-4 w-72 bg-light-800 dark:bg-dark-300 rounded-md animate-pulse" />
+                        </div>
+                    </div>
+                </div>
+
+                {/* KPIs Skeleton */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                    {[...Array(4)].map((_, i) => (
+                        <div key={i} className="h-[142px] bg-white dark:bg-dark-200 rounded-3xl p-6 border border-light-700 dark:border-dark-400 flex flex-col justify-between">
+                            <div className="animate-pulse flex items-center justify-between mb-4">
+                                <div className="w-11 h-11 bg-light-800 dark:bg-dark-300 rounded-2xl" />
+                                <div className="w-12 h-4 bg-light-800 dark:bg-dark-300 rounded-md" />
+                            </div>
+                            <div className="h-8 w-24 bg-light-800 dark:bg-dark-300 rounded-md animate-pulse" />
+                        </div>
+                    ))}
+                </div>
+
+                {/* Main Charts Skeleton */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
+                    <div className="lg:col-span-2 bg-white dark:bg-dark-200 rounded-3xl p-6 sm:p-8 border border-light-700 dark:border-dark-400 h-96 animate-pulse" />
+                    <div className="bg-white dark:bg-dark-200 rounded-3xl p-6 sm:p-8 border border-light-700 dark:border-dark-400 h-96 animate-pulse" />
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
+                    <div className="bg-white dark:bg-dark-200 rounded-3xl p-6 sm:p-8 border border-light-700 dark:border-dark-400 h-80 animate-pulse" />
+                    <div className="bg-white dark:bg-dark-200 rounded-3xl p-6 sm:p-8 border border-light-700 dark:border-dark-400 h-80 animate-pulse" />
+                    <div className="bg-white dark:bg-dark-200 rounded-3xl p-6 sm:p-8 border border-light-700 dark:border-dark-400 h-80 animate-pulse" />
                 </div>
             </div>
         );
@@ -203,28 +239,23 @@ export default function AnalyticsPage() {
                                 14-Day Window
                             </span>
                         </div>
-                        <div className="h-72 w-full">
-                            <ResponsiveContainer width="100%" height="100%">
-                                <LineChart data={accuracyTrend} margin={{ top: 10, right: 20, bottom: 5, left: -15 }}>
-                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" strokeOpacity={0.4} />
-                                    <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748b' }} />
-                                    <YAxis domain={[0, 100]} ticks={[0, 25, 50, 75, 100]} axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748b' }} />
-                                    <Tooltip
-                                        contentStyle={{ backgroundColor: '#0f1117', borderRadius: '16px', border: '1px solid #334155', color: '#fff', padding: '12px 16px' }}
-                                        formatter={(value) => [`${value}%`, 'Accuracy']}
-                                    />
-                                    <Line 
-                                        type="monotone" 
-                                        dataKey="accuracy" 
-                                        stroke="#10b981" 
-                                        strokeWidth={3} 
-                                        connectNulls={true}
-                                        dot={{ r: 4, fill: '#10b981', strokeWidth: 0 }} 
-                                        activeDot={{ r: 6, fill: '#10b981', stroke: '#fff', strokeWidth: 2 }} 
-                                    />
-                                </LineChart>
-                            </ResponsiveContainer>
-                        </div>
+                        <ChartContainer config={accuracyConfig} className="h-72 w-full">
+                            <LineChart data={accuracyTrend} margin={{ top: 10, right: 20, bottom: 5, left: -15 }}>
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" strokeOpacity={0.4} />
+                                <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748b' }} />
+                                <YAxis domain={[0, 100]} ticks={[0, 25, 50, 75, 100]} axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748b' }} />
+                                <ChartTooltip content={<ChartTooltipContent />} />
+                                <Line 
+                                    type="monotone" 
+                                    dataKey="accuracy" 
+                                    stroke="var(--color-accuracy)" 
+                                    strokeWidth={3} 
+                                    connectNulls={true}
+                                    dot={{ r: 4, fill: 'var(--color-accuracy)', strokeWidth: 0 }} 
+                                    activeDot={{ r: 6, fill: 'var(--color-accuracy)', stroke: '#fff', strokeWidth: 2 }} 
+                                />
+                            </LineChart>
+                        </ChartContainer>
                     </div>
                 </div>
 
@@ -269,21 +300,15 @@ export default function AnalyticsPage() {
                                 <p className="text-xs text-light-200 dark:text-dark-400 mt-1">Cards reviewed daily</p>
                             </div>
                         </div>
-                        <div className="h-64 w-full">
-                            <ResponsiveContainer width="100%" height="100%">
-                                <BarChart data={flashcardVolumeTrend} margin={{ top: 10, right: 0, bottom: 5, left: -25 }}>
-                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" strokeOpacity={0.4} />
-                                    <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#64748b' }} />
-                                    <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#64748b' }} />
-                                    <Tooltip
-                                        cursor={{ fill: 'rgba(16, 185, 129, 0.08)' }}
-                                        contentStyle={{ backgroundColor: '#0f1117', borderRadius: '16px', border: '1px solid #334155', color: '#fff', padding: '12px 16px' }}
-                                        formatter={(value) => [value, 'Cards Reviewed']}
-                                    />
-                                    <Bar dataKey="count" fill="#10b981" radius={[4, 4, 0, 0]} maxBarSize={30} />
-                                </BarChart>
-                            </ResponsiveContainer>
-                        </div>
+                        <ChartContainer config={flashcardConfig} className="h-64 w-full">
+                            <BarChart data={flashcardVolumeTrend} margin={{ top: 10, right: 0, bottom: 5, left: -25 }}>
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" strokeOpacity={0.4} />
+                                <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#64748b' }} />
+                                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#64748b' }} />
+                                <ChartTooltip cursor={{ fill: 'rgba(16, 185, 129, 0.08)' }} content={<ChartTooltipContent />} />
+                                <Bar dataKey="count" fill="var(--color-count)" radius={[4, 4, 0, 0]} maxBarSize={30} />
+                            </BarChart>
+                        </ChartContainer>
                     </div>
                 </div>
 
@@ -295,21 +320,15 @@ export default function AnalyticsPage() {
                                 <p className="text-xs text-light-200 dark:text-dark-400 mt-1">Quizzes completed daily</p>
                             </div>
                         </div>
-                        <div className="h-64 w-full">
-                            <ResponsiveContainer width="100%" height="100%">
-                                <BarChart data={quizVolumeTrend} margin={{ top: 10, right: 0, bottom: 5, left: -25 }}>
-                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" strokeOpacity={0.4} />
-                                    <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#64748b' }} />
-                                    <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#64748b' }} />
-                                    <Tooltip
-                                        cursor={{ fill: 'rgba(59, 130, 246, 0.08)' }}
-                                        contentStyle={{ backgroundColor: '#0f1117', borderRadius: '16px', border: '1px solid #334155', color: '#fff', padding: '12px 16px' }}
-                                        formatter={(value) => [value, 'Quizzes Completed']}
-                                    />
-                                    <Bar dataKey="count" fill="#3b82f6" radius={[4, 4, 0, 0]} maxBarSize={30} />
-                                </BarChart>
-                            </ResponsiveContainer>
-                        </div>
+                        <ChartContainer config={quizConfig} className="h-64 w-full">
+                            <BarChart data={quizVolumeTrend} margin={{ top: 10, right: 0, bottom: 5, left: -25 }}>
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" strokeOpacity={0.4} />
+                                <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#64748b' }} />
+                                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#64748b' }} />
+                                <ChartTooltip cursor={{ fill: 'rgba(59, 130, 246, 0.08)' }} content={<ChartTooltipContent />} />
+                                <Bar dataKey="count" fill="var(--color-count)" radius={[4, 4, 0, 0]} maxBarSize={30} />
+                            </BarChart>
+                        </ChartContainer>
                     </div>
                 </div>
 

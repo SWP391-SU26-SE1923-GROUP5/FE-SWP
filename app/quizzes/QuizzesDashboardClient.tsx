@@ -147,7 +147,7 @@ export default function QuizzesDashboardClient({ initialQuizzes }: Props) {
                                 <select
                                     value={timeFilter}
                                     onChange={(e) => {
-                                        setTimeFilter(e.target.value as any);
+                                        setTimeFilter(e.target.value as "all" | "7d" | "30d");
                                         setCurrentPage(1);
                                     }}
                                     className="bg-transparent border-none focus:outline-hidden text-sm font-bold text-dark100_light900 cursor-pointer pr-2"
@@ -164,7 +164,7 @@ export default function QuizzesDashboardClient({ initialQuizzes }: Props) {
                                 <select
                                     value={sortBy}
                                     onChange={(e) => {
-                                        setSortBy(e.target.value as any);
+                                        setSortBy(e.target.value as "newest" | "oldest" | "title-asc" | "title-desc");
                                         setCurrentPage(1);
                                     }}
                                     className="bg-transparent border-none focus:outline-hidden text-sm font-bold text-dark100_light900 cursor-pointer pr-2"

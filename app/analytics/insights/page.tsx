@@ -1,6 +1,4 @@
-'use client';
-
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import Link from 'next/link';
 import {
     ArrowLeft,
@@ -13,36 +11,10 @@ import {
     ArrowUpRight
 } from 'lucide-react';
 import { getAnalyticsDashboard } from '@/lib/actions/analytics.actions';
-import { AiTipDto } from '@/types';
 
-export default function AIInsightsPage() {
-    const [tips, setTips] = useState<AiTipDto[]>([]);
-    const [loading, setLoading] = useState<boolean>(true);
-
-    useEffect(() => {
-        async function fetchInsights() {
-            setLoading(true);
-            try {
-                const data = await getAnalyticsDashboard();
-                if (data && data.aiTips) {
-                    setTips(data.aiTips);
-                }
-            } catch (error) {
-                console.error(error);
-            } finally {
-                setLoading(false);
-            }
-        }
-        fetchInsights();
-    }, []);
-
-    if (loading) {
-        return (
-            <div className="w-full min-h-screen flex items-center justify-center">
-                <div className="w-8 h-8 rounded-full border-4 border-[#10b981] border-t-transparent animate-spin" />
-            </div>
-        );
-    }
+export default async function AIInsightsPage() {
+    const data = await getAnalyticsDashboard();
+    const tips = data?.aiTips || [];
 
     return (
         <div className="flex flex-col gap-8 pb-20 pt-6 max-w-5xl mx-auto w-full px-5 sm:px-6 animate-in fade-in duration-500">

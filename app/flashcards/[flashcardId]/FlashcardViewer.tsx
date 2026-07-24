@@ -81,22 +81,28 @@ export default function FlashcardViewer({ cards: initialCards }: { cards: Flashc
         }
     };
 
-    const handleReview = async (quality: number, e: React.MouseEvent) => {
+    interface ReviewResponse {
+        review?: { interval?: number; nextReviewDate?: string };
+        Review?: { interval?: number; nextReviewDate?: string };
+        xpEarned?: number;
+    }
+
+    async function handleReview(quality: number, e: React.MouseEvent) {
         e.stopPropagation();
         if (isSubmitting) return;
         setIsSubmitting(true);
         try {
             const timeSpent = Math.max(1, cardSeconds);
-            const res = await submitFlashcardReview(currentCard.id, quality, timeSpent);
-            const rev = (res as any)?.review || (res as any)?.Review;
+            const res = await submitFlashcardReview(currentCard.id, quality, timeSpent) as ReviewResponse;
+            const rev = res?.review || res?.Review;
             if (rev && typeof rev.interval !== "undefined") {
                 const dateStr = rev.nextReviewDate ? new Date(rev.nextReviewDate).toLocaleDateString() : "";
                 setLastSchedule({ interval: rev.interval, date: dateStr });
                 const scheduleMsg = rev.interval <= 1 ? " • Next: Tomorrow" : ` • Next in ${rev.interval} days`;
-                const xpMsg = res?.xpEarned > 0 ? ` (+${res.xpEarned} XP)` : "";
+                const xpMsg = (res?.xpEarned ?? 0) > 0 ? ` (+${res.xpEarned} XP)` : "";
                 toast.success(`Review recorded!${scheduleMsg}${xpMsg}`);
             } else {
-                const xpMsg = res?.xpEarned > 0 ? ` (+${res.xpEarned} XP)` : "";
+                const xpMsg = (res?.xpEarned ?? 0) > 0 ? ` (+${res.xpEarned} XP)` : "";
                 toast.success(`Review recorded!${xpMsg}`);
             }
             if (currentIndex < cards.length - 1) {
@@ -111,7 +117,7 @@ export default function FlashcardViewer({ cards: initialCards }: { cards: Flashc
         } finally {
             setIsSubmitting(false);
         }
-    };
+    }
 
     return (
         <div className="flex flex-col items-center w-full max-w-2xl">

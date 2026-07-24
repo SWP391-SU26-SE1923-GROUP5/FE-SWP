@@ -99,7 +99,7 @@ export default function LandingHeroSection() {
                       <span className="text-blue-600 font-bold text-sm">🎯</span>
                     </div>
                     <div>
-                      <p className="text-xs text-gray-500">Today's Goal</p>
+                      <p className="text-xs text-gray-500">Today&#39;s Goal</p>
                       <p className="font-semibold text-gray-900">3 completed</p>
                     </div>
                   </div>

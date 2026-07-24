@@ -100,46 +100,57 @@ const Search = () => {
     const isNavigating = useRef(false);
     const abortControllerRef = useRef<AbortController | null>(null);
 
-    useEffect(() => {
-        const isNewTyping = prevQueryRef.current !== debouncedQuery;
-        prevQueryRef.current = debouncedQuery;
-
-        const fetchFiles = async () => {
-            if (debouncedQuery.length === 0) {
-                setResults([]);
-                setDropdownOpen(false);
-
-                if (searchParams.has("query")) {
-                    const newSearchParams = new URLSearchParams(searchParams.toString());
-                    newSearchParams.delete("query");
-
-                    const newPath = newSearchParams.toString()
-                        ? `${path}?${newSearchParams.toString()}`
-                        : path;
-
-                    return router.push(newPath);
-                }
-                return;
-            }
-
-            const files = await getFiles({ types: [], searchText: debouncedQuery });
-
-            if (files) {
-                setResults(files.documents);
-                if (isNewTyping && !isModalOpen && !isNavigating.current) {
-                    setDropdownOpen(true);
-                }
-            }
-        };
-
-        fetchFiles();
-    }, [debouncedQuery, path, router, searchParams, isModalOpen]);
-
-    useEffect(() => {
+    const [prevSearchQuery, setPrevSearchQuery] = useState(searchQuery);
+    if (searchQuery !== prevSearchQuery) {
+        setPrevSearchQuery(searchQuery);
         if (!searchQuery) {
             setQuery("");
         }
-    }, [searchQuery]);
+    }
+
+    const [prevDebouncedQuery, setPrevDebouncedQuery] = useState(debouncedQuery);
+    if (debouncedQuery !== prevDebouncedQuery) {
+        setPrevDebouncedQuery(debouncedQuery);
+        if (debouncedQuery.length === 0) {
+            setResults([]);
+            setDropdownOpen(false);
+        }
+    }
+
+    useEffect(() => {
+        let isMounted = true;
+        const isNewTyping = prevQueryRef.current !== debouncedQuery;
+        prevQueryRef.current = debouncedQuery;
+
+        if (debouncedQuery.length === 0) {
+            if (searchParams.has("query")) {
+                const newSearchParams = new URLSearchParams(searchParams.toString());
+                newSearchParams.delete("query");
+
+                const newPath = newSearchParams.toString()
+                    ? `${path}?${newSearchParams.toString()}`
+                    : path;
+
+                router.push(newPath);
+            }
+            return;
+        }
+
+        getFiles({ types: [], searchText: debouncedQuery })
+            .then((files) => {
+                if (isMounted && files) {
+                    setResults(files.documents);
+                    if (isNewTyping && !isModalOpen && !isNavigating.current) {
+                        setDropdownOpen(true);
+                    }
+                }
+            })
+            .catch((err) => console.error("Search query failed:", err));
+
+        return () => {
+            isMounted = false;
+        };
+    }, [debouncedQuery, path, router, searchParams, isModalOpen]);
 
     const handleAISearch = async (searchQueryText: string) => {
         if (!searchQueryText.trim()) return;
@@ -160,10 +171,10 @@ const Search = () => {
             const response: SemanticSearchResponse = await semanticSearch(searchQueryText);
             if (controller.signal.aborted) return;
             setAiResult(response);
-        } catch (error: any) {
+        } catch (error: Error | unknown) {
             if (controller.signal.aborted) return;
             console.error("AI Search Error:", error);
-            const cleanMsg = (error.message || "").replace(/^\[\d+\]\s*/, '');
+            const cleanMsg = ((error as Error).message || "").replace(/^\[\d+\]\s*/, '');
             setAiResult(cleanMsg || "Sorry, I encountered an error searching inside your documents.");
         } finally {
             if (!controller.signal.aborted) {
@@ -350,7 +361,7 @@ const Search = () => {
                                                                             res.isHighlightable !== false ? "bg-brand/10 group-hover:bg-brand/20" : "bg-purple-100 group-hover:bg-purple-200"
                                                                         }`}>
                                                                             {res.isHighlightable !== false ? (
-                                                                                <BookOpen className={`h-4 w-4 ${res.isHighlightable !== false ? "text-brand" : "text-purple-600"}`} />
+                                                                                <BookOpen className="h-4 w-4 text-brand" />
                                                                             ) : (
                                                                                 <Sparkles className="h-4 w-4 text-purple-600" />
                                                                             )}
@@ -436,15 +447,15 @@ const Search = () => {
                                     id: activeCitation.documentId || activeCitation.DocumentId || "",
                                     fileName: activeCitation.source,
                                     fileExtension: activeCitation.source.split('.').pop() || 'pdf',
-                                    mimeType: "",
                                     fileSizeBytes: 0,
-                                    uploadedAt: new Date().toISOString(),
-                                    status: "Completed",
-                                    lifecycleStatus: "Active",
-                                    isEncrypted: false,
-                                    isPublic: false,
-                                    encryptionKeyId: "",
-                                    ownerId: ""
+                                    status: 2,
+                                    userId: "",
+                                    subjectId: "",
+                                    title: activeCitation.source,
+                                    fileLink: "",
+                                    fileType: "document",
+                                    sharedUsers: "[]",
+                                    shareStatus: "private"
                                 }} 
                                 path="/search" 
                                 closeModals={() => setActiveCitation(null)} 

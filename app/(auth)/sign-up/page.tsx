@@ -24,7 +24,7 @@ const SignUp = () => {
             }
 
             return { success: false, error: "Failed to create account." };
-        } catch (error: any) {
+        } catch (error: unknown) {
             const rawMessage = error instanceof Error ? error.message : String(error);
             const cleanMessage = rawMessage.replace(/^\[\d+\]\s*/, '');
 

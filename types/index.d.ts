@@ -9,6 +9,8 @@ declare module "next-auth" {
         user: {
             id: string;
             role: string;
+            currentStorageCapacity?: number;
+            tierStorageLimitMb?: number;
         } & DefaultSession["user"];
     }
 
@@ -17,6 +19,8 @@ declare module "next-auth" {
         accessToken?: string;
         refreshToken?: string;
         accessTokenExpiresAt?: number;
+        currentStorageCapacity?: number;
+        tierStorageLimitMb?: number;
     }
 }
 
@@ -29,6 +33,8 @@ declare module "next-auth/jwt" {
         refreshToken?: string;
         accessTokenExpiresAt?: number;
         error?: string;
+        currentStorageCapacity?: number;
+        tierStorageLimitMb?: number;
     }
 }
 
@@ -56,6 +62,7 @@ export interface User extends BaseDocument {
     dateOfBirth?: string;
     currentStorageCapacity?: number;
     currentAiTokenUsage?: number;
+    tierStorageLimitMb?: number;
     status?: string;
     avatar?: string;
     username?: string;
@@ -86,6 +93,16 @@ export interface VerifyOtpProps {
     otp: string;
 }
 
+export interface AuthMessageResponse {
+    message: string;
+}
+
+export interface AuthErrorResponse {
+    message?: string;
+    error?: string;
+    title?: string;
+}
+
 export interface IAuthService {
     createAccount(props: CreateAccountProps): Promise<{ email: string | null }>;
     signInUser(props: SignInProps): Promise<LoginResponse | null>;
@@ -95,9 +112,9 @@ export interface IAuthService {
     signOutUser(): Promise<void>;
     verifyOtp(props: VerifyOtpProps): Promise<string>;
     resendOtp(props: { email: string }): Promise<string>;
-    forgotPassword(props: { email: string }): Promise<string>;
-    verifyPasswordResetOtp(props: { email: string; otp: string }): Promise<string>;
-    resetPassword(props: { email: string; newPassword: string }): Promise<string>;
+    forgotPassword(props: { email: string }): Promise<AuthMessageResponse>;
+    verifyPasswordResetOtp(props: { email: string; otp: string }): Promise<AuthMessageResponse>;
+    resetPassword(props: { email: string; newPassword: string }): Promise<AuthMessageResponse>;
     refreshSessionToken(refreshToken: string, accessToken: string): Promise<{
         accessToken: string;
         refreshToken: string;
@@ -119,6 +136,8 @@ export interface File_ extends BaseDocument {
     shareStatus: string;
     status: number;
     fileSizeBytes: number;
+    subjectName?: string;
+    subject?: Subject;
 }
 
 export interface Subject extends BaseDocument {
@@ -187,13 +206,23 @@ export interface StorageCategoryStats {
     latestDate: string;
 }
 
+export interface DocumentShareDto {
+    userId?: string;
+    UserId?: string;
+    level?: number;
+    Level?: number;
+    accessLevel?: number;
+    userFullName?: string;
+    UserFullName?: string;
+}
+
 export interface IFileStorage {
     getSubjects(): Promise<Subject[]>;
     uploadFile(props: UploadFileProps): Promise<UploadFileResponse | undefined>;
     getFiles(props: GetFilesProps): Promise<{ documents: File_[]; total: number }>;
     renameFile(props: RenameFileProps): Promise<File_ | undefined>;
     updateFileUsers(props: UpdateFileUsersProps): Promise<File_ | undefined>;
-    getDocumentShares(fileId: string): Promise<any[]>;
+    getDocumentShares(fileId: string): Promise<DocumentShareDto[]>;
     revokeDocumentShare(fileId: string, targetUserId: string, path?: string): Promise<boolean>;
     updateEditedFile(props: UpdateEditedFileProps): Promise<UploadFileResponse | undefined>;
     deleteFile(props: DeleteFileProps): Promise<{ status: string } | undefined>;
@@ -313,6 +342,7 @@ export interface SummaryResponse {
 export interface AiResultState {
     type: string;
     data?: {
+        id?: string;
         fileUrl?: string;
         quizTitle?: string;
         questions?: QuizQuestion[];

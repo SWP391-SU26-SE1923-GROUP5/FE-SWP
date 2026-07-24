@@ -5,6 +5,10 @@ import { IAnalyticsService, DashboardDto } from "@/types";
 
 const connection_url = process.env.NEXT_PUBLIC_API_URL;
 
+if (!connection_url) {
+    throw new Error("Missing NEXT_PUBLIC_API_URL environment variable.");
+}
+
 export class LocalAnalytics implements IAnalyticsService {
     private async getHeaders() {
         const session = await auth();
@@ -19,8 +23,9 @@ export class LocalAnalytics implements IAnalyticsService {
         };
     }
 
-    private handleError(error: any, context: string): never {
-        if (error && typeof error === 'object' && error.digest?.startsWith('NEXT_REDIRECT')) {
+    private handleError(error: unknown, context: string): never {
+        const err = error as Record<string, unknown>;
+        if (err && typeof err === 'object' && typeof err.digest === 'string' && err.digest.startsWith('NEXT_REDIRECT')) {
             throw error;
         }
         console.error(`${context} Error:`, error);
@@ -41,7 +46,7 @@ export class LocalAnalytics implements IAnalyticsService {
                 throw new Error(`[${res.status}] Failed to fetch analytics dashboard`);
             }
 
-            const data = await res.json();
+            const data = await res.json() as DashboardDto;
             return parseStringify(data);
         } catch (error) {
             this.handleError(error, "GetAnalyticsDashboard");

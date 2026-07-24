@@ -32,22 +32,28 @@ const FileUploader = ({ subjects: initialSubjects = [], className }: FileUploade
     const [selectedSubjectId, setSelectedSubjectId] = useState<string>("");
     const [isUploading, setIsUploading] = useState(false);
     const [subjectsList, setSubjectsList] = useState<Subject[]>(initialSubjects);
+    const [prevInitialSubjects, setPrevInitialSubjects] = useState<Subject[]>(initialSubjects);
     const path = usePathname();
 
-    React.useEffect(() => {
+    if (initialSubjects !== prevInitialSubjects) {
+        setPrevInitialSubjects(initialSubjects);
         if (initialSubjects && initialSubjects.length > 0) {
             setSubjectsList(initialSubjects);
         }
-    }, [initialSubjects]);
+    }
 
     React.useEffect(() => {
+        let isMounted = true;
         if (isOpen && (!subjectsList || subjectsList.length === 0)) {
             getSubjects()
                 .then(res => {
-                    if (res && Array.isArray(res)) setSubjectsList(res);
+                    if (isMounted && res && Array.isArray(res)) setSubjectsList(res);
                 })
                 .catch(err => console.error("Failed to load fallback subjects inside modal:", err));
         }
+        return () => {
+            isMounted = false;
+        };
     }, [isOpen, subjectsList]);
 
     const onDrop = useCallback((acceptedFiles: File[]) => {
@@ -96,7 +102,7 @@ const FileUploader = ({ subjects: initialSubjects = [], className }: FileUploade
                         }
                         return false;
                     })
-                    .catch((err: any) => {
+                    .catch((err: Error) => {
                         toast.error(err.message || `Failed to upload file ${file.name}`);
                         return false;
                     });

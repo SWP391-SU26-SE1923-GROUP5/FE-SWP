@@ -10,10 +10,18 @@ export default async function FlashcardStudyPage({ params }: Props) {
 
     let deckCards: Flashcard[] = [];
 
+    interface RawDueCard {
+        flashcardId?: string;
+        id?: string;
+        documentId?: string;
+        front?: string;
+        back?: string;
+    }
+
     if (flashcardId === "due") {
         const dueCards = await getDueFlashcards(50);
-        deckCards = (dueCards || []).map((c: any) => ({
-            id: c.flashcardId || c.id,
+        deckCards = (dueCards || []).map((c: RawDueCard) => ({
+            id: c.flashcardId || c.id || "",
             documentId: c.documentId || "",
             front: c.front || "",
             back: c.back || "",

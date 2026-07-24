@@ -12,12 +12,24 @@ export default async function FlashcardsPage() {
 
     const actualDueCount = typeof dueCount === 'number' ? dueCount : (stats?.dueNow || 0);
 
-    const fileMap = (filesData?.documents || []).reduce((acc, file) => {
+    interface FileItem {
+        id: string;
+        fileName: string;
+    }
+
+    const fileMap = (filesData?.documents || []).reduce((acc, file: FileItem) => {
         acc[file.id] = file.fileName;
         return acc;
     }, {} as Record<string, string>);
 
-    const groupedDecks = (flashcards || []).reduce((acc, card) => {
+    interface FlashcardItem {
+        documentId: string;
+        createdAt?: string;
+        front?: string;
+        back?: string;
+    }
+
+    const groupedDecks = (flashcards || []).reduce((acc, card: FlashcardItem) => {
         if (!acc[card.documentId]) {
             acc[card.documentId] = {
                 documentId: card.documentId,

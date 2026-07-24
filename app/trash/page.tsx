@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import Link from 'next/link';
 import {
     Trash2,
@@ -67,49 +67,49 @@ export default function TrashPage() {
     const [itemsPerPage, setItemsPerPage] = useState(10);
     const [viewMode, setViewMode] = useState<ViewMode>('table');
 
-    const loadTrash = async () => {
-        setLoading(true);
-        try {
-            const data = await getTrashFiles();
-            const docs = data?.documents || [];
-            const mapped: TrashItemView[] = docs.map((doc: File_) => {
-                const deletedTimestamp = doc.updatedAt ? new Date(doc.updatedAt).getTime() : Date.now();
-                const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000;
-                const remainingMs = Math.max(0, (deletedTimestamp + thirtyDaysMs) - Date.now());
-                const daysRemaining = Math.max(1, Math.ceil(remainingMs / (24 * 60 * 60 * 1000)));
-
-                return {
-                    id: doc.id,
-                    name: doc.fileName || doc.title || 'Untitled file',
-                    subjectName: doc.subjectId ? `Subject #${doc.subjectId.slice(0, 6)}` : 'General',
-                    size: doc.fileSizeBytes || 0,
-                    deletedAt: doc.updatedAt
-                        ? new Date(doc.updatedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
-                        : new Date().toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }),
-                    deletedTimestamp,
-                    daysRemaining,
-                    url: doc.fileLink || ''
-                };
-            });
-            setTrashFiles(mapped);
-        } catch (error: any) {
-            console.error('Failed to load trash files:', error);
-            toast.error('Could not fetch deleted documents from trash.');
-        } finally {
-            setLoading(false);
-        }
-    };
-
     useEffect(() => {
-        loadTrash();
+        let isMounted = true;
+        
+        getTrashFiles()
+            .then(data => {
+                if (!isMounted) return;
+                const docs = data?.documents || [];
+                const mapped: TrashItemView[] = docs.map((doc: File_) => {
+                    const deletedTimestamp = doc.updatedAt ? new Date(doc.updatedAt).getTime() : Date.now();
+                    const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000;
+                    const remainingMs = Math.max(0, (deletedTimestamp + thirtyDaysMs) - Date.now());
+                    const daysRemaining = Math.max(1, Math.ceil(remainingMs / (24 * 60 * 60 * 1000)));
+
+                    return {
+                        id: doc.id,
+                        name: doc.fileName || doc.title || 'Untitled file',
+                        subjectName: doc.subjectId ? `Subject #${doc.subjectId.slice(0, 6)}` : 'General',
+                        size: doc.fileSizeBytes || 0,
+                        deletedAt: doc.updatedAt
+                            ? new Date(doc.updatedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
+                            : new Date().toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }),
+                        deletedTimestamp,
+                        daysRemaining,
+                        url: doc.fileLink || ''
+                    };
+                });
+                setTrashFiles(mapped);
+                setLoading(false);
+            })
+            .catch(error => {
+                if (!isMounted) return;
+                console.error('Failed to load trash files:', error);
+                toast.error('Could not fetch deleted documents from trash.');
+                setLoading(false);
+            });
+            
+        return () => {
+            isMounted = false;
+        };
     }, []);
 
-    useEffect(() => {
-        setCurrentPage(1);
-    }, [searchQuery, sortField, sortOrder, itemsPerPage]);
-
     const filteredAndSortedFiles = useMemo(() => {
-        let result = trashFiles.filter(file =>
+        const result = trashFiles.filter(file =>
             file.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
             file.subjectName.toLowerCase().includes(searchQuery.toLowerCase())
         );
@@ -159,6 +159,7 @@ export default function TrashPage() {
             setSortField(field);
             setSortOrder('asc');
         }
+        setCurrentPage(1);
     };
 
     const handleRestore = async (id: string, name: string) => {
@@ -167,8 +168,8 @@ export default function TrashPage() {
             await restoreFile({ fileId: id, path: '/trash' });
             setTrashFiles(prev => prev.filter(f => f.id !== id));
             toast.success(`Restored "${name}" successfully. Storage quota has been refunded!`);
-        } catch (error: any) {
-            toast.error(error?.message || `Failed to restore "${name}".`);
+        } catch (error) {
+            toast.error((error as Error)?.message || `Failed to restore "${name}".`);
         } finally {
             setActionLoading(null);
         }
@@ -181,8 +182,8 @@ export default function TrashPage() {
             setTrashFiles(prev => prev.filter(f => f.id !== id));
             setSelectedFileToDelete(null);
             toast.success(`"${name}" has been permanently purged.`);
-        } catch (error: any) {
-            toast.error(error?.message || `Failed to permanently delete "${name}".`);
+        } catch (error) {
+            toast.error((error as Error)?.message || `Failed to permanently delete "${name}".`);
         } finally {
             setActionLoading(null);
         }
@@ -295,12 +296,12 @@ export default function TrashPage() {
                             type="text"
                             placeholder="Filter by file title or subject..."
                             value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
+                            onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
                             className="pl-10 pr-9 h-10 w-full rounded-xl border border-light-700 dark:border-dark-400 bg-light-800/60 dark:bg-dark-200 text-xs text-dark100_light900 placeholder:text-dark500_light400 focus-visible:ring-2 focus-visible:ring-brand focus-visible:border-transparent transition-all"
                         />
                         {searchQuery && (
                             <button
-                                onClick={() => setSearchQuery('')}
+                                onClick={() => { setSearchQuery(''); setCurrentPage(1); }}
                                 className="absolute right-3 top-1/2 -translate-y-1/2 text-dark500_light400 hover:text-dark100_light900 p-0.5 rounded-full"
                             >
                                 <X className="h-3.5 w-3.5" />
@@ -314,7 +315,7 @@ export default function TrashPage() {
                         <span className="text-xs font-medium text-dark500_light400">Sort by:</span>
                         <select
                             value={sortField}
-                            onChange={(e) => setSortField(e.target.value as SortField)}
+                            onChange={(e) => { setSortField(e.target.value as SortField); setCurrentPage(1); }}
                             className="h-9 px-3 rounded-xl border border-light-700 dark:border-dark-400 bg-light-800/60 dark:bg-dark-200 text-xs font-semibold text-dark200_light800 focus:outline-none focus:ring-1 focus:ring-brand cursor-pointer"
                         >
                             <option value="daysRemaining">Urgency (Days Left)</option>
@@ -324,7 +325,7 @@ export default function TrashPage() {
                             <option value="deletedAt">Date Deleted</option>
                         </select>
                         <button
-                            onClick={() => setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')}
+                            onClick={() => { setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc'); setCurrentPage(1); }}
                             className="h-9 px-2.5 rounded-xl border border-light-700 dark:border-dark-400 bg-light-800/60 dark:bg-dark-200 text-dark200_light800 hover:bg-light-700 dark:hover:bg-dark-400 transition flex items-center justify-center cursor-pointer"
                             title={`Order: ${sortOrder === 'asc' ? 'Ascending' : 'Descending'}`}
                         >
@@ -380,11 +381,11 @@ export default function TrashPage() {
                     <Search className="h-10 w-10 text-dark500_light400 mb-2 opacity-40" />
                     <h4 className="text-base font-bold text-dark100_light900 mb-1">No matching files found</h4>
                     <p className="caption text-dark500_light400 max-w-sm mb-4">
-                        No deleted documents matched "{searchQuery}"
+                        No deleted documents matched &#34;{searchQuery}&#34;
                     </p>
                     <Button
                         variant="outline"
-                        onClick={() => setSearchQuery('')}
+                        onClick={() => { setSearchQuery(''); setCurrentPage(1); }}
                         className="h-9 px-4 rounded-xl border-light-700 dark:border-dark-400 text-dark200_light800 text-xs font-semibold cursor-pointer"
                     >
                         Clear Search Filter
@@ -508,7 +509,7 @@ export default function TrashPage() {
                                                         <span>Permanently delete file?</span>
                                                     </AlertDialogTitle>
                                                     <AlertDialogDescription className="text-dark500_light400 text-sm">
-                                                        Are you sure you want to permanently delete <span className="font-semibold text-dark100_light900">"{file.name}"</span>? This will immediately remove all AI vector embeddings from Qdrant and cloud storage items. This action cannot be undone.
+                                                        Are you sure you want to permanently delete <span className="font-semibold text-dark100_light900">&#34;{file.name}&#34;</span>? This will immediately remove all AI vector embeddings from Qdrant and cloud storage items. This action cannot be undone.
                                                     </AlertDialogDescription>
                                                 </AlertDialogHeader>
                                                 <AlertDialogFooter className="pt-4 flex gap-2">
@@ -619,7 +620,7 @@ export default function TrashPage() {
                                                         <span>Permanently delete file?</span>
                                                     </AlertDialogTitle>
                                                     <AlertDialogDescription className="text-dark500_light400 text-sm">
-                                                        Are you sure you want to permanently delete <span className="font-semibold text-dark100_light900">"{file.name}"</span>? This will immediately remove all AI vector embeddings from Qdrant and cloud storage items. This action cannot be undone.
+                                                        Are you sure you want to permanently delete <span className="font-semibold text-dark100_light900">&#34;{file.name}&#34;</span>? This will immediately remove all AI vector embeddings from Qdrant and cloud storage items. This action cannot be undone.
                                                     </AlertDialogDescription>
                                                 </AlertDialogHeader>
                                                 <AlertDialogFooter className="pt-4 flex gap-2">

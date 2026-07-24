@@ -57,8 +57,8 @@ const ForgotPasswordForm = () => {
             setEmail(data.email);
             setStep("OTP");
             toast.success("If the email exists, an OTP has been sent.");
-        } catch (error: any) {
-            toast.error(error?.message || "Failed to send verification code. Please try again.");
+        } catch (error) {
+            toast.error((error as Error)?.message || "Failed to send verification code. Please try again.");
         } finally {
             setIsLoading(false);
         }
@@ -71,8 +71,8 @@ const ForgotPasswordForm = () => {
             setOtp(data.otp);
             setStep("RESET");
             toast.success("OTP verified. Please enter your new password.");
-        } catch (error: any) {
-            toast.error(error?.message || "Invalid or expired verification code.");
+        } catch (error) {
+            toast.error((error as Error)?.message || "Invalid or expired verification code.");
         } finally {
             setIsLoading(false);
         }
@@ -87,8 +87,8 @@ const ForgotPasswordForm = () => {
             });
             setStep("SUCCESS");
             toast.success("Password reset successfully.");
-        } catch (error: any) {
-            toast.error(error?.message || "Failed to reset password. Please verify your OTP or try again.");
+        } catch (error) {
+            toast.error((error as Error)?.message || "Failed to reset password. Please verify your OTP or try again.");
         } finally {
             setIsLoading(false);
         }
@@ -99,8 +99,8 @@ const ForgotPasswordForm = () => {
         try {
             await forgotPassword({ email });
             toast.success("OTP sent successfully to your email.");
-        } catch (error: any) {
-            toast.error(error?.message || "Failed to resend OTP.");
+        } catch (error) {
+            toast.error((error as Error)?.message || "Failed to resend OTP.");
         }
     };
 

@@ -7,17 +7,44 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Loader2, Save, FileText, Shield, Pencil } from "lucide-react";
 
+interface ApryseDocument {
+    getFileData: (options: { xfdfString: string; downloadType: string }) => Promise<ArrayBuffer>;
+}
+
+interface ApryseUI {
+    setCurrentPageNumber: (pageNum: number) => void;
+    searchTextFull: (snippet: string) => void;
+    disableElements: (elements: string[]) => void;
+    dispose: () => void;
+}
+
+interface ApryseCore {
+    documentViewer: {
+        addEventListener: (event: string, callback: () => void) => void;
+        setCurrentPage: (pageNum: number, smooth: boolean) => void;
+        getDocument: () => ApryseDocument;
+    };
+    annotationManager: {
+        exportAnnotations: () => Promise<string>;
+    };
+}
+
+export interface WebViewerInstance {
+    UI: ApryseUI;
+    Core: ApryseCore;
+}
+
 export default function ApryseViewer({ file, path, closeModals, readOnly = false, targetPage, searchSnippet }: { file: File_, path: string, closeModals: () => void, readOnly?: boolean, targetPage?: number, searchSnippet?: string }) {
     const viewer = useRef<HTMLDivElement>(null);
     const [isSaving, setIsSaving] = useState(false);
-    const instanceRef = useRef<any>(null);
+    const instanceRef = useRef<WebViewerInstance | "initializing" | null>(null);
     const blobUrlRef = useRef<string | null>(null);
 
     useEffect(() => {
         if (!instanceRef.current || instanceRef.current === "initializing") return;
         
         try {
-            const instance = instanceRef.current;
+            const instance = instanceRef.current as WebViewerInstance;
             if (targetPage !== undefined && targetPage !== null) {
                 let pageNum = parseInt(targetPage.toString(), 10);
                 if (pageNum === 0) pageNum = 1; // Backend might return 0-based indexing
@@ -36,13 +63,13 @@ export default function ApryseViewer({ file, path, closeModals, readOnly = false
     const ext = file.fileExtension?.toLowerCase().replace('.', '') || "";
 
     useEffect(() => {
+        let isMounted = true;
         if (instanceRef.current) return;
         instanceRef.current = "initializing";
 
-        const loadDocument = async () => {
-            try {
-                const result = await downloadFile({ fileId: file.id });
-
+        downloadFile({ fileId: file.id })
+            .then((result) => {
+                if (!isMounted) return;
                 const binaryString = window.atob(result.data);
                 const bytes = new Uint8Array(binaryString.length);
                 for (let i = 0; i < binaryString.length; i++) {
@@ -52,64 +79,69 @@ export default function ApryseViewer({ file, path, closeModals, readOnly = false
                 const blob = new Blob([bytes], { type: 'application/octet-stream' });
                 blobUrlRef.current = window.URL.createObjectURL(blob);
 
-                import('@pdftron/webviewer').then((webviewerModule) => {
-                    const WebViewer = webviewerModule.default;
-                    const isSpreadsheet = ["xlsx", "xls"].includes(ext);
+                return import('@pdftron/webviewer');
+            })
+            .then((webviewerModule) => {
+                if (!isMounted || !webviewerModule) return;
+                const WebViewer = webviewerModule.default;
+                const isSpreadsheet = ["xlsx", "xls"].includes(ext);
 
-                    if (viewer.current) {
-                        WebViewer(
-                            {
-                                path: '/lib/webviewer',
-                                initialDoc: blobUrlRef.current ?? "",
-                                extension: ext,
-                                enableOfficeEditing: !readOnly,
-                                isReadOnly: readOnly,
-                                licenseKey: "demo:1782432031639:63f292a203000000006bfbfd2dedd818a75a9704b35fedfc1b98df0080",
-                                ...(isSpreadsheet && !readOnly && {
-                                    initialMode: 'spreadsheetEditor',
-                                    spreadsheetEditorOptions: {
-                                        initialEditMode: 'editing'
-                                    }
-                                })
-                            } as any,
-                            viewer.current
-                        ).then((instance) => {
-                            instanceRef.current = instance;
-                            if (readOnly) {
-                                instance.UI.disableElements(['annotationToolbarButton', 'toolsHeader', 'saveButton']);
-                            }
-                            
-                            // Listen for document load to jump to target page
-                            instance.Core.documentViewer.addEventListener('documentLoaded', () => {
-                                if (targetPage !== undefined && targetPage !== null) {
-                                    let pageNum = parseInt(targetPage.toString(), 10);
-                                    if (pageNum === 0) pageNum = 1; // Backend might return 0-based indexing
-                                    if (!isNaN(pageNum) && pageNum > 0) {
-                                        instance.Core.documentViewer.setCurrentPage(pageNum, true);
-                                    }
-                                }
-                                if (searchSnippet) {
-                                    instance.UI.searchTextFull(searchSnippet);
-                                }
-                            });
-                        });
+                if (viewer.current) {
+                    const options: Record<string, unknown> = {
+                        path: '/lib/webviewer',
+                        initialDoc: blobUrlRef.current ?? "",
+                        extension: ext,
+                        enableOfficeEditing: !readOnly,
+                        isReadOnly: readOnly,
+                        licenseKey: "demo:1782432031639:63f292a203000000006bfbfd2dedd818a75a9704b35fedfc1b98df0080",
+                    };
+                    
+                    if (isSpreadsheet && !readOnly) {
+                        options.initialMode = 'spreadsheetEditor';
+                        options.spreadsheetEditorOptions = { initialEditMode: 'editing' };
                     }
-                });
-            } catch (error) {
-                console.error("Failed to load document:", error);
-                toast.error("Failed to load document for editing.");
-            }
-        };
 
-        loadDocument();
+                    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+                    // @ts-ignore
+                    WebViewer(options, viewer.current).then((instance: WebViewerInstance) => {
+                        if (!isMounted) {
+                            instance.UI.dispose();
+                            return;
+                        }
+                        instanceRef.current = instance;
+                        if (readOnly) {
+                            instance.UI.disableElements(['annotationToolbarButton', 'toolsHeader', 'saveButton']);
+                        }
+                        
+                        instance.Core.documentViewer.addEventListener('documentLoaded', () => {
+                            if (targetPage !== undefined && targetPage !== null) {
+                                let pageNum = parseInt(targetPage.toString(), 10);
+                                if (pageNum === 0) pageNum = 1;
+                                if (!isNaN(pageNum) && pageNum > 0) {
+                                    instance.Core.documentViewer.setCurrentPage(pageNum, true);
+                                }
+                            }
+                            if (searchSnippet) {
+                                instance.UI.searchTextFull(searchSnippet);
+                            }
+                        });
+                    });
+                }
+            })
+            .catch((error) => {
+                console.error("Failed to load document:", error);
+                if (isMounted) toast.error("Failed to load document for editing.");
+            });
 
         return () => {
+            isMounted = false;
             if (blobUrlRef.current) window.URL.revokeObjectURL(blobUrlRef.current);
             if (instanceRef.current && instanceRef.current !== "initializing") {
-                instanceRef.current.UI.dispose();
-                instanceRef.current = null;
+                (instanceRef.current as WebViewerInstance).UI.dispose();
             }
+            instanceRef.current = null;
         }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [file]);
 
     const handleSave = async () => {
@@ -119,7 +151,7 @@ export default function ApryseViewer({ file, path, closeModals, readOnly = false
         const toastId = toast.loading("Saving document changes...");
 
         try {
-            const core = instanceRef.current;
+            const core = instanceRef.current as WebViewerInstance;
             const doc = core.Core.documentViewer.getDocument();
 
             const isOfficeFile = ["docx", "doc", "xlsx", "xls", "pptx", "ppt"].includes(ext);
@@ -158,7 +190,6 @@ export default function ApryseViewer({ file, path, closeModals, readOnly = false
     if (readOnly) {
         return (
             <div className="flex flex-col w-full gap-0">
-                {/* Read-only toolbar */}
                 <div className="flex items-center justify-between px-5 py-3 bg-gradient-to-r from-slate-50 to-slate-100/80 border-b border-slate-200/80 rounded-t-xl">
                     <div className="flex items-center gap-3 min-w-0">
                         <div className="p-1.5 bg-white rounded-lg shadow-2xs border border-slate-200/60">
@@ -171,7 +202,6 @@ export default function ApryseViewer({ file, path, closeModals, readOnly = false
                         Read-Only
                     </span>
                 </div>
-                {/* Viewer */}
                 <div className="relative w-full h-[72vh] bg-white border border-t-0 border-slate-200/80 rounded-b-xl overflow-hidden">
                     <div ref={viewer} className="w-full h-full"></div>
                 </div>
@@ -181,7 +211,6 @@ export default function ApryseViewer({ file, path, closeModals, readOnly = false
 
     return (
         <div className="flex flex-col w-full gap-0">
-            {/* Edit mode toolbar */}
             <div className="flex items-center justify-between px-5 py-3 bg-gradient-to-r from-brand/5 via-indigo-50/50 to-slate-50 border border-slate-200/80 rounded-t-xl">
                 <div className="flex items-center gap-3 min-w-0">
                     <div className="p-1.5 bg-white rounded-lg shadow-2xs border border-brand/20">
@@ -211,7 +240,6 @@ export default function ApryseViewer({ file, path, closeModals, readOnly = false
                 </Button>
             </div>
 
-            {/* Viewer container */}
             <div className="relative w-full h-[75vh] rounded-b-xl overflow-hidden border border-t-0 border-slate-200/80 bg-white">
                 {isSaving && (
                     <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-white/70 backdrop-blur-sm gap-3">
@@ -219,11 +247,11 @@ export default function ApryseViewer({ file, path, closeModals, readOnly = false
                             <Loader2 className="w-8 h-8 animate-spin text-brand" />
                         </div>
                         <p className="font-semibold text-slate-700 text-sm">Saving your changes…</p>
-                        <p className="text-xs text-slate-400">Please don't close this window</p>
+                        <p className="text-xs text-slate-400">Please don&#39;t close this window</p>
                     </div>
                 )}
                 <div ref={viewer} className="w-full h-full"></div>
             </div>
         </div>
     );
-}
+}

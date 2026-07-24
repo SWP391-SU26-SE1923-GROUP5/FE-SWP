@@ -37,10 +37,11 @@ export default function LeaderboardPage() {
                 if (stats) {
                     setMyStats(stats);
                 }
-                if (user && user.id) {
-                    setCurrentUserId(user.id);
-                } else if (user && (user as any).id) {
-                    setCurrentUserId((user as any).id);
+                const u = user as { id?: string; Id?: string } | null;
+                if (u?.id) {
+                    setCurrentUserId(u.id);
+                } else if (u?.Id) {
+                    setCurrentUserId(u.Id);
                 }
             } catch (error) {
                 console.error("Failed to load leaderboard data:", error);
@@ -105,7 +106,7 @@ export default function LeaderboardPage() {
                     ].map((tab) => (
                         <button
                             key={tab.id}
-                            onClick={() => setTimeTab(tab.id as any)}
+                            onClick={() => setTimeTab(tab.id as 'weekly' | 'monthly' | 'allTime')}
                             className={`py-3 rounded-xl text-sm font-bold transition-all duration-200 cursor-pointer text-center ${
                                 timeTab === tab.id
                                     ? 'bg-brand text-white shadow-drop-2'

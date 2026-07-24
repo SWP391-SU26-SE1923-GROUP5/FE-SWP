@@ -1,12 +1,11 @@
 "use client"
 
-import { File_ } from "@/types";
+import { File_, User, DocumentShareDto } from "@/types";
 import Thumbnail from "@/components/Thumbnail";
 import FormattedDateTime from "@/components/FormattedDateTime";
 import { convertFileSize, formatDateTime } from "@/lib/utils";
 import { useEffect, useState } from "react";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 import Image from "next/image";
 import { toast } from "sonner";
 import { getUserById, getShareableUsers } from "@/lib/actions/user.actions";
@@ -41,18 +40,21 @@ export const FileDetails = ({ file }: { file: File_ }) => {
     const [ownerName, setOwnerName] = useState<string>("Loading...");
 
     useEffect(() => {
-        const fetchOwnerDetails = async () => {
-            if (!file.userId) return;
-            try {
-                const user = await getUserById(file.userId);
-                setOwnerName(user?.fullName || "Unknown Owner");
-            } catch (error) {
-                console.error("Failed to fetch owner details:", error);
-                setOwnerName(file.userId);
-            }
-        };
+        let isMounted = true;
+        if (!file.userId) return;
 
-        fetchOwnerDetails();
+        getUserById(file.userId)
+            .then((user) => {
+                if (isMounted) setOwnerName(user?.fullName || "Unknown Owner");
+            })
+            .catch((error) => {
+                console.error("Failed to fetch owner details:", error);
+                if (isMounted) setOwnerName(file.userId);
+            });
+
+        return () => {
+            isMounted = false;
+        };
     }, [file.userId]);
 
     return (
@@ -80,7 +82,7 @@ interface Props {
 export const ShareInput = ({ file, emails, onInputChange, onRemove, userLevels, onLevelsChange }: Props) => {
     const [ownerName, setOwnerName] = useState<string>("Loading owner...");
     const [ownerEmail, setOwnerEmail] = useState<string>("");
-    const [shareableUsers, setShareableUsers] = useState<any[]>([]);
+    const [shareableUsers, setShareableUsers] = useState<User[]>([]);
     const [shareDetails, setShareDetails] = useState<Record<string, { fullName?: string; email?: string }>>({});
     const [selectedAccessLevel, setSelectedAccessLevel] = useState<number>(1);
     const [searchQuery, setSearchQuery] = useState<string>("");
@@ -88,40 +90,44 @@ export const ShareInput = ({ file, emails, onInputChange, onRemove, userLevels, 
     const existingUsers = emails || parseSharedUsers(file.sharedUsers);
 
     useEffect(() => {
-        const fetchOwnerDetails = async () => {
-            if (!file.userId) return;
-            try {
-                const user = await getUserById(file.userId);
-                if (user) {
-                    setOwnerName(user.fullName || "Unknown Owner");
-                    setOwnerEmail(user.email || "");
-                } else {
-                    setOwnerName("Unknown Owner");
-                }
-            } catch (error) {
-                console.error("Failed to fetch owner details:", error);
-                setOwnerName(file.userId);
-            }
-        };
+        let isMounted = true;
 
-        const fetchShareData = async () => {
-            try {
-                const users = await getShareableUsers();
-                setShareableUsers(users || []);
-            } catch (error) {
+        if (file.userId) {
+            getUserById(file.userId)
+                .then((user) => {
+                    if (isMounted) {
+                        if (user) {
+                            setOwnerName(user.fullName || "Unknown Owner");
+                            setOwnerEmail(user.email || "");
+                        } else {
+                            setOwnerName("Unknown Owner");
+                        }
+                    }
+                })
+                .catch((error) => {
+                    console.error("Failed to fetch owner details:", error);
+                    if (isMounted) setOwnerName(file.userId);
+                });
+        }
+
+        getShareableUsers()
+            .then((users) => {
+                if (isMounted) setShareableUsers(users || []);
+            })
+            .catch((error) => {
                 console.error("Failed to fetch shareable users:", error);
-            }
+            });
 
-            try {
-                const shares = await getDocumentShares(file.id);
-                if (shares && Array.isArray(shares)) {
-                    const sharedIds = shares.map((s: any) => s.userId || s.UserId).filter(Boolean);
+        getDocumentShares(file.id)
+            .then((shares) => {
+                if (isMounted && shares && Array.isArray(shares)) {
+                    const sharedIds = shares.map((s: DocumentShareDto) => s.userId || s.UserId).filter(Boolean) as string[];
                     if (sharedIds.length > 0) {
                         onInputChange(sharedIds);
                     }
                     const details: Record<string, { fullName?: string; email?: string }> = {};
                     const initialLevels: Record<string, number> = {};
-                    shares.forEach((s: any) => {
+                    shares.forEach((s: DocumentShareDto) => {
                         const uid = s.userId || s.UserId;
                         if (uid) {
                             initialLevels[uid] = Number(s.level || s.Level || s.accessLevel || 1);
@@ -133,13 +139,15 @@ export const ShareInput = ({ file, emails, onInputChange, onRemove, userLevels, 
                         onLevelsChange(prev => ({ ...prev, ...initialLevels }));
                     }
                 }
-            } catch (error) {
+            })
+            .catch((error) => {
                 console.error("Failed to fetch document shares:", error);
-            }
-        };
+            });
 
-        fetchOwnerDetails();
-        fetchShareData();
+        return () => {
+            isMounted = false;
+        };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [file.userId, file.id]);
 
     const handleAddUser = (userKey: string, levelToAdd?: number) => {
@@ -177,7 +185,6 @@ export const ShareInput = ({ file, emails, onInputChange, onRemove, userLevels, 
 
     return (
         <div className="share-wrapper min-w-0 flex flex-col w-full">
-            {/* Sleek Document Header Card */}
             <div className="flex items-center gap-3.5 p-3.5 bg-gradient-to-r from-brand/5 via-indigo-500/5 to-purple-500/5 border border-brand/15 rounded-2xl mb-5 shadow-2xs min-w-0">
                 <Thumbnail
                     type={file.fileType}
@@ -199,7 +206,6 @@ export const ShareInput = ({ file, emails, onInputChange, onRemove, userLevels, 
                 </div>
             </div>
 
-            {/* Invite Collaborators Section */}
             <div className="flex items-center justify-between mb-2">
                 <label className="text-xs font-bold uppercase tracking-wider text-slate-500">
                     Invite Collaborators
@@ -235,7 +241,6 @@ export const ShareInput = ({ file, emails, onInputChange, onRemove, userLevels, 
                 </select>
             </div>
 
-            {/* Floating Search Results */}
             {filteredUsers.length > 0 && (
                 <ul className="absolute z-50 left-0 right-0 mt-3 max-h-56 overflow-y-auto bg-white/95 backdrop-blur-md border border-slate-200/90 rounded-2xl shadow-xl p-1.5 space-y-1 divide-y divide-slate-100/80 animate-in fade-in-50 zoom-in-95 duration-150">
                     {filteredUsers.map((u) => {
@@ -268,7 +273,6 @@ export const ShareInput = ({ file, emails, onInputChange, onRemove, userLevels, 
                 </ul>
             )}
 
-            {/* Who Has Access List */}
             <div className="pt-6 min-w-0">
                 <div className="flex justify-between items-center mb-3">
                     <label className="text-xs font-bold uppercase tracking-wider text-slate-500">
@@ -280,7 +284,6 @@ export const ShareInput = ({ file, emails, onInputChange, onRemove, userLevels, 
                 </div>
 
                 <ul className="space-y-2.5 max-h-[220px] overflow-y-auto custom-scrollbar pr-1 min-w-0">
-                    {/* Owner Card */}
                     <li className="flex items-center justify-between gap-3 p-3 bg-gradient-to-r from-amber-50/80 via-orange-50/50 to-yellow-50/40 rounded-2xl border border-amber-200/80 shadow-2xs min-w-0">
                         <div className="flex items-center gap-3 min-w-0 flex-1">
                             <div className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 text-white font-bold text-xs flex items-center justify-center shadow-2xs shrink-0">
@@ -298,7 +301,6 @@ export const ShareInput = ({ file, emails, onInputChange, onRemove, userLevels, 
                         </span>
                     </li>
 
-                    {/* Collaborator Cards */}
                     {existingUsers.map((userKey: string) => {
                         const matched = shareableUsers.find(u => u.id === userKey || u.email?.toLowerCase() === userKey.toLowerCase());
                         const detail = shareDetails[userKey];

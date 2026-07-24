@@ -2,20 +2,32 @@
 
 import React, { useState, useMemo } from "react";
 import Link from "next/link";
-import { Layers, ArrowLeft, Sparkles, Clock, Award, BrainCircuit, Search, ArrowUpDown, Filter, X, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, BookOpen, Play } from "lucide-react";
+import { Layers, ArrowLeft, Sparkles, Clock, Award, BrainCircuit, Search, ArrowUpDown, Filter, X, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Play } from "lucide-react";
 import { Button } from "@/components/ui/button";
+
+export type DashboardCard = {
+    front?: string;
+    back?: string;
+    createdAt?: string;
+};
+
+export type DashboardStats = {
+    totalReviewed?: number;
+    masteredCount?: number;
+    averageEaseFactor?: number;
+};
 
 export type DeckItem = {
     documentId: string;
     documentName: string;
-    cards: any[];
+    cards: DashboardCard[];
     createdAt?: string;
 };
 
 type Props = {
     initialDecks: DeckItem[];
     actualDueCount: number;
-    stats: any;
+    stats: DashboardStats | null;
 };
 
 export default function FlashcardsDashboardClient({ initialDecks, actualDueCount, stats }: Props) {
@@ -33,7 +45,7 @@ export default function FlashcardsDashboardClient({ initialDecks, actualDueCount
             const query = searchQuery.toLowerCase();
             result = result.filter((deck) => {
                 if (deck.documentName.toLowerCase().includes(query)) return true;
-                return deck.cards.some((c: any) => 
+                return deck.cards.some((c: DashboardCard) => 
                     (c.front && c.front.toLowerCase().includes(query)) ||
                     (c.back && c.back.toLowerCase().includes(query))
                 );
@@ -63,7 +75,7 @@ export default function FlashcardsDashboardClient({ initialDecks, actualDueCount
                 const getLatestDate = (d: DeckItem) => {
                     if (d.createdAt) return new Date(d.createdAt).getTime();
                     if (d.cards.length > 0 && d.cards[0].createdAt) {
-                        return Math.max(...d.cards.map((c: any) => new Date(c.createdAt || 0).getTime()));
+                        return Math.max(...d.cards.map((c: DashboardCard) => new Date(c.createdAt || 0).getTime()));
                     }
                     return 0;
                 };
@@ -219,7 +231,7 @@ export default function FlashcardsDashboardClient({ initialDecks, actualDueCount
                                 <select
                                     value={sizeFilter}
                                     onChange={(e) => {
-                                        setSizeFilter(e.target.value as any);
+                                        setSizeFilter(e.target.value as "all" | "small" | "medium" | "large");
                                         setCurrentPage(1);
                                     }}
                                     className="bg-transparent border-none focus:outline-hidden text-sm font-bold text-dark100_light900 cursor-pointer pr-2"
@@ -237,7 +249,7 @@ export default function FlashcardsDashboardClient({ initialDecks, actualDueCount
                                 <select
                                     value={sortBy}
                                     onChange={(e) => {
-                                        setSortBy(e.target.value as any);
+                                        setSortBy(e.target.value as "most-cards" | "fewest-cards" | "name-asc" | "name-desc" | "newest" | "oldest");
                                         setCurrentPage(1);
                                     }}
                                     className="bg-transparent border-none focus:outline-hidden text-sm font-bold text-dark100_light900 cursor-pointer pr-2"
@@ -366,7 +378,7 @@ export default function FlashcardsDashboardClient({ initialDecks, actualDueCount
                                             <Clock className="h-3.5 w-3.5 shrink-0" />
                                             <span>
                                                 Tạo ngày:{" "}
-                                                {new Date(deck.createdAt || deck.cards[0]?.createdAt || Date.now()).toLocaleDateString('vi-VN', {
+                                                {new Date(deck.createdAt || deck.cards[0]?.createdAt || new Date().toISOString()).toLocaleDateString('vi-VN', {
                                                     day: "2-digit",
                                                     month: "2-digit",
                                                     year: "numeric",

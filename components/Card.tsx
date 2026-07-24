@@ -1,5 +1,4 @@
-import { File_ } from "@/types";
-import Link from "next/link";
+import { File_, Subject } from "@/types";
 import Thumbnail from "@/components/Thumbnail";
 import {convertFileSize} from "@/lib/utils";
 import FormattedDateTime from "@/components/FormattedDateTime";
@@ -10,11 +9,11 @@ import FilePreviewWrapper from "@/components/FilePreviewWrapper";
 import { getSubjects } from "@/lib/actions/file.actions";
 import { BookOpen } from "lucide-react";
 
-const Card = async ({ file, subjects }: { file: File_; subjects?: any[] }) => {
+const Card = async ({ file, subjects }: { file: File_; subjects?: Subject[] }) => {
     const owner = await getUserById(file.userId);
     const allSubjects = subjects || await getSubjects();
-    const fileSubject = allSubjects?.find((s: any) => s.id === file.subjectId);
-    const subjectName = (file as any).subjectName || (file as any).subject?.subjectName || fileSubject?.subjectName || fileSubject?.subjectCode || "General";
+    const fileSubject = allSubjects?.find((s: Subject) => s.id === file.subjectId);
+    const subjectName = file.subjectName || file.subject?.subjectName || fileSubject?.subjectName || fileSubject?.subjectCode || "General";
 
     return (
         <FilePreviewWrapper file={file} className="file-card">

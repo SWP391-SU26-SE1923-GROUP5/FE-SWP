@@ -13,7 +13,11 @@ import {
 } from "@/types";
 import { revalidatePath } from "next/cache";
 
-const connection_url = process.env.NEXT_PUBLIC_API_URL;
+const url = process.env.NEXT_PUBLIC_API_URL;
+if (!url) {
+    throw new Error("CRITICAL: NEXT_PUBLIC_API_URL environment variable is missing.");
+}
+const connection_url = url;
 
 export interface ChatMessage {
     id: string;
@@ -49,9 +53,7 @@ export interface Citation {
     content: string;
     relevance: number;
     documentId?: string;
-    DocumentId?: string;
     pageNumber?: number;
-    PageNumber?: number;
 }
 
 export interface RAGCitation {
@@ -72,7 +74,7 @@ export interface RAGResponse {
     answer: string;
     citations?: RAGCitation[];
     references?: RAGReference[];
-    neighbors?: any[];
+    neighbors?: unknown[];
 }
 
 export interface SemanticSearchResult {
@@ -114,11 +116,11 @@ export const createChatSession = async (
 
     if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(`[${response.status}] ${errorData.message || errorData.title || "Failed to create chat session."}`);
+        throw new Error(`[${response.status}] ${errorData?.message || errorData?.title || "Failed to create chat session."}`);
     }
 
     const data = await response.json();
-    
+
     if (documentId) {
         try {
             await addDocumentToSession(data.id, documentId);
@@ -126,7 +128,7 @@ export const createChatSession = async (
             console.error("Failed to automatically link document to session:", e);
         }
     }
-    
+
     return data;
 };
 
@@ -151,14 +153,13 @@ export const sendChatMessage = async (
 
     if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(`[${response.status}] ${errorData.message || "Failed to send message."}`);
+        throw new Error(`[${response.status}] ${errorData?.message || "Failed to send message."}`);
     }
 
-    const data = await response.json();
+    const data: ChatMessage = await response.json();
     return {
         ...data,
-        sender: data.sender?.toLowerCase() === 'user' ? 'user' : 'ai',
-        citations: data.citations ?? data.Citations
+        sender: data.sender?.toLowerCase() === 'user' ? 'user' : 'ai'
     };
 };
 
@@ -176,7 +177,7 @@ export const deleteFlashcard = async (flashcardId: string): Promise<void> => {
 
     if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(`[${response.status}] ${errorData.message || "Failed to delete flashcard."}`);
+        throw new Error(`[${response.status}] ${errorData?.message || "Failed to delete flashcard."}`);
     }
 
     revalidatePath("/flashcards");
@@ -196,7 +197,7 @@ export const deleteQuiz = async (quizId: string): Promise<void> => {
 
     if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(`[${response.status}] ${errorData.message || "Failed to delete quiz."}`);
+        throw new Error(`[${response.status}] ${errorData?.message || "Failed to delete quiz."}`);
     }
 
     revalidatePath("/quizzes");
@@ -221,7 +222,7 @@ export const generateFlashcards = async (docId: string, numberOfFlashcards: numb
 
     if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(`[${response.status}] ${errorData.message || errorData.title || "Failed to generate flashcards."}`);
+        throw new Error(`[${response.status}] ${errorData?.message || errorData?.title || "Failed to generate flashcards."}`);
     }
 
     return await response.json();
@@ -246,7 +247,7 @@ export const generateQuiz = async (docId: string, numberOfQuestions: number = 5)
 
     if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(`[${response.status}] ${errorData.message || errorData.title || "Failed to generate quiz."}`);
+        throw new Error(`[${response.status}] ${errorData?.message || errorData?.title || "Failed to generate quiz."}`);
     }
 
     return await response.json();
@@ -266,7 +267,7 @@ export const getCreatedFlashcards = async (): Promise<Flashcard[]> => {
 
     if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(`[${response.status}] ${errorData.message || errorData.title || "Failed to fetch flashcards."}`);
+        throw new Error(`[${response.status}] ${errorData?.message || errorData?.title || "Failed to fetch flashcards."}`);
     }
 
     const data = await response.json();
@@ -287,7 +288,7 @@ export const getFlashcardsByDocument = async (docId: string): Promise<Flashcard[
 
     if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(`[${response.status}] ${errorData.message || errorData.title || "Failed to fetch flashcards."}`);
+        throw new Error(`[${response.status}] ${errorData?.message || errorData?.title || "Failed to fetch flashcards."}`);
     }
 
     return await response.json();
@@ -316,7 +317,7 @@ export const submitFlashcardReview = async (
 
     if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(`[${response.status}] ${errorData.message || errorData.title || "Failed to submit flashcard review."}`);
+        throw new Error(`[${response.status}] ${errorData?.message || errorData?.title || "Failed to submit flashcard review."}`);
     }
 
     return await response.json();
@@ -336,7 +337,7 @@ export const getDueFlashcards = async (limit: number = 50): Promise<DueFlashcard
 
     if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(`[${response.status}] ${errorData.message || errorData.title || "Failed to fetch due flashcards."}`);
+        throw new Error(`[${response.status}] ${errorData?.message || errorData?.title || "Failed to fetch due flashcards."}`);
     }
 
     return await response.json();
@@ -364,7 +365,11 @@ export const getDueFlashcardsCount = async (): Promise<number> => {
 export const getFlashcardReviewStats = async (userId?: string): Promise<FlashcardReviewStats> => {
     const session = await auth();
     if (!session?.accessToken) throw new Error("Unauthorized. Please log in.");
-    const targetId = userId || session.user?.id || "00000000-0000-0000-0000-000000000000";
+
+    const targetId = userId || session.user?.id;
+    if (!targetId) {
+        throw new Error("Unauthorized. User ID is required.");
+    }
 
     const response = await fetch(`${connection_url}/api/FlashcardReview/stats/${targetId}`, {
         method: 'GET',
@@ -376,7 +381,7 @@ export const getFlashcardReviewStats = async (userId?: string): Promise<Flashcar
 
     if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(`[${response.status}] ${errorData.message || errorData.title || "Failed to fetch flashcard stats."}`);
+        throw new Error(`[${response.status}] ${errorData?.message || errorData?.title || "Failed to fetch flashcard stats."}`);
     }
 
     return await response.json();
@@ -409,7 +414,7 @@ export const getCreatedQuizzes = async (params?: {
 
     if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(`[${response.status}] ${errorData.message || errorData.title || "Failed to fetch quizzes."}`);
+        throw new Error(`[${response.status}] ${errorData?.message || errorData?.title || "Failed to fetch quizzes."}`);
     }
 
     const data = await response.json();
@@ -430,7 +435,7 @@ export const getFlashcardById = async (flashcardId: string): Promise<Flashcard> 
 
     if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(`[${response.status}] ${errorData.message || "Failed to fetch flashcard."}`);
+        throw new Error(`[${response.status}] ${errorData?.message || "Failed to fetch flashcard."}`);
     }
 
     return await response.json();
@@ -450,15 +455,21 @@ export const getQuizById = async (quizId: string): Promise<QuizResponse> => {
 
     if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(`[${response.status}] ${errorData.message || "Failed to fetch quiz."}`);
+        throw new Error(`[${response.status}] ${errorData?.message || "Failed to fetch quiz."}`);
     }
 
     const data = await response.json();
 
+    interface QuizQuestionDto {
+        id: string;
+        title: string;
+        answers: { selectedOption: string; isCorrect: boolean }[];
+    }
+
     return {
         quizTitle: data.title,
-        questions: data.questions?.map((q: any) => ({
-            id: q.id || q.Id,
+        questions: data.questions?.map((q: QuizQuestionDto) => ({
+            id: q.id,
             questionTitle: q.title,
             answers: q.answers || []
         })) || []
@@ -469,9 +480,11 @@ export const submitQuiz = async (
     quizId: string,
     answers: Record<string, string>,
     durationSeconds?: number
-): Promise<any> => {
+): Promise<unknown> => {
     const session = await auth();
-    if (!session?.accessToken) throw new Error("Unauthorized. Please log in.");
+    if (!session?.accessToken || !session?.user?.id) {
+        throw new Error("Unauthorized. Please log in.");
+    }
 
     const response = await fetch(`${connection_url}/api/Quiz/${quizId}/submit`, {
         method: 'POST',
@@ -480,7 +493,7 @@ export const submitQuiz = async (
             'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-            userId: session.user?.id || "00000000-0000-0000-0000-000000000000",
+            userId: session.user.id,
             quizId: quizId,
             answers: JSON.stringify(answers),
             durationSeconds: durationSeconds || 60
@@ -489,7 +502,7 @@ export const submitQuiz = async (
 
     if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(`[${response.status}] ${errorData.message || "Failed to submit quiz."}`);
+        throw new Error(`[${response.status}] ${errorData?.message || "Failed to submit quiz."}`);
     }
 
     return await response.json();
@@ -512,7 +525,7 @@ export const getQuizHistory = async (quizId: string): Promise<QuizSubmissionResp
     }
 
     const data = await response.json();
-    return Array.isArray(data) ? data : (data?.items || data?.Items || []);
+    return Array.isArray(data) ? data : (data?.items || []);
 };
 
 export const getSessionMessages = async (sessionId: string): Promise<ChatMessage[]> => {
@@ -529,14 +542,14 @@ export const getSessionMessages = async (sessionId: string): Promise<ChatMessage
 
     if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(`[${response.status}] ${errorData.message || errorData.title || "Failed to fetch chat messages."}`);
+        throw new Error(`[${response.status}] ${errorData?.message || errorData?.title || "Failed to fetch chat messages."}`);
     }
 
-    const data = await response.json();
-    return data.map((msg: any) => ({
+    const data: ChatMessage[] = await response.json();
+
+    return data.map((msg) => ({
         ...msg,
-        sender: msg.sender?.toLowerCase() === 'user' ? 'user' : 'ai',
-        citations: msg.citations ?? msg.Citations
+        sender: msg.sender?.toLowerCase() === 'user' ? 'user' : 'ai'
     }));
 };
 
@@ -554,16 +567,16 @@ export const getUserSessions = async (): Promise<ChatSession[]> => {
 
     if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(`[${response.status}] ${errorData.message || errorData.title || "Failed to fetch chat sessions."}`);
+        throw new Error(`[${response.status}] ${errorData?.message || errorData?.title || "Failed to fetch chat sessions."}`);
     }
 
     const data: ChatSession[] = await response.json();
     const currentUserId = session.user?.id;
-    
+
     if (currentUserId) {
         return data.filter(s => s.userId === currentUserId);
     }
-    
+
     return data;
 };
 
@@ -586,7 +599,7 @@ export const semanticSearch = async (
 
     if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(`[${response.status}] ${errorData.message || errorData.title || "Semantic search failed."}`);
+        throw new Error(`[${response.status}] ${errorData?.message || errorData?.title || "Semantic search failed."}`);
     }
 
     return await response.json();
@@ -609,7 +622,7 @@ export const summarizeRagDocument = async (documentId: string): Promise<SummaryR
 
     if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(`[${response.status}] ${errorData.message || errorData.title || "Failed to generate RAG summary."}`);
+        throw new Error(`[${response.status}] ${errorData?.message || errorData?.title || "Failed to generate RAG summary."}`);
     }
 
     return await response.json();
@@ -638,7 +651,7 @@ export const getSessionDocuments = async (sessionId: string): Promise<ChatSessio
 
     if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(`[${response.status}] ${errorData.message || errorData.title || "Failed to fetch session documents."}`);
+        throw new Error(`[${response.status}] ${errorData?.message || errorData?.title || "Failed to fetch session documents."}`);
     }
 
     return await response.json();
@@ -659,7 +672,7 @@ export const addDocumentToSession = async (sessionId: string, documentId: string
 
     if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(`[${response.status}] ${errorData.message || errorData.title || "Failed to add document to session."}`);
+        throw new Error(`[${response.status}] ${errorData?.message || errorData?.title || "Failed to add document to session."}`);
     }
 
     return await response.json();
@@ -679,9 +692,10 @@ export const removeDocumentFromSession = async (sessionId: string, documentId: s
 
     if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(`[${response.status}] ${errorData.message || errorData.title || "Failed to remove document from session."}`);
+        throw new Error(`[${response.status}] ${errorData?.message || errorData?.title || "Failed to remove document from session."}`);
     }
 };
+
 export const renameChatSession = async (sessionId: string, sessionTitle: string): Promise<ChatSession> => {
     const session = await auth();
     if (!session?.accessToken) throw new Error("Unauthorized. Please log in.");
@@ -697,7 +711,7 @@ export const renameChatSession = async (sessionId: string, sessionTitle: string)
 
     if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(`[${response.status}] ${errorData.message || errorData.title || "Failed to rename session."}`);
+        throw new Error(`[${response.status}] ${errorData?.message || errorData?.title || "Failed to rename session."}`);
     }
 
     return await response.json();
@@ -717,7 +731,7 @@ export const deleteChatSession = async (sessionId: string): Promise<void> => {
 
     if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(`[${response.status}] ${errorData.message || errorData.title || "Failed to delete session."}`);
+        throw new Error(`[${response.status}] ${errorData?.message || errorData?.title || "Failed to delete session."}`);
     }
 };
 

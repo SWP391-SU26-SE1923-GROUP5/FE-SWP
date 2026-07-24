@@ -19,8 +19,9 @@ export class LocalPayment implements IPaymentService {
         };
     }
 
-    private handleError(error: any, context: string): never {
-        if (error && typeof error === 'object' && error.digest?.startsWith('NEXT_REDIRECT')) {
+    private handleError(error: unknown, context: string): never {
+        const err = error as Record<string, unknown>;
+        if (err && typeof err === 'object' && typeof err.digest === 'string' && err.digest.startsWith('NEXT_REDIRECT')) {
             throw error;
         }
 

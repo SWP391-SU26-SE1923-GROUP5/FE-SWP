@@ -1,12 +1,17 @@
-import { IAuthService, CreateAccountProps, SignInProps, User } from "@/types";
-import { auth, signOut } from "@/auth";
-import { parseStringify } from "@/lib/utils";
+import {IAuthService, CreateAccountProps, SignInProps, User, AuthMessageResponse, AuthErrorResponse, LoginResponse} from "@/types";
+import {auth, signOut} from "@/auth";
+import {parseStringify} from "@/lib/utils";
 
 const connection_url = process.env.NEXT_PUBLIC_API_URL;
 
+if (!connection_url) {
+    throw new Error("Missing NEXT_PUBLIC_API_URL environment variable.");
+}
+
 export class LocalAuth implements IAuthService {
-    private handleError(error: any, context: string): never {
-        if (error && typeof error === 'object' && error.digest?.startsWith('NEXT_REDIRECT')) {
+    private handleError(error: unknown, context: string): never {
+        const err = error as Record<string, unknown>;
+        if (err && typeof err === 'object' && typeof err.digest === 'string' && err.digest.startsWith('NEXT_REDIRECT')) {
             throw error;
         }
         console.error(`[LocalAuth:${context}]`, error instanceof Error ? error.message : error);
@@ -26,7 +31,7 @@ export class LocalAuth implements IAuthService {
                 })
             });
 
-            const data = await res.json().catch(() => ({}));
+            const data = await res.json().catch(() => ({})) as { email: string | null } & AuthErrorResponse;
 
             if (!res.ok) {
                 throw new Error(`[${res.status}] ${data.message || data.error || data.title || "Failed to register account"}`);
@@ -49,7 +54,7 @@ export class LocalAuth implements IAuthService {
                 })
             });
 
-            const data = await res.json().catch(() => ({}));
+            const data = await res.json().catch(() => ({})) as LoginResponse & AuthErrorResponse;
 
             if (!res.ok) {
                 throw new Error(`[${res.status}] ${data.message || data.error || data.title || "Invalid email or password"}`);
@@ -85,12 +90,12 @@ export class LocalAuth implements IAuthService {
             const session = await auth();
 
             if (session && session.user) {
-                const user = {
-                    id: session.user.id,
+                const user: User = {
+                    id: session.user.id!,
                     email: session.user.email!,
                     fullName: session.user.name!,
                     role: session.user.role,
-                } as User;
+                };
 
                 return parseStringify(user);
             }
@@ -105,12 +110,12 @@ export class LocalAuth implements IAuthService {
             const session = await auth();
 
             if (session && session.user && session.user.id === id) {
-                const currentUser = {
-                    id: session.user.id,
+                const currentUser: User = {
+                    id: session.user.id!,
                     email: session.user.email!,
                     fullName: session.user.name!,
                     role: session.user.role,
-                } as User;
+                };
 
                 return parseStringify(currentUser);
             }
@@ -186,7 +191,7 @@ export class LocalAuth implements IAuthService {
                 body: JSON.stringify({ refreshToken })
             });
 
-            const data = await res.json().catch(() => ({}));
+            const data = await res.json().catch(() => ({})) as { accessToken: string; refreshToken: string; accessTokenExpiresAt: string; } & AuthErrorResponse;
 
             if (!res.ok) {
                 throw new Error(`[${res.status}] ${data.message || data.error || data.title || "Failed to refresh token"}`);
@@ -206,7 +211,7 @@ export class LocalAuth implements IAuthService {
                 body: JSON.stringify({ email, otp })
             });
 
-            const data = await res.json().catch(() => ({}));
+            const data = await res.json().catch(() => ({})) as AuthMessageResponse & AuthErrorResponse;
 
             if (!res.ok) {
                 throw new Error(`[${res.status}] ${data.message || data.error || data.title || "Verification failed"}`);
@@ -226,7 +231,7 @@ export class LocalAuth implements IAuthService {
                 body: JSON.stringify({ email })
             });
 
-            const data = await res.json().catch(() => ({}));
+            const data = await res.json().catch(() => ({})) as AuthMessageResponse & AuthErrorResponse;
 
             if (!res.ok) {
                 throw new Error(`[${res.status}] ${data.message || data.error || data.title || "Resend OTP failed"}`);
@@ -238,7 +243,7 @@ export class LocalAuth implements IAuthService {
         }
     }
 
-    async forgotPassword({ email }: { email: string }): Promise<string> {
+    async forgotPassword({ email }: { email: string }): Promise<AuthMessageResponse> {
         try {
             const res = await fetch(`${connection_url}/api/Auth/forgot-password`, {
                 method: 'POST',
@@ -246,19 +251,19 @@ export class LocalAuth implements IAuthService {
                 body: JSON.stringify({ email })
             });
 
-            const data = await res.json().catch(() => ({}));
+            const data = await res.json().catch(() => ({})) as AuthMessageResponse & AuthErrorResponse;
 
             if (!res.ok) {
                 throw new Error(`[${res.status}] ${data.message || data.error || data.title || "Forgot password request failed"}`);
             }
 
-            return parseStringify(data.message || "If the email exists, an OTP has been sent.");
+            return parseStringify({ message: data.message || "If the email exists, an OTP has been sent." });
         } catch (error) {
             this.handleError(error, "forgotPassword");
         }
     }
 
-    async verifyPasswordResetOtp({ email, otp }: { email: string; otp: string }): Promise<string> {
+    async verifyPasswordResetOtp({ email, otp }: { email: string; otp: string }): Promise<AuthMessageResponse> {
         try {
             const res = await fetch(`${connection_url}/api/Auth/verify-password-reset-otp`, {
                 method: 'POST',
@@ -266,19 +271,19 @@ export class LocalAuth implements IAuthService {
                 body: JSON.stringify({ email, otp })
             });
 
-            const data = await res.json().catch(() => ({}));
+            const data = await res.json().catch(() => ({})) as AuthMessageResponse & AuthErrorResponse;
 
             if (!res.ok) {
                 throw new Error(`[${res.status}] ${data.message || data.error || data.title || "OTP verification failed"}`);
             }
 
-            return parseStringify(data.message || "OTP verified successfully.");
+            return parseStringify({ message: data.message || "OTP verified successfully." });
         } catch (error) {
             this.handleError(error, "verifyPasswordResetOtp");
         }
     }
 
-    async resetPassword({ email, newPassword }: { email: string; newPassword: string }): Promise<string> {
+    async resetPassword({ email, newPassword }: { email: string; newPassword: string }): Promise<AuthMessageResponse> {
         try {
             const res = await fetch(`${connection_url}/api/Auth/reset-password`, {
                 method: 'POST',
@@ -286,13 +291,13 @@ export class LocalAuth implements IAuthService {
                 body: JSON.stringify({ email, newPassword })
             });
 
-            const data = await res.json().catch(() => ({}));
+            const data = await res.json().catch(() => ({})) as AuthMessageResponse & AuthErrorResponse;
 
             if (!res.ok) {
                 throw new Error(`[${res.status}] ${data.message || data.error || data.title || "Password reset failed"}`);
             }
 
-            return parseStringify(data.message || "Password reset successfully.");
+            return parseStringify({ message: data.message || "Password reset successfully." });
         } catch (error) {
             this.handleError(error, "resetPassword");
         }

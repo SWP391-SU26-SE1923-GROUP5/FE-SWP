@@ -9,7 +9,6 @@ import {
     BrainCircuit,
     FileText,
     Loader2,
-    RotateCcw,
     Sparkles,
     MessageSquare,
     Pencil,
@@ -54,7 +53,6 @@ import {
     getSessionMessages,
     getUserSessions,
     getSessionDocuments,
-    addDocumentToSession,
     renameChatSession,
     deleteChatSession,
     getSuggestedPrompts,
@@ -66,8 +64,14 @@ import { FileDetails, ShareInput } from "@/components/ActionsModalContent";
 import ApryseViewer from "./ApryseViewer";
 import { toast } from "sonner";
 
-const MiniMessageWithCitations = ({ content, citations }: { content: string; citations?: any[] }) => {
-    const [activeCitation, setActiveCitation] = useState<any | null>(null);
+interface Citation {
+    isHighlightable?: boolean;
+    source?: string;
+    snippet?: string;
+}
+
+const MiniMessageWithCitations = ({ content, citations }: { content: string; citations?: Citation[] }) => {
+    const [activeCitation, setActiveCitation] = useState<Citation | null>(null);
 
     if (!citations || citations.length === 0) return <div className="whitespace-pre-wrap">{content}</div>;
 
@@ -82,7 +86,7 @@ const MiniMessageWithCitations = ({ content, citations }: { content: string; cit
                         if (idx >= 0 && idx < citations.length) {
                             const cit = citations[idx];
                             return (
-                                <button 
+                                <button
                                     key={i}
                                     onClick={() => setActiveCitation(activeCitation === cit ? null : cit)}
                                     className="inline-flex items-center justify-center px-1.5 py-0.5 mx-0.5 rounded-sm bg-brand/20 text-brand text-[10px] font-bold cursor-pointer hover:bg-brand hover:text-white transition-colors align-super"
@@ -96,7 +100,7 @@ const MiniMessageWithCitations = ({ content, citations }: { content: string; cit
                     return <span key={i}>{part}</span>;
                 })}
             </div>
-            
+
             <div className="mt-2 pt-2 border-t border-slate-200/60 dark:border-dark-400/60 flex flex-wrap gap-2">
                 <span className="text-[11px] font-semibold text-slate-500/80 w-full mb-0.5 uppercase tracking-wider">Sources</span>
                 {citations.map((cit, idx) => (
@@ -104,11 +108,11 @@ const MiniMessageWithCitations = ({ content, citations }: { content: string; cit
                         key={`source-${idx}`}
                         onClick={() => setActiveCitation(activeCitation === cit ? null : cit)}
                         className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-white dark:bg-dark-300 border border-slate-200 dark:border-dark-400 hover:border-brand dark:hover:border-brand transition-colors cursor-pointer group shadow-sm"
-                        title={cit.source || cit.Source || "Document source"}
+                        title={cit.source || "Document source"}
                     >
                         <FileText className="w-3 h-3 text-slate-400 group-hover:text-brand" />
                         <span className="text-[10px] font-medium text-slate-600 dark:text-slate-300 truncate max-w-[120px]">
-                            {cit.source || cit.Source || `Source ${idx + 1}`}
+                            {cit.source || `Source ${idx + 1}`}
                         </span>
                         {cit.isHighlightable === false && (
                             <span className="px-1.5 py-0.5 text-[8px] font-bold bg-purple-100 text-purple-700 rounded-full uppercase ml-1">
@@ -121,7 +125,7 @@ const MiniMessageWithCitations = ({ content, citations }: { content: string; cit
 
             {activeCitation && (
                 <div className="mt-2 p-3 bg-slate-50 dark:bg-dark-300 border border-slate-200 dark:border-dark-400 rounded-lg relative animate-in fade-in zoom-in duration-200">
-                    <button 
+                    <button
                         onClick={() => setActiveCitation(null)}
                         className="absolute top-2 right-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 cursor-pointer"
                     >
@@ -131,7 +135,7 @@ const MiniMessageWithCitations = ({ content, citations }: { content: string; cit
                         {activeCitation.isHighlightable === false ? "AI Summary:" : "Source Snippet:"}
                     </p>
                     <p className={`text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed ${activeCitation.isHighlightable === false ? '' : 'italic'}`}>
-                        {activeCitation.isHighlightable === false ? (activeCitation.snippet || activeCitation.Snippet) : `"...${activeCitation.snippet || activeCitation.Snippet}..."`}
+                        {activeCitation.isHighlightable === false ? activeCitation.snippet : `"...${activeCitation.snippet}..."`}
                     </p>
                 </div>
             )}
@@ -169,13 +173,11 @@ export default function ActionDropdown({ file }: { file: File_ }) {
 
     const isAiDocSupported = SUPPORTED_AI_DOC_EXTENSIONS.includes(fileExt);
 
-    // --- Access level logic ---
     const currentUserId = session?.user?.id;
     const isOwner = !!currentUserId && file.userId === currentUserId;
     const [userAccessLevel, setUserAccessLevel] = useState<number | null>(null);
     const accessLevelFetched = useRef(false);
 
-    // Owner and Edit-level (2) users can do everything; Read-level (1) can only view/download
     const canEdit = isOwner || userAccessLevel === 2;
 
     const fetchAccessLevel = useCallback(async () => {
@@ -184,20 +186,19 @@ export default function ActionDropdown({ file }: { file: File_ }) {
         try {
             const shares = await getDocumentShares(file.id);
             if (shares && Array.isArray(shares)) {
-                // Non-owner sees only their own share entry
                 const myShare = shares.find(
-                    (s: any) => (s.userId || s.UserId) === currentUserId
+                    (s: { userId?: string, UserId?: string, level?: number, Level?: number, accessLevel?: number }) => (s.userId || s.UserId) === currentUserId
                 ) || shares[0];
                 if (myShare) {
                     setUserAccessLevel(Number(myShare.level || myShare.Level || myShare.accessLevel || 1));
                 } else {
-                    setUserAccessLevel(1); // default to read-only if no share found
+                    setUserAccessLevel(1);
                 }
             } else {
                 setUserAccessLevel(1);
             }
         } catch {
-            setUserAccessLevel(1); // fail-safe: default to read-only
+            setUserAccessLevel(1);
         }
     }, [file.id, currentUserId, isOwner]);
 
@@ -220,16 +221,14 @@ export default function ActionDropdown({ file }: { file: File_ }) {
     const [chatInput, setChatInput] = useState("");
     const [isChatLoading, setIsChatLoading] = useState(false);
     const [isSending, setIsSending] = useState(false);
-    
+
     const [suggestedPrompts, setSuggestedPrompts] = useState<string[]>([]);
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
-    // Auto-scroll chat to bottom
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [chatMessages, isSending]);
 
-    // AI session management states
     const [isRenameSessionModalOpen, setIsRenameSessionModalOpen] = useState(false);
     const [renameSessionTitle, setRenameSessionTitle] = useState("");
     const [isRenamingSession, setIsRenamingSession] = useState(false);
@@ -334,7 +333,7 @@ export default function ActionDropdown({ file }: { file: File_ }) {
                 data = {
                     id: res.id || res.quizId,
                     quizTitle: res.title || res.quizTitle || res.documentName || `${file.fileName} Quiz`,
-                    questions: res.questions?.map((q: any) => ({
+                    questions: res.questions?.map((q: QuizQuestion & { title?: string }) => ({
                         id: q.id,
                         questionTitle: q.title || q.questionTitle,
                         answers: q.answers || []
@@ -353,7 +352,6 @@ export default function ActionDropdown({ file }: { file: File_ }) {
 
                 if (docSessions.length === 0 && sessions.length > 0) {
                     const matchedSessions: ChatSession[] = [];
-                    // Check only the 15 most recent sessions concurrently to prevent N+1 freezing
                     const recentSessions = sessions.slice(0, 15);
                     await Promise.all(
                         recentSessions.map(async (s) => {
@@ -365,7 +363,7 @@ export default function ActionDropdown({ file }: { file: File_ }) {
                             } catch (e) {}
                         })
                     );
-                    
+
                     if (matchedSessions.length > 0) {
                         docSessions = matchedSessions.sort(
                             (a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
@@ -381,14 +379,14 @@ export default function ActionDropdown({ file }: { file: File_ }) {
                     const msgs = await getSessionMessages(firstSession.id);
                     setChatMessages(msgs);
                 }
-                
+
                 try {
                     const prompts = await getSuggestedPrompts(file.id);
                     setSuggestedPrompts(prompts);
                 } catch (e) {
                     console.error("Failed to fetch suggested prompts", e);
                 }
-                
+
                 data = { ready: true };
             }
 
@@ -455,6 +453,7 @@ export default function ActionDropdown({ file }: { file: File_ }) {
         }
 
         const userMessage = {
+            // eslint-disable-next-line react-hooks/purity
             id: Date.now().toString(),
             chatSessionId: currentSessionId,
             sender: "user",
@@ -463,7 +462,7 @@ export default function ActionDropdown({ file }: { file: File_ }) {
             updatedAt: new Date().toISOString()
         };
 
-        setChatMessages((prev) => [...prev, userMessage as any]);
+        setChatMessages((prev) => [...prev, userMessage as unknown as ChatMessage]);
         if (typeof promptText !== 'string') setChatInput("");
         setIsSending(true);
 
@@ -503,8 +502,8 @@ export default function ActionDropdown({ file }: { file: File_ }) {
             setChatSessions(prev => prev.map(s => s.id === selectedSessionId ? { ...s, sessionTitle: updated.sessionTitle } : s));
             setIsRenameSessionModalOpen(false);
             toast.success("Session renamed successfully!", { id: toastId });
-        } catch (error: any) {
-            toast.error(error.message || "Failed to rename session", { id: toastId });
+        } catch (error) {
+            toast.error((error as Error)?.message || "Failed to rename session", { id: toastId });
         } finally {
             setIsRenamingSession(false);
         }
@@ -526,8 +525,8 @@ export default function ActionDropdown({ file }: { file: File_ }) {
             }
             setIsDeleteSessionModalOpen(false);
             toast.success("Session deleted successfully!", { id: toastId });
-        } catch (error: any) {
-            toast.error(error.message || "Failed to delete session", { id: toastId });
+        } catch (error) {
+            toast.error((error as Error)?.message || "Failed to delete session", { id: toastId });
         } finally {
             setIsDeletingSession(false);
         }
@@ -606,13 +605,13 @@ export default function ActionDropdown({ file }: { file: File_ }) {
                                     <div className="p-6 md:p-8 border border-slate-200/60 rounded-2xl bg-gradient-to-b from-slate-50/50 to-white shadow-sm relative overflow-hidden group">
                                         <div className="absolute top-0 right-0 w-32 h-32 bg-brand/5 rounded-bl-full -mr-10 -mt-10 transition-transform group-hover:scale-110 duration-700 pointer-events-none" />
                                         <p className="text-slate-700 leading-relaxed whitespace-pre-wrap relative z-10 font-medium text-[15px]">
-                                            {aiResult.data.summary as string}
+                                            {aiResult.data?.summary as string}
                                         </p>
                                     </div>
                                     <div className="flex justify-end pt-2">
-                                        <Button 
-                                            onClick={() => navigator.clipboard.writeText(aiResult.data.summary as string)}
-                                            variant="outline" 
+                                        <Button
+                                            onClick={() => navigator.clipboard.writeText(aiResult.data?.summary as string)}
+                                            variant="outline"
                                             className="gap-2 rounded-xl text-slate-600 hover:text-brand hover:bg-brand/5 border-slate-200 cursor-pointer shadow-2xs"
                                         >
                                             <Copy className="w-4 h-4" /> Copy Summary
@@ -675,7 +674,6 @@ export default function ActionDropdown({ file }: { file: File_ }) {
                                             )}
                                         </div>
 
-                                        {/* Inline Rename UI */}
                                         {isRenameSessionModalOpen && (
                                             <div className="flex items-center gap-2 p-3 bg-brand/5 border border-brand/20 rounded-xl animate-in slide-in-from-top-2">
                                                 <Input
@@ -746,7 +744,8 @@ export default function ActionDropdown({ file }: { file: File_ }) {
                                             </div>
                                         ) : (
                                             chatMessages.map((msg) => {
-                                                const isUserMsg = msg.sender?.toLowerCase() === "user" || (msg as any).role?.toLowerCase() === "user" || (msg as any).isUser === true || (msg.sender && msg.sender.toLowerCase() !== "ai" && msg.sender.toLowerCase() !== "assistant" && msg.sender.toLowerCase() !== "system");
+                                                const msgExt = msg as ChatMessage & { role?: string, isUser?: boolean };
+                                                const isUserMsg = msg.sender?.toLowerCase() === "user" || msgExt.role?.toLowerCase() === "user" || msgExt.isUser === true || (msg.sender && msg.sender.toLowerCase() !== "ai" && msg.sender.toLowerCase() !== "assistant" && msg.sender.toLowerCase() !== "system");
                                                 return (
                                                     <div
                                                         key={msg.id}
@@ -804,8 +803,8 @@ export default function ActionDropdown({ file }: { file: File_ }) {
                                     <div className="w-16 h-16 bg-emerald-100 dark:bg-emerald-500/20 text-emerald-500 rounded-full flex items-center justify-center mb-2 text-3xl">
                                         ✨
                                     </div>
-                                    <h3 className="h3-bold text-dark-100">{aiResult.data.quizTitle}</h3>
-                                    <p className="text-light-400">Successfully generated {aiResult.data.questions.length} questions for this document.</p>
+                                    <h3 className="h3-bold text-dark-100">{aiResult.data?.quizTitle as string}</h3>
+                                    <p className="text-light-400">Successfully generated {(aiResult.data?.questions as unknown[])?.length} questions for this document.</p>
                                 </div>
                             )}
 
@@ -814,8 +813,8 @@ export default function ActionDropdown({ file }: { file: File_ }) {
                                     <div className="w-16 h-16 bg-emerald-100 dark:bg-emerald-500/20 text-emerald-500 rounded-full flex items-center justify-center mb-2 text-3xl">
                                         ✨
                                     </div>
-                                    <h3 className="h3-bold text-dark-100">{aiResult.data.deckTitle}</h3>
-                                    <p className="text-light-400">Successfully generated {aiResult.data.cards.length} flashcards for this document.</p>
+                                    <h3 className="h3-bold text-dark-100">{aiResult.data?.deckTitle as string}</h3>
+                                    <p className="text-light-400">Successfully generated {(aiResult.data?.cards as unknown[])?.length} flashcards for this document.</p>
                                 </div>
                             )}
                         </div>
@@ -879,7 +878,7 @@ export default function ActionDropdown({ file }: { file: File_ }) {
                             <Button
                                 onClick={() => {
                                     closeAllModals();
-                                    router.push(`/quizzes/${aiResult.data?.id}`);
+                                    router.push(`/quizzes/${aiResult?.data?.id}`);
                                 }}
                                 className="w-full py-2 rounded-full bg-brand text-white hover:bg-emerald-400 transition-colors cursor-pointer shadow-sm"
                             >
@@ -945,7 +944,7 @@ export default function ActionDropdown({ file }: { file: File_ }) {
                         .filter((item) => {
                             if (item.value === "edit") return SUPPORTED_EDIT_EXTENSIONS.includes(fileExt);
                             // Hide editOnly actions (rename, share, delete) for read-only users
-                            if ((item as any).editOnly && !isOwner) {
+                            if ((item as ActionType & { editOnly?: boolean }).editOnly && !isOwner) {
                                 // Still loading access level → hide by default (safe)
                                 if (userAccessLevel === null) return false;
                                 if (userAccessLevel < 2) return false;

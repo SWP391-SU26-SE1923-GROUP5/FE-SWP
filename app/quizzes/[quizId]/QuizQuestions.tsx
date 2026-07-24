@@ -22,13 +22,27 @@ export default function QuizQuestions({ quizData, quizId }: Props) {
     const [submitted, setSubmitted] = useState<boolean>(false);
     const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
     const [xpEarned, setXpEarned] = useState<number>(0);
-    const [newAchievements, setNewAchievements] = useState<any[]>([]);
-    const [levelUpToast, setLevelUpToast] = useState<any | null>(null);
-    const [startTime] = useState<number>(Date.now());
+    interface Achievement {
+        title: string;
+        description?: string;
+        xpReward?: number;
+        id?: string;
+        icon?: string;
+    }
+
+    interface LevelUpToast {
+        newLevel: number;
+        title?: string;
+        message?: string;
+    }
+
+    const [newAchievements, setNewAchievements] = useState<Achievement[]>([]);
+    const [levelUpToast, setLevelUpToast] = useState<LevelUpToast | null>(null);
+    const [startTime] = useState<number>(Date.now);
     const [elapsedSeconds, setElapsedSeconds] = useState<number>(0);
 
     useEffect(() => {
-        let interval: any;
+        let interval: ReturnType<typeof setInterval>;
         if (started && !submitted && !isSubmitting) {
             interval = setInterval(() => {
                 setElapsedSeconds((prev) => prev + 1);
