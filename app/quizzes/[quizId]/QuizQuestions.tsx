@@ -81,7 +81,14 @@ export default function QuizQuestions({ quizData, quizId }: Props) {
                         }
                     });
                     const durationSeconds = Math.max(1, elapsedSeconds || Math.round((Date.now() - startTime) / 1000));
-                    const result = await submitQuiz(quizId, formattedAnswers, durationSeconds);
+                    const result = (await submitQuiz(quizId, formattedAnswers, durationSeconds)) as {
+                        data?: { score?: number; totalCorrect?: number; levelUpToast?: LevelUpToast };
+                        submission?: { score?: number; totalCorrect?: number; levelUpToast?: LevelUpToast };
+                        xpEarned?: number;
+                        newAchievements?: Achievement[];
+                        levelUpToast?: LevelUpToast | null;
+                        currentLevel?: number;
+                    } | null | undefined;
                     if (result) {
                         const subData = result.data || result.submission;
                         if (subData) {
@@ -94,8 +101,8 @@ export default function QuizQuestions({ quizData, quizId }: Props) {
                         if (result.xpEarned !== undefined) setXpEarned(result.xpEarned);
                         if (result.newAchievements !== undefined) setNewAchievements(result.newAchievements);
                         if (result.levelUpToast || subData?.levelUpToast) {
-                            setLevelUpToast(result.levelUpToast || subData.levelUpToast);
-                        } else if (result.currentLevel && result.currentLevel > 0 && result.xpEarned > 0 && result.levelUpToast !== null) {
+                            setLevelUpToast(result.levelUpToast || subData?.levelUpToast || null);
+                        } else if ((result.currentLevel ?? 0) > 0 && (result.xpEarned ?? 0) > 0 && result.levelUpToast !== null) {
                             if (result.levelUpToast) setLevelUpToast(result.levelUpToast);
                         }
                     }

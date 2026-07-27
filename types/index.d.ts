@@ -504,3 +504,23 @@ export interface IProfileService {
     getMyTierInfo(): Promise<UserTierInfoDto | null>;
     getMyAchievements(): Promise<AchievementDto[]>;
 }
+
+export interface TierBreakdownDto {
+    tierName: string;
+    price: number;
+    transactionCount: number;
+    totalRevenue: number;
+}
+
+export interface AdminDashboardDto {
+    totalUsers: number;
+    totalActiveUsers: number;
+    totalDocumentsUploaded: number;
+    totalRevenue: number;
+    totalTransactions: number;
+    tierBreakdown: TierBreakdownDto[];
+}
+
+export interface IAdminService {
+    getDashboard(): Promise<AdminDashboardDto | null>;
+}
