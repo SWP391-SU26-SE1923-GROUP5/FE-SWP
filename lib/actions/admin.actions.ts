@@ -10,3 +10,5 @@ const getAdminProvider = (): IAdminService => {
 const adminProvider = getAdminProvider();
 
 export const getAdminDashboard = adminProvider.getDashboard.bind(adminProvider);
+export const getAdminUsers = adminProvider.getUsers.bind(adminProvider);
+export const updateAdminUser = adminProvider.updateUser.bind(adminProvider);

@@ -6,13 +6,10 @@ import {
     FileText,
     DollarSign,
     CreditCard,
-    AlertCircle,
-    LayoutDashboard
+    AlertCircle
 } from "lucide-react";
 import TierRevenueChart from "@/components/admin/TierRevenueChart";
-import { Button } from "@/components/ui/button";
-import Image from "next/image";
-import { signOutUser } from "@/lib/actions/user.actions";
+import AdminNavigation from "@/components/admin/AdminNavigation";
 
 export default async function AdminDashboardPage() {
     let dashboard: AdminDashboardDto | null = null;
@@ -43,35 +40,11 @@ export default async function AdminDashboardPage() {
     return (
         <main className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 py-10 px-6 sm:px-10 lg:px-14">
             <div className="max-w-7xl mx-auto space-y-8">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between pb-6 border-b border-slate-200 dark:border-slate-800 gap-4">
-                    <div className="flex items-center gap-3">
-                        <div className="p-2.5 rounded-xl bg-indigo-600 text-white shadow-sm">
-                            <LayoutDashboard className="w-6 h-6" />
-                        </div>
-                        <div>
-                            <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 dark:text-white">
-                                Admin Dashboard
-                            </h1>
-                            <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mt-0.5">
-                                Platform telemetry, revenue tracking, and subscription diagnostics
-                            </p>
-                        </div>
-                    </div>
-                    <form action={async () => {
-                        "use server"
-                        await signOutUser()
-                    }}>
-                        <Button type="submit" className="sign-out-button py-6 cursor-pointer rounded-full bg-red-200 [&:hover]:bg-red-300 transition">
-                            <Image
-                                src="/assets/icons/logout.svg"
-                                alt="logout"
-                                width={24}
-                                height={24}
-                                className="w-6"
-                            />
-                        </Button>
-                    </form>
-                </div>
+                <AdminNavigation
+                    title="Admin Dashboard"
+                    subtitle="Platform telemetry, revenue tracking, and subscription diagnostics"
+                    currentTab="dashboard"
+                />
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-5">
                     <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-xs flex flex-col justify-between">

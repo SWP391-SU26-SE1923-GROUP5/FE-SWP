@@ -521,6 +521,35 @@ export interface AdminDashboardDto {
     tierBreakdown: TierBreakdownDto[];
 }
 
+export interface AdminUserDto {
+    id: string;
+    fullName?: string | null;
+    email?: string | null;
+    dateOfBirth?: string | null;
+    currentStorageCapacity?: number | null;
+    currentAiTokenUsage?: number | null;
+    status?: string | null;
+    role?: string | null;
+    tierId?: string | null;
+    tierName?: string | null;
+    tierStorageLimitMb?: number | null;
+    tierAiTokens?: number | null;
+    tierExpireAt?: string | null;
+    createdAt?: string | null;
+    updatedAt?: string | null;
+}
+
+export interface UpdateAdminUserDto {
+    fullName?: string;
+    dateOfBirth?: string;
+    currentStorageCapacity?: number;
+    currentAiTokenUsage?: number;
+    status?: string;
+    role?: string;
+}
+
 export interface IAdminService {
     getDashboard(): Promise<AdminDashboardDto | null>;
+    getUsers(): Promise<AdminUserDto[]>;
+    updateUser(id: string, data: UpdateAdminUserDto): Promise<AdminUserDto | null>;
 }
