@@ -1,7 +1,5 @@
 import NextAuth, { AuthError } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
-import GitHub from "next-auth/providers/github";
-import Google from "next-auth/providers/google";
 import { signInUser, refreshSessionToken } from "@/lib/actions/user.actions";
 import { JWT } from "next-auth/jwt";
 
@@ -58,14 +56,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         signIn: "/sign-in",
     },
     providers: [
-        GitHub({
-            clientId: process.env.AUTH_GITHUB_ID,
-            clientSecret: process.env.AUTH_GITHUB_SECRET,
-        }),
-        Google({
-            clientId: process.env.AUTH_GOOGLE_ID,
-            clientSecret: process.env.AUTH_GOOGLE_SECRET,
-        }),
         CredentialsProvider({
             name: "credentials",
             credentials: {

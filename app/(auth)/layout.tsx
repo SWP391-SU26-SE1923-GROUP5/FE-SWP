@@ -1,6 +1,5 @@
 import {ReactNode} from "react";
 import Image from "next/image";
-import SocialAuthForm from "@/components/forms/SocialAuthForm";
 import { Toaster } from "@/components/ui/sonner"
 
 const AuthLayout = ({ children }: { children: ReactNode}) => {
@@ -25,8 +24,6 @@ const AuthLayout = ({ children }: { children: ReactNode}) => {
                 </div>
 
                 {children}
-
-                <SocialAuthForm />
             </section>
 
             <Toaster position="top-center" richColors />
