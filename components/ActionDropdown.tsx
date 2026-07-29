@@ -942,7 +942,11 @@ export default function ActionDropdown({ file }: { file: File_ }) {
 
                     {actionsDropdownItems
                         .filter((item) => {
-                            if (item.value === "edit") return SUPPORTED_EDIT_EXTENSIONS.includes(fileExt);
+                            if (item.value === "edit") {
+                                if (!SUPPORTED_EDIT_EXTENSIONS.includes(fileExt)) return false;
+                                if (!canEdit) return false;
+                                return true;
+                            }
                             // Hide editOnly actions (rename, share, delete) for read-only users
                             if ((item as ActionType & { editOnly?: boolean }).editOnly && !isOwner) {
                                 // Still loading access level → hide by default (safe)
