@@ -186,7 +186,7 @@ export default function FlashcardViewer({ cards: initialCards }: { cards: Flashc
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 w-full">
                         <Button
                             variant="outline"
-                            onClick={(e) => handleReview(0, e)}
+                            onClick={(e) => handleReview(1, e)}
                             disabled={isSubmitting}
                             className="border-red-200 text-red hover:bg-red hover:text-white rounded-xl py-6 font-semibold cursor-pointer transition-colors"
                         >
@@ -194,7 +194,7 @@ export default function FlashcardViewer({ cards: initialCards }: { cards: Flashc
                         </Button>
                         <Button
                             variant="outline"
-                            onClick={(e) => handleReview(1, e)}
+                            onClick={(e) => handleReview(2, e)}
                             disabled={isSubmitting}
                             className="border-amber-200 text-amber-600 hover:bg-amber-500 hover:text-white rounded-xl py-6 font-semibold cursor-pointer transition-colors"
                         >
@@ -202,7 +202,7 @@ export default function FlashcardViewer({ cards: initialCards }: { cards: Flashc
                         </Button>
                         <Button
                             variant="outline"
-                            onClick={(e) => handleReview(2, e)}
+                            onClick={(e) => handleReview(3, e)}
                             disabled={isSubmitting}
                             className="border-blue-200 text-blue-600 hover:bg-blue-600 hover:text-white rounded-xl py-6 font-semibold cursor-pointer transition-colors"
                         >
@@ -210,7 +210,7 @@ export default function FlashcardViewer({ cards: initialCards }: { cards: Flashc
                         </Button>
                         <Button
                             variant="outline"
-                            onClick={(e) => handleReview(3, e)}
+                            onClick={(e) => handleReview(4, e)}
                             disabled={isSubmitting}
                             className="border-emerald-200 text-emerald-600 hover:bg-emerald-600 hover:text-white rounded-xl py-6 font-semibold cursor-pointer transition-colors"
                         >

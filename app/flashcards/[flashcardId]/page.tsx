@@ -19,7 +19,7 @@ export default async function FlashcardStudyPage({ params }: Props) {
     }
 
     if (flashcardId === "due") {
-        const dueCards = await getDueFlashcards(50);
+        const dueCards = await getDueFlashcards(1000);
         deckCards = (dueCards || []).map((c: RawDueCard) => ({
             id: c.flashcardId || c.id || "",
             documentId: c.documentId || "",

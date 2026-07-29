@@ -251,7 +251,7 @@ export default function AIChatPage() {
         if (libraryDocs.length === 0) {
             setIsLoading(p => ({ ...p, library: true }));
             try {
-                const res = await getFiles({ types: ["document"], limit: 50 });
+                const res = await getFiles({ types: ["document"], limit: 1000 });
                 setLibraryDocs(res.documents || []);
             } catch (e) {
                 toast.error("Failed to load library.");
