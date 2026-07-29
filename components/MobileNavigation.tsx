@@ -17,7 +17,7 @@ import {cn} from "@/lib/utils";
 import {Button} from "@/components/ui/button";
 import FileUploader from "@/components/FileUploader";
 import {signOutUser} from "@/lib/actions/user.actions";
-import { BarChart3, Bell, Trophy, Trash2 } from "lucide-react";
+import { BarChart3, Bell, Trophy, Trash2, BrainCircuit, FileText } from "lucide-react";
 
 interface Props {
     fullName: string;
@@ -142,6 +142,26 @@ const MobileNavigation = ({fullName, avatar, email}: Props) => {
                     <Separator className="my-5 bg-light-200/20"/>
 
                     <div className="flex flex-col justify-between gap-5 pb-5">
+                        <div className="flex items-center gap-4 w-full">
+                            <Link href="/quizzes" className="flex-1">
+                                <Button
+                                    className="w-full flex items-center justify-center gap-2 rounded-full py-6 border border-slate-200 bg-white text-brand hover:bg-slate-100 hover:text-brand transition-colors cursor-pointer shadow-sm"
+                                >
+                                    <BrainCircuit className="h-5 w-5 text-brand" />
+                                    <span className="font-medium text-brand">Quizzes</span>
+                                </Button>
+                            </Link>
+
+                            <Link href="/flashcards" className="flex-1">
+                                <Button
+                                    className="w-full flex items-center justify-center gap-2 rounded-full py-6 border border-slate-200 bg-white text-brand hover:bg-slate-100 hover:text-brand transition-colors cursor-pointer shadow-sm"
+                                >
+                                    <FileText className="h-5 w-5 text-brand" />
+                                    <span className="font-medium text-brand">Flashcards</span>
+                                </Button>
+                            </Link>
+                        </div>
+
                         <FileUploader />
 
                         <Button type="submit" className="mobile-sign-out-button bg-red-800 rounded-full py-6" onClick={async () => await signOutUser()}>

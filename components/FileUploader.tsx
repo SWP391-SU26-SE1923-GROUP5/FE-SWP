@@ -32,15 +32,13 @@ const FileUploader = ({ subjects: initialSubjects = [], className }: FileUploade
     const [selectedSubjectId, setSelectedSubjectId] = useState<string>("");
     const [isUploading, setIsUploading] = useState(false);
     const [subjectsList, setSubjectsList] = useState<Subject[]>(initialSubjects);
-    const [prevInitialSubjects, setPrevInitialSubjects] = useState<Subject[]>(initialSubjects);
     const path = usePathname();
 
-    if (initialSubjects !== prevInitialSubjects) {
-        setPrevInitialSubjects(initialSubjects);
+    React.useEffect(() => {
         if (initialSubjects && initialSubjects.length > 0) {
             setSubjectsList(initialSubjects);
         }
-    }
+    }, [initialSubjects]);
 
     React.useEffect(() => {
         let isMounted = true;
