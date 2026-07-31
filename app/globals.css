@@ -414,7 +414,7 @@
     @apply no-scrollbar h-full flex-1 overflow-auto bg-light-300 px-5 py-7 sm:mr-7 sm:rounded-[30px] md:mb-7 md:px-9 md:py-10;
 }
 @utility dashboard-container {
-    @apply w-full grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-[1fr_380px] xl:grid-cols-[1fr_440px] 2xl:grid-cols-[1fr_500px] xl:gap-10 items-start;
+    @apply w-full grid grid-cols-1 gap-6 lg:grid-cols-[1fr_380px] xl:grid-cols-[1fr_440px] 2xl:grid-cols-[1fr_500px] xl:gap-10;
 }
 @utility dashboard-summary-list {
     @apply mt-6 grid grid-cols-1 gap-4 xl:mt-10 xl:grid-cols-2 xl:gap-9;
@@ -432,7 +432,7 @@
     @apply h5 relative z-20 text-center;
 }
 @utility dashboard-recent-files {
-    @apply rounded-[20px] bg-white p-5 xl:p-8 overflow-y-auto h-[calc(100vh-160px)];
+    @apply rounded-[20px] bg-white p-5 xl:p-8 overflow-y-auto h-full;
 }
 @utility recent-file-details {
     @apply flex w-full flex-col xl:flex-row xl:justify-between;

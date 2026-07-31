@@ -6,6 +6,7 @@ import {
     RadialBar,
     RadialBarChart,
     PolarAngleAxis,
+    ResponsiveContainer,
 } from "recharts";
 import Link from "next/link";
 import { useState, useEffect } from "react";
@@ -59,18 +60,18 @@ export const Chart = ({ used = 0 }: { used?: number }) => {
     const chartData = [{ name: "Used", storage: Math.min(percentage, 100), fill: "#064e3b" }];
 
     return (
-        <Card className="chart flex flex-row items-center justify-between p-6 bg-emerald-500 text-white border-none shadow-md">
+        <Card className="chart flex flex-col md:flex-row items-center justify-between p-8 bg-emerald-500 text-white border-none shadow-md rounded-[24px]">
 
-            <CardContent className="p-0 flex items-center justify-center shrink-0">
-                <ChartContainer config={chartConfig} className="w-[140px] h-[140px]">
+            <CardContent className="p-0 flex items-center justify-center shrink-0 mb-6 md:mb-0">
+                <ChartContainer config={chartConfig} className="w-[180px] h-[180px]">
                     <RadialBarChart
                         data={chartData}
                         startAngle={90}
                         endAngle={-270}
-                        innerRadius={50}
-                        outerRadius={65}
-                        width={140}
-                        height={140}
+                        innerRadius={65}
+                        outerRadius={85}
+                        width={180}
+                        height={180}
                     >
                         <PolarAngleAxis
                             type="number"
@@ -97,14 +98,14 @@ export const Chart = ({ used = 0 }: { used?: number }) => {
                                                 <tspan
                                                     x={viewBox.cx}
                                                     y={viewBox.cy}
-                                                    className="text-3xl font-bold fill-white"
+                                                    className="text-4xl font-bold fill-white"
                                                 >
                                                     {percentage}%
                                                 </tspan>
                                                 <tspan
                                                     x={viewBox.cx}
-                                                    y={(viewBox.cy || 0) + 20}
-                                                    className="text-xs font-medium fill-white/80"
+                                                    y={(viewBox.cy || 0) + 24}
+                                                    className="text-sm font-medium fill-white/80"
                                                 >
                                                     Space used
                                                 </tspan>
@@ -118,17 +119,19 @@ export const Chart = ({ used = 0 }: { used?: number }) => {
                 </ChartContainer>
             </CardContent>
 
-            <CardHeader className="chart-details text-left p-0 flex-1 ml-6 space-y-1.5">
-                <span className="text-[10px] font-bold bg-white/20 w-fit px-2.5 py-0.5 rounded-full backdrop-blur-sm mb-1">
-                    {tierName}
-                </span>
-                <CardTitle className="text-xl font-bold text-white">Available Storage</CardTitle>
-                <CardDescription className="text-sm text-white/90">
+            <CardHeader className="chart-details text-center md:text-left p-0 flex-1 md:ml-10 space-y-2.5 w-full">
+                <div className="flex justify-center md:justify-start">
+                    <span className="text-xs font-bold bg-white/20 w-fit px-3 py-1 rounded-full backdrop-blur-sm mb-1">
+                        {tierName}
+                    </span>
+                </div>
+                <CardTitle className="text-2xl xl:text-3xl font-bold text-white">Available Storage</CardTitle>
+                <CardDescription className="text-base text-white/90">
                     {convertFileSize(used)} / {totalBytes > 0 ? convertFileSize(totalBytes) : "0 B"}
                 </CardDescription>
 
-                <div className="pt-2">
-                    <Button asChild className="w-full max-w-sm bg-white text-emerald-600 hover:bg-slate-100 h-9 text-xs font-semibold rounded-full cursor-pointer">
+                <div className="pt-4 flex justify-center md:justify-start">
+                    <Button asChild className="w-full max-w-sm bg-white text-emerald-600 hover:bg-slate-100 h-11 text-sm font-bold rounded-full cursor-pointer transition-all">
                         <Link href="/pricing">
                             Upgrade Plan
                         </Link>
