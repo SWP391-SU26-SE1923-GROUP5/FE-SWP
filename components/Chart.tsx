@@ -128,7 +128,7 @@ export const Chart = ({ used = 0 }: { used?: number }) => {
                 </CardDescription>
 
                 <div className="pt-2">
-                    <Button asChild className="w-full bg-white text-emerald-600 hover:bg-slate-100 h-9 text-xs font-semibold rounded-full cursor-pointer">
+                    <Button asChild className="w-full max-w-sm bg-white text-emerald-600 hover:bg-slate-100 h-9 text-xs font-semibold rounded-full cursor-pointer">
                         <Link href="/pricing">
                             Upgrade Plan
                         </Link>

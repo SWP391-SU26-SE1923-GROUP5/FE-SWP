@@ -18,7 +18,7 @@ const ImageThumbnail = ({ file }: { file: File_ }) => (
             <Thumbnail type={file.fileType} extension={file.fileExtension.replace('.', '')} url={file.fileLink} className="!size-12 shrink-0" imageClassName="!size-7 shrink-0" />
         </div>
         <div className="flex flex-col min-w-0 flex-1">
-            <p className="text-base font-bold text-slate-800 truncate" title={file.fileName}>{file.fileName}</p>
+            <p className="text-base font-bold text-slate-800 line-clamp-1 break-all" title={file.fileName}>{file.fileName}</p>
             <div className="flex items-center gap-1.5 mt-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-brand"></span>
                 <div className="text-xs font-medium text-slate-500 flex items-center gap-1">
@@ -32,7 +32,7 @@ const ImageThumbnail = ({ file }: { file: File_ }) => (
 const DetailRow = ({ label, value }: { label: string, value: string }) => (
     <div className="flex flex-col gap-1 py-3 border-b border-slate-100/60 last:border-0">
         <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">{label}</p>
-        <p className="text-sm font-medium text-slate-700 truncate" title={value}>{value}</p>
+        <p className="text-sm font-medium text-slate-700 line-clamp-1 break-all" title={value}>{value}</p>
     </div>
 )
 
@@ -194,14 +194,14 @@ export const ShareInput = ({ file, emails, onInputChange, onRemove, userLevels, 
                     imageClassName="!size-6 shrink-0"
                 />
                 <div className="flex flex-col min-w-0 flex-1">
-                    <p className="text-sm font-bold text-slate-800 truncate" title={file.fileName || file.title}>
+                    <p className="text-sm font-bold text-slate-800 line-clamp-1 break-all" title={file.fileName || file.title}>
                         {file.fileName || file.title}
                     </p>
                     <div className="flex items-center gap-2 mt-1">
                         <span className="px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider bg-brand/10 text-brand border border-brand/20 shrink-0">
                             {file.fileExtension?.replace('.', '') || file.fileType || 'Doc'}
                         </span>
-                        <FormattedDateTime date={file.createdAt || ""} className="text-xs text-slate-400 truncate" />
+                        <FormattedDateTime date={file.createdAt || ""} className="text-xs text-slate-400 line-clamp-1 break-all" />
                     </div>
                 </div>
             </div>
@@ -256,11 +256,11 @@ export const ShareInput = ({ file, emails, onInputChange, onRemove, userLevels, 
                                         {initials}
                                     </div>
                                     <div className="flex flex-col min-w-0 flex-1">
-                                        <p className="text-sm font-semibold text-slate-800 truncate group-hover:text-brand transition-colors">
+                                        <p className="text-sm font-semibold text-slate-800 line-clamp-1 break-all group-hover:text-brand transition-colors">
                                             {u.fullName || u.email}
                                         </p>
                                         {u.fullName && u.email && (
-                                            <p className="text-xs text-slate-400 truncate">{u.email}</p>
+                                            <p className="text-xs text-slate-400 line-clamp-1 break-all">{u.email}</p>
                                         )}
                                     </div>
                                 </div>
@@ -290,10 +290,10 @@ export const ShareInput = ({ file, emails, onInputChange, onRemove, userLevels, 
                                 {(ownerName || 'O').slice(0, 2).toUpperCase()}
                             </div>
                             <div className="flex flex-col min-w-0 flex-1">
-                                <p className="text-sm font-bold text-slate-800 flex items-center gap-2 truncate">
-                                    <span className="truncate">{ownerName}</span>
+                                <p className="text-sm font-bold text-slate-800 flex items-center gap-2 line-clamp-1 break-all">
+                                    <span className="line-clamp-1 break-all">{ownerName}</span>
                                 </p>
-                                {ownerEmail && <p className="text-xs text-slate-400 truncate">{ownerEmail}</p>}
+                                {ownerEmail && <p className="text-xs text-slate-400 line-clamp-1 break-all">{ownerEmail}</p>}
                             </div>
                         </div>
                         <span className="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider text-amber-800 bg-amber-100 border border-amber-300/80 shadow-2xs shrink-0">
@@ -316,10 +316,10 @@ export const ShareInput = ({ file, emails, onInputChange, onRemove, userLevels, 
                                         {initials}
                                     </div>
                                     <div className="flex flex-col min-w-0 flex-1">
-                                        <p className="text-sm font-semibold text-slate-800 truncate" title={displayName}>
+                                        <p className="text-sm font-semibold text-slate-800 line-clamp-1 break-all" title={displayName}>
                                             {displayName}
                                         </p>
-                                        {displayEmail && <p className="text-xs text-slate-400 truncate">{displayEmail}</p>}
+                                        {displayEmail && <p className="text-xs text-slate-400 line-clamp-1 break-all">{displayEmail}</p>}
                                     </div>
                                 </div>
 

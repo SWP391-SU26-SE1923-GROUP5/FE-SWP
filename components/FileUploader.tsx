@@ -29,7 +29,7 @@ interface FileUploaderProps {
 const FileUploader = ({ subjects: initialSubjects = [], className }: FileUploaderProps) => {
     const [isOpen, setIsOpen] = useState(false);
     const [files, setFiles] = useState<File[]>([]);
-    const [selectedSubjectId, setSelectedSubjectId] = useState<string>("");
+    const [fileSubjects, setFileSubjects] = useState<Record<string, string>>({});
     const [isUploading, setIsUploading] = useState(false);
     const [subjectsList, setSubjectsList] = useState<Subject[]>(initialSubjects);
     const path = usePathname();
@@ -57,7 +57,7 @@ const FileUploader = ({ subjects: initialSubjects = [], className }: FileUploade
     const onDrop = useCallback((acceptedFiles: File[]) => {
         const validFiles = acceptedFiles.filter(file => {
             if (file.size > MAX_FILE_SIZE) {
-                toast.error(`${file.name} exceeds maximum file size of 50MB.`);
+                toast.error(`${file.name} exceeds maximum file size of 5MB.`);
                 return false;
             }
             return true;
@@ -77,22 +77,29 @@ const FileUploader = ({ subjects: initialSubjects = [], className }: FileUploade
     const handleRemoveFile = (e: React.MouseEvent, fileName: string) => {
         e.stopPropagation();
         setFiles(prev => prev.filter(file => file.name !== fileName));
+        setFileSubjects(prev => {
+            const updated = { ...prev };
+            delete updated[fileName];
+            return updated;
+        });
     };
 
     const handleUploadSubmit = async () => {
-        if (!selectedSubjectId) {
-            toast.error("Please select a subject before uploading.");
-            return;
-        }
         if (files.length === 0) {
             toast.error("Please select at least one file to upload.");
+            return;
+        }
+        
+        const missingSubjects = files.some(file => !fileSubjects[file.name]);
+        if (missingSubjects) {
+            toast.error("Please select a subject for all files.");
             return;
         }
 
         setIsUploading(true);
         try {
             const uploadPromises = files.map(async file => {
-                return uploadFile({ file, path, subjectId: selectedSubjectId })
+                return uploadFile({ file, path, subjectId: fileSubjects[file.name] })
                     .then((uploadedFile) => {
                         if (uploadedFile) {
                             toast.success(`Uploaded ${file.name}. AI is processing!`);
@@ -111,9 +118,19 @@ const FileUploader = ({ subjects: initialSubjects = [], className }: FileUploade
 
             if (allSucceeded) {
                 setFiles([]);
+                setFileSubjects({});
                 setIsOpen(false);
             } else {
                 setFiles(prev => prev.filter((_, idx) => !results[idx]));
+                setFileSubjects(prev => {
+                    const updated = { ...prev };
+                    files.forEach((file, idx) => {
+                        if (results[idx]) {
+                            delete updated[file.name];
+                        }
+                    });
+                    return updated;
+                });
             }
         } finally {
             setIsUploading(false);
@@ -153,29 +170,7 @@ const FileUploader = ({ subjects: initialSubjects = [], className }: FileUploade
                     <div className="space-y-5 py-2">
                         <div className="space-y-2">
                             <label className="text-sm font-semibold text-dark300_light700 flex items-center gap-1.5">
-                                1. Select Subject <span className="text-destructive">*</span>
-                            </label>
-                            <div className="relative flex items-center">
-                                <select
-                                    className="w-full h-12 px-4 rounded-xl border border-light-800 dark:border-dark-400 bg-light-900 dark:bg-dark-300 text-dark300_light700 font-medium appearance-none outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer text-sm"
-                                    value={selectedSubjectId}
-                                    onChange={(e) => setSelectedSubjectId(e.target.value)}
-                                    disabled={isUploading}
-                                >
-                                    <option value="" disabled>Choose an existing subject...</option>
-                                    {subjectsList?.map((subject) => (
-                                        <option key={subject.id} value={subject.id}>
-                                            {subject.subjectName}
-                                        </option>
-                                    ))}
-                                </select>
-                                <ChevronDown className="absolute right-4 w-4 h-4 text-dark500_light400 pointer-events-none" />
-                            </div>
-                        </div>
-
-                        <div className="space-y-2">
-                            <label className="text-sm font-semibold text-dark300_light700 flex items-center gap-1.5">
-                                2. Upload Document <span className="text-destructive">*</span>
+                                1. Upload Document <span className="text-destructive">*</span>
                             </label>
                             <div
                                 {...getRootProps()}
@@ -194,7 +189,7 @@ const FileUploader = ({ subjects: initialSubjects = [], className }: FileUploade
                                     Drag & drop your file here, or <span className="text-emerald-600 font-semibold underline">browse</span>
                                 </p>
                                 <p className="text-xs text-dark500_light400 mt-1">
-                                    Supports PDF, DOCX, PPTX (Max size: 50MB)
+                                    Supports PDF, DOCX, PPTX (Max size: 5MB)
                                 </p>
                             </div>
                         </div>
@@ -210,26 +205,48 @@ const FileUploader = ({ subjects: initialSubjects = [], className }: FileUploade
                                         return (
                                             <li
                                                 key={`${file.name}-${index}`}
-                                                className="flex items-center justify-between p-3 rounded-xl border border-light-800 dark:border-dark-400 bg-light-900 dark:bg-dark-300"
+                                                className="flex flex-col gap-2.5 p-3 rounded-xl border border-light-800 dark:border-dark-400 bg-light-900 dark:bg-dark-300"
                                             >
-                                                <div className="flex items-center gap-3 overflow-hidden">
-                                                    <Thumbnail type={type} url={convertFileToUrl(file)} extension={extension} />
-                                                    <div className="truncate text-sm font-medium text-dark200_light800">
-                                                        {file.name}
-                                                        <span className="block text-xs text-dark500_light400">
-                                                            {(file.size / (1024 * 1024)).toFixed(2)} MB
-                                                        </span>
+                                                <div className="flex items-center justify-between w-full">
+                                                    <div className="flex flex-1 min-w-0 items-center gap-3 overflow-hidden">
+                                                        <Thumbnail type={type} url={convertFileToUrl(file)} extension={extension} className="shrink-0" />
+                                                        <div className="flex flex-col min-w-0 flex-1 w-full">
+                                                            <p className="line-clamp-1 break-all text-sm font-medium text-dark200_light800">
+                                                                {file.name}
+                                                            </p>
+                                                            <span className="text-xs text-dark500_light400">
+                                                                {(file.size / (1024 * 1024)).toFixed(2)} MB
+                                                            </span>
+                                                        </div>
                                                     </div>
+                                                    {!isUploading && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={(e) => handleRemoveFile(e, file.name)}
+                                                            className="p-1.5 rounded-full hover:bg-light-800 dark:hover:bg-dark-400 text-dark500_light400 transition cursor-pointer shrink-0"
+                                                        >
+                                                            <X className="h-4 w-4" />
+                                                        </button>
+                                                    )}
                                                 </div>
-                                                {!isUploading && (
-                                                    <button
-                                                        type="button"
-                                                        onClick={(e) => handleRemoveFile(e, file.name)}
-                                                        className="p-1.5 rounded-full hover:bg-light-800 dark:hover:bg-dark-400 text-dark500_light400 transition cursor-pointer"
+                                                <div className="relative flex items-center w-full">
+                                                    <select
+                                                        className={cn("w-full h-9 px-3 rounded-lg border bg-light-900 dark:bg-dark-300 font-medium appearance-none outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer text-xs",
+                                                            !fileSubjects[file.name] ? "text-dark500_light400 border-rose-300/60 dark:border-rose-500/30" : "text-dark200_light800 border-light-800 dark:border-dark-400"
+                                                        )}
+                                                        value={fileSubjects[file.name] || ""}
+                                                        onChange={(e) => setFileSubjects(prev => ({ ...prev, [file.name]: e.target.value }))}
+                                                        disabled={isUploading}
                                                     >
-                                                        <X className="h-4 w-4" />
-                                                    </button>
-                                                )}
+                                                        <option value="" disabled>Select subject...</option>
+                                                        {subjectsList?.map((subject) => (
+                                                            <option key={subject.id} value={subject.id}>
+                                                                {subject.subjectName}
+                                                            </option>
+                                                        ))}
+                                                    </select>
+                                                    <ChevronDown className="absolute right-2.5 w-3.5 h-3.5 text-dark500_light400 pointer-events-none" />
+                                                </div>
                                             </li>
                                         );
                                     })}
@@ -251,7 +268,7 @@ const FileUploader = ({ subjects: initialSubjects = [], className }: FileUploade
                         <Button
                             type="button"
                             onClick={handleUploadSubmit}
-                            disabled={!selectedSubjectId || files.length === 0 || isUploading}
+                            disabled={files.length === 0 || files.some(f => !fileSubjects[f.name]) || isUploading}
                             className="primary-gradient text-light-900 font-medium rounded-xl px-6 py-2.5 flex items-center gap-2 cursor-pointer"
                         >
                             {isUploading ? (

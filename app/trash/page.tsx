@@ -509,7 +509,7 @@ export default function TrashPage() {
                                                         <span>Permanently delete file?</span>
                                                     </AlertDialogTitle>
                                                     <AlertDialogDescription className="text-dark500_light400 text-sm">
-                                                        Are you sure you want to permanently delete <span className="font-semibold text-dark100_light900">&#34;{file.name}&#34;</span>? This will immediately remove all AI vector embeddings from Qdrant and cloud storage items. This action cannot be undone.
+                                                        Are you sure you want to permanently delete <span className="font-semibold text-dark100_light900 break-all">&#34;{file.name}&#34;</span>? This will immediately remove all AI vector embeddings from Qdrant and cloud storage items. This action cannot be undone.
                                                     </AlertDialogDescription>
                                                 </AlertDialogHeader>
                                                 <AlertDialogFooter className="pt-4 flex gap-2">
@@ -620,7 +620,7 @@ export default function TrashPage() {
                                                         <span>Permanently delete file?</span>
                                                     </AlertDialogTitle>
                                                     <AlertDialogDescription className="text-dark500_light400 text-sm">
-                                                        Are you sure you want to permanently delete <span className="font-semibold text-dark100_light900">&#34;{file.name}&#34;</span>? This will immediately remove all AI vector embeddings from Qdrant and cloud storage items. This action cannot be undone.
+                                                        Are you sure you want to permanently delete <span className="font-semibold text-dark100_light900 break-all">&#34;{file.name}&#34;</span>? This will immediately remove all AI vector embeddings from Qdrant and cloud storage items. This action cannot be undone.
                                                     </AlertDialogDescription>
                                                 </AlertDialogHeader>
                                                 <AlertDialogFooter className="pt-4 flex gap-2">

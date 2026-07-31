@@ -48,7 +48,6 @@ const Dashboard = async ({ searchParams }: DashboardProps) => {
                     ))}
                 </ul>
             </section>
-
             <section className="dashboard-recent-files">
                 <h2 className="h3 xl:h2 text-light-100">Recent files uploaded</h2>
                 {files.documents.length > 0 ? (
