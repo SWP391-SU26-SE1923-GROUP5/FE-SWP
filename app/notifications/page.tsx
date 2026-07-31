@@ -208,9 +208,6 @@ export default function NotificationsPage() {
                         </button>
                     </div>
 
-                    <span className="text-xs font-semibold text-dark500_light400 mb-3">
-                        Showing {paginatedNotifications.length} of {totalItems}
-                    </span>
                 </div>
 
                 <div className="space-y-3.5">
@@ -289,6 +286,8 @@ export default function NotificationsPage() {
                             totalPages={totalPages}
                             total={totalItems}
                             onPageChange={setCurrentPage}
+                            itemsPerPage={itemsPerPage}
+                            itemName="notifications"
                         />
                     </div>
                 )}

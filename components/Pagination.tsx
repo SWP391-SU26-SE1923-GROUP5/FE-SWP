@@ -12,6 +12,7 @@ interface PaginationProps {
     onPageChange?: (newPage: number) => void;
     itemsPerPage?: number;
     onItemsPerPageChange?: (newLimit: number) => void;
+    itemName?: string;
 }
 
 const Pagination = ({
@@ -20,7 +21,8 @@ const Pagination = ({
     total,
     onPageChange,
     itemsPerPage,
-    onItemsPerPageChange
+    onItemsPerPageChange,
+    itemName
 }: PaginationProps) => {
     const router = useRouter();
     const searchParams = useSearchParams();
@@ -58,7 +60,7 @@ const Pagination = ({
             <div className="flex items-center gap-4 text-xs font-medium text-slate-500 dark:text-slate-400">
                 <span>
                     {total !== undefined
-                        ? `Showing ${Math.min((page - 1) * currentLimit + 1, total)} - ${Math.min(page * currentLimit, total)} of ${total} documents`
+                        ? `Showing ${Math.min((page - 1) * currentLimit + 1, total)} - ${Math.min(page * currentLimit, total)} of ${total} ${itemName || 'documents'}`
                         : `Page ${page} of ${totalPages || 1}`}
                 </span>
 
