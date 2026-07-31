@@ -14,8 +14,7 @@ const SignUp = () => {
             const result = await createAccount({
                 fullName: data.fullName,
                 email: data.email,
-                password: data.password,
-                dateOfBirth: data.dateOfBirth
+                password: data.password
             });
 
             if (result?.email) {
@@ -52,7 +51,6 @@ const SignUp = () => {
                 fullName: "",
                 email: "",
                 password: "",
-                dateOfBirth: "",
             }}
             onSubmit={handleSignUp}
             formType="SIGN_UP"

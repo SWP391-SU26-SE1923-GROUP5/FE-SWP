@@ -19,7 +19,6 @@ interface AuthFormProps<T extends FieldValues> {
 
 export function formatLabel(key: string) {
     if (key === "email") return "Email Address";
-    if (key === "dateOfBirth") return "Date Of Birth";
     const withSpaces = key.replace(/([A-Z])/g, ' $1');
     return withSpaces.charAt(0).toUpperCase() + withSpaces.slice(1).trim();
 }
@@ -65,9 +64,7 @@ const AuthForm = <T extends FieldValues>({
                 const labelText = formatLabel(field);
 
                 const inputType =
-                    field === "password" ? "password" :
-                        field === "dateOfBirth" ? "date" :
-                            "text";
+                    field === "password" ? "password" : "text";
 
                 return (
                     <div key={field} className="space-y-2">

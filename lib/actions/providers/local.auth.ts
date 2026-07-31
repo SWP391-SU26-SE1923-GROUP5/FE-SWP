@@ -18,7 +18,7 @@ export class LocalAuth implements IAuthService {
         throw error;
     }
 
-    async createAccount({ fullName, email, password, dateOfBirth }: CreateAccountProps) {
+    async createAccount({ fullName, email, password }: CreateAccountProps) {
         try {
             const res = await fetch(`${connection_url}/api/Auth/register`, {
                 method: 'POST',
@@ -26,8 +26,7 @@ export class LocalAuth implements IAuthService {
                 body: JSON.stringify({
                     fullName,
                     email,
-                    password,
-                    dateOfBirth
+                    password
                 })
             });
 
@@ -66,7 +65,6 @@ export class LocalAuth implements IAuthService {
                     fullName: data.user.fullName,
                     email: data.user.email,
                     role: data.user.role,
-                    dateOfBirth: data.user.dateOfBirth,
                     currentStorageCapacity: data.user.currentStorageCapacity,
                     currentAiTokenUsage: data.user.currentAiTokenUsage,
                     status: data.user.status,

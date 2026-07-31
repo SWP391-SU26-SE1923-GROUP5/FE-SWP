@@ -39,12 +39,7 @@ export const SignUpSchema = z.object({
         .regex(/[0-9]/, { message: 'Password must contain at least one number.' })
         .regex(/[^a-zA-Z0-9]/, {
             message: 'Password must contain at least one special character.',
-        }),
-
-    dateOfBirth: z
-        .string()
-        .min(1, { message: 'Date of birth is required.' })
-        .regex(/^\d{4}-\d{2}-\d{2}$/, { message: 'Please select a valid date.' }),
+        })
 });
 
 export const ForgotPasswordEmailSchema = z.object({

@@ -187,10 +187,10 @@ export default function ActionDropdown({ file }: { file: File_ }) {
             const shares = await getDocumentShares(file.id);
             if (shares && Array.isArray(shares)) {
                 const myShare = shares.find(
-                    (s: { userId?: string, UserId?: string, level?: number, Level?: number, accessLevel?: number }) => (s.userId || s.UserId) === currentUserId
+                    (s: { userId?: string, level?: number }) => s.userId  === currentUserId
                 ) || shares[0];
                 if (myShare) {
-                    setUserAccessLevel(Number(myShare.level || myShare.Level || myShare.accessLevel || 1));
+                    setUserAccessLevel(Number(myShare.level || 1));
                 } else {
                     setUserAccessLevel(1);
                 }
@@ -744,8 +744,7 @@ export default function ActionDropdown({ file }: { file: File_ }) {
                                             </div>
                                         ) : (
                                             chatMessages.map((msg) => {
-                                                const msgExt = msg as ChatMessage & { role?: string, isUser?: boolean };
-                                                const isUserMsg = msg.sender?.toLowerCase() === "user" || msgExt.role?.toLowerCase() === "user" || msgExt.isUser === true || (msg.sender && msg.sender.toLowerCase() !== "ai" && msg.sender.toLowerCase() !== "assistant" && msg.sender.toLowerCase() !== "system");
+                                                const isUserMsg = msg.sender?.toLowerCase() === "user";
                                                 return (
                                                     <div
                                                         key={msg.id}
@@ -947,9 +946,7 @@ export default function ActionDropdown({ file }: { file: File_ }) {
                                 if (!canEdit) return false;
                                 return true;
                             }
-                            // Hide editOnly actions (rename, share, delete) for read-only users
                             if ((item as ActionType & { editOnly?: boolean }).editOnly && !isOwner) {
-                                // Still loading access level → hide by default (safe)
                                 if (userAccessLevel === null) return false;
                                 if (userAccessLevel < 2) return false;
                             }

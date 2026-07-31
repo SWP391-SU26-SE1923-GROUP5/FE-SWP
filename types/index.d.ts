@@ -59,7 +59,6 @@ export interface User extends BaseDocument {
     fullName: string;
     email: string;
     role: string;
-    dateOfBirth?: string;
     currentStorageCapacity?: number;
     currentAiTokenUsage?: number;
     tierStorageLimitMb?: number;
@@ -85,7 +84,6 @@ export interface SignInProps {
 
 export interface CreateAccountProps extends SignInProps {
     fullName: string;
-    dateOfBirth: string;
 }
 
 export interface VerifyOtpProps {
