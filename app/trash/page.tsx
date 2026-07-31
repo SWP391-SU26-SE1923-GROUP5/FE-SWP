@@ -544,7 +544,7 @@ export default function TrashPage() {
                 </div>
             ) : (
                 <div className="space-y-6">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 pb-28">
                         {paginatedFiles.map((file) => {
                             const { type, extension } = getFileType(file.name);
                             const sizeMB = (file.size / (1024 * 1024)).toFixed(2);
@@ -642,7 +642,10 @@ export default function TrashPage() {
                         })}
                     </div>
 
-                    <div className="px-6 pb-4">
+                    <div 
+                        className="sticky bottom-0 px-6 pt-10 pb-4 z-10"
+                        style={{ background: 'linear-gradient(to top, var(--color-light-300) 0%, var(--color-light-300) 70%, transparent 100%)' }}
+                    >
                         <Pagination
                             page={currentPage}
                             totalPages={totalPages}

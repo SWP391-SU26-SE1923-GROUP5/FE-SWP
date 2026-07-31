@@ -48,13 +48,16 @@ const Page = async ({ searchParams, params }: SearchParamProps) => {
 
             {files.documents && files.documents.length > 0 ? (
                 <div className="flex flex-col flex-1 justify-between">
-                    <section className="file-list grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                    <section className="file-list grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 pb-28">
                         {files.documents.map((file: File_) => (
                             <Card key={file.id} file={file} />
                         ))}
                     </section>
 
-                    <div className="w-full mt-auto pt-6">
+                    <div 
+                        className="w-full sticky bottom-0 pt-10 pb-4 z-10"
+                        style={{ background: 'linear-gradient(to top, var(--color-light-300) 0%, var(--color-light-300) 70%, transparent 100%)' }}
+                    >
                         <Pagination
                             page={page}
                             totalPages={totalPages}

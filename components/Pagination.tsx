@@ -55,7 +55,7 @@ const Pagination = ({
     const currentLimit = itemsPerPage || Number(searchParams?.get("limit")) || 12;
 
     return (
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 w-full mt-8 pt-5 border-t border-slate-200/80 dark:border-slate-800">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 w-full mt-8 pt-5">
             {/* Left: Item count & summary */}
             <div className="flex items-center gap-4 text-xs font-medium text-slate-500 dark:text-slate-400">
                 <span>
@@ -65,7 +65,7 @@ const Pagination = ({
                 </span>
 
                 {(onItemsPerPageChange || !onPageChange) && (
-                    <div className="flex items-center gap-1.5 pl-4 border-l border-slate-200 dark:border-slate-800">
+                    <div className="flex items-center gap-1.5 pl-4">
                         <span>Per page:</span>
                         <select
                             value={currentLimit}

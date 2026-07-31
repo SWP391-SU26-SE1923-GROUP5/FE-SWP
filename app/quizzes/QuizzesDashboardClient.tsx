@@ -262,7 +262,7 @@ export default function QuizzesDashboardClient({ initialQuizzes }: Props) {
                 </div>
             ) : (
                 <>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 pb-28">
                         {paginatedQuizzes.map((quiz) => (
                             <div
                                 key={quiz.id}
@@ -324,7 +324,7 @@ export default function QuizzesDashboardClient({ initialQuizzes }: Props) {
                     </div>
 
                     {totalPages > 1 && (
-                        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-white dark:bg-dark-200 border border-light-700 dark:border-dark-400 p-4 sm:px-6 rounded-3xl shadow-drop-1">
+                        <div className="sticky bottom-4 z-20 flex flex-col sm:flex-row items-center justify-between gap-4 bg-white/90 dark:bg-dark-200/90 backdrop-blur-md border border-light-700 dark:border-dark-400 p-4 sm:px-6 rounded-3xl shadow-drop-1 mt-4">
                             <span className="text-xs font-bold text-light-200 dark:text-dark-400">
                                 Showing <span className="text-dark100_light900 font-extrabold">{(activePage - 1) * pageSize + 1}</span> to{" "}
                                 <span className="text-dark100_light900 font-extrabold">{Math.min(activePage * pageSize, filteredAndSortedQuizzes.length)}</span> of{" "}
