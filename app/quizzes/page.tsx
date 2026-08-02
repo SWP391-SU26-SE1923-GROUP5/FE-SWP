@@ -26,7 +26,7 @@ export default async function QuizDashboard() {
     }, {} as Record<string, typeof allQuizzes>);
 
     const documentQuizzes: DocumentQuizzes[] = Object.keys(quizzesByDoc).map(docId => ({
-        documentId,
+        documentId: docId,
         documentName: fileMap[docId] || "Unknown Document",
         quizzes: quizzesByDoc[docId]
     }));
