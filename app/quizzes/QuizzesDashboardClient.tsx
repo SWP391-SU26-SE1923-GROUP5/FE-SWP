@@ -2,29 +2,47 @@
 
 import React, { useState, useMemo } from "react";
 import Link from "next/link";
-import { BrainCircuit, Clock, ArrowLeft, Trash2, Search, ArrowUpDown, History, Play, Filter, X, Calendar, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react";
+import { BrainCircuit, Clock, ArrowLeft, Trash2, Search, ArrowUpDown, History, Play, Filter, X, Calendar, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, FileText } from "lucide-react";
 import { QuizRecord } from "@/types";
 import { deleteQuiz } from "@/lib/actions/ai.actions";
+import { toast } from "sonner";
 
-type Props = {
-    initialQuizzes: QuizRecord[];
+export type DocumentQuizzes = {
+    documentId: string;
+    documentName: string;
+    quizzes: QuizRecord[];
 };
 
-export default function QuizzesDashboardClient({ initialQuizzes }: Props) {
-    const [quizzes, setQuizzes] = useState<QuizRecord[]>(initialQuizzes);
+type Props = {
+    initialDocumentQuizzes: DocumentQuizzes[];
+};
+
+export default function QuizzesDashboardClient({ initialDocumentQuizzes }: Props) {
+    const [documentQuizzes, setDocumentQuizzes] = useState<DocumentQuizzes[]>(initialDocumentQuizzes);
     const [searchQuery, setSearchQuery] = useState("");
     const [sortBy, setSortBy] = useState<"newest" | "oldest" | "title-asc" | "title-desc">("newest");
     const [timeFilter, setTimeFilter] = useState<"all" | "7d" | "30d">("all");
     const [currentPage, setCurrentPage] = useState(1);
     const [pageSize, setPageSize] = useState<number>(9);
     const [isDeleting, setIsDeleting] = useState<string | null>(null);
+    const [selectedDocumentId, setSelectedDocumentId] = useState<string | null>(null);
+
+    const allQuizzesFlattened = useMemo(() => {
+        return documentQuizzes.flatMap(dq => dq.quizzes.map(q => ({ ...q, documentName: dq.documentName })));
+    }, [documentQuizzes]);
 
     const filteredAndSortedQuizzes = useMemo(() => {
-        let result = [...quizzes];
+        let result = allQuizzesFlattened;
+
+        if (selectedDocumentId && !searchQuery.trim()) {
+            result = result.filter(q => q.documentId === selectedDocumentId);
+        }
 
         if (searchQuery.trim()) {
+            if (selectedDocumentId) setSelectedDocumentId(null);
+
             const query = searchQuery.toLowerCase();
-            result = result.filter((q) => q.title?.toLowerCase().includes(query));
+            result = result.filter((q) => q.title?.toLowerCase().includes(query) || q.documentName.toLowerCase().includes(query));
         }
 
         if (timeFilter !== "all") {
@@ -50,16 +68,27 @@ export default function QuizzesDashboardClient({ initialQuizzes }: Props) {
         });
 
         return result;
-    }, [quizzes, searchQuery, timeFilter, sortBy]);
+    }, [allQuizzesFlattened, searchQuery, timeFilter, sortBy, selectedDocumentId]);
 
-    const totalPages = Math.max(1, Math.ceil(filteredAndSortedQuizzes.length / pageSize));
+    const isDocumentView = !selectedDocumentId && !searchQuery.trim();
     
+    const documentsWithQuizzes = useMemo(() => {
+        return documentQuizzes.filter(dq => dq.quizzes.length > 0).sort((a, b) => a.documentName.localeCompare(b.documentName));
+    }, [documentQuizzes]);
+
+    const totalItems = isDocumentView ? documentsWithQuizzes.length : filteredAndSortedQuizzes.length;
+    const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
     const activePage = Math.min(currentPage, totalPages);
 
     const paginatedQuizzes = useMemo(() => {
         const start = (activePage - 1) * pageSize;
         return filteredAndSortedQuizzes.slice(start, start + pageSize);
     }, [filteredAndSortedQuizzes, activePage, pageSize]);
+
+    const paginatedDocuments = useMemo(() => {
+        const start = (activePage - 1) * pageSize;
+        return documentsWithQuizzes.slice(start, start + pageSize);
+    }, [documentsWithQuizzes, activePage, pageSize]);
 
     const hasActiveFilters = searchQuery.trim() !== "" || timeFilter !== "all" || sortBy !== "newest";
 
@@ -77,48 +106,70 @@ export default function QuizzesDashboardClient({ initialQuizzes }: Props) {
             setIsDeleting(id);
             try {
                 await deleteQuiz(id);
-                setQuizzes((prev) => prev.filter((q) => q.id !== id));
+                setDocumentQuizzes(prev => prev.map(dq => ({
+                    ...dq,
+                    quizzes: dq.quizzes.filter(q => q.id !== id)
+                })));
+                toast.success("Quiz deleted successfully");
             } catch (err) {
                 console.error("Failed to delete quiz:", err);
+                toast.error("Failed to delete quiz");
             } finally {
                 setIsDeleting(null);
             }
         }
     };
 
+    const selectedDocName = selectedDocumentId ? documentQuizzes.find(d => d.documentId === selectedDocumentId)?.documentName : null;
+
     return (
         <div className="flex flex-col gap-8 pb-20 pt-6 max-w-7xl mx-auto w-full px-5 sm:px-6 animate-in fade-in duration-500">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-light-700 dark:border-dark-400 pb-5">
                 <div className="flex items-center gap-3.5">
-                    <Link
-                        href="/home"
-                        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white dark:bg-dark-300 border border-light-700 dark:border-dark-400 shadow-xs hover:bg-light-800 dark:hover:bg-dark-400 text-dark300_light700 transition-all cursor-pointer"
-                        title="Back to Dashboard"
-                    >
-                        <ArrowLeft className="h-5 w-5" />
-                    </Link>
+                    {selectedDocumentId ? (
+                        <button
+                            onClick={() => { setSelectedDocumentId(null); setCurrentPage(1); }}
+                            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white dark:bg-dark-300 border border-light-700 dark:border-dark-400 shadow-xs hover:bg-light-800 dark:hover:bg-dark-400 text-dark300_light700 transition-all cursor-pointer"
+                            title="Back to Documents"
+                        >
+                            <ArrowLeft className="h-5 w-5" />
+                        </button>
+                    ) : (
+                        <Link
+                            href="/home"
+                            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white dark:bg-dark-300 border border-light-700 dark:border-dark-400 shadow-xs hover:bg-light-800 dark:hover:bg-dark-400 text-dark300_light700 transition-all cursor-pointer"
+                            title="Back to Dashboard"
+                        >
+                            <ArrowLeft className="h-5 w-5" />
+                        </Link>
+                    )}
                     <div>
                         <div className="flex items-center gap-2.5 flex-wrap">
-                            <h1 className="h2 text-dark100_light900 font-bold">Your Quizzes</h1>
+                            <h1 className="h2 text-dark100_light900 font-bold">
+                                {selectedDocumentId ? "Document Quizzes" : "Your Quizzes"}
+                            </h1>
                             <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-brand/10 text-brand dark:bg-brand/20 border border-brand/20">
-                                {quizzes.length} {quizzes.length === 1 ? "Quiz" : "Quizzes"}
+                                {isDocumentView 
+                                    ? `${documentsWithQuizzes.length} ${documentsWithQuizzes.length === 1 ? "Document" : "Documents"}`
+                                    : `${filteredAndSortedQuizzes.length} ${filteredAndSortedQuizzes.length === 1 ? "Quiz" : "Quizzes"}`
+                                }
                             </span>
                         </div>
-                        <p className="body-2 text-dark500_light400 mt-0.5">
-                            Search, filter, sort, and retake your previously generated quizzes or check attempt logs.
+                        <p className="body-2 text-dark500_light400 mt-0.5 line-clamp-1">
+                            {selectedDocName ? `Showing quizzes for: ${selectedDocName}` : "Search, filter, sort, and retake your previously generated quizzes."}
                         </p>
                     </div>
                 </div>
             </div>
 
-            {quizzes.length > 0 && (
+            {(documentsWithQuizzes.length > 0 || hasActiveFilters) && (
                 <div className="flex flex-col gap-4 bg-white dark:bg-dark-200 border border-light-700 dark:border-dark-400 p-5 rounded-3xl shadow-drop-1">
                     <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                         <div className="relative w-full lg:w-96">
                             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-light-200 dark:text-dark-400" />
                             <input
                                 type="text"
-                                placeholder="Search quizzes by title..."
+                                placeholder="Search quizzes or documents..."
                                 value={searchQuery}
                                 onChange={(e) => {
                                     setSearchQuery(e.target.value);
@@ -140,59 +191,61 @@ export default function QuizzesDashboardClient({ initialQuizzes }: Props) {
                             )}
                         </div>
 
-                        <div className="flex flex-wrap items-center gap-3">
-                            <div className="flex items-center gap-2 px-3.5 py-2 bg-light-800 dark:bg-dark-300 border border-light-700 dark:border-dark-400 rounded-xl text-sm font-medium text-dark200_light800">
-                                <Calendar className="h-4 w-4 text-brand shrink-0" />
-                                <span className="text-xs text-light-200 dark:text-dark-400 font-bold uppercase tracking-wider shrink-0">Time:</span>
-                                <select
-                                    value={timeFilter}
-                                    onChange={(e) => {
-                                        setTimeFilter(e.target.value as "all" | "7d" | "30d");
-                                        setCurrentPage(1);
-                                    }}
-                                    className="bg-transparent border-none focus:outline-hidden text-sm font-bold text-dark100_light900 cursor-pointer pr-2"
-                                >
-                                    <option value="all">All Time</option>
-                                    <option value="7d">Last 7 Days</option>
-                                    <option value="30d">Last 30 Days</option>
-                                </select>
-                            </div>
+                        {!isDocumentView && (
+                            <div className="flex flex-wrap items-center gap-3">
+                                <div className="flex items-center gap-2 px-3.5 py-2 bg-light-800 dark:bg-dark-300 border border-light-700 dark:border-dark-400 rounded-xl text-sm font-medium text-dark200_light800">
+                                    <Calendar className="h-4 w-4 text-brand shrink-0" />
+                                    <span className="text-xs text-light-200 dark:text-dark-400 font-bold uppercase tracking-wider shrink-0">Time:</span>
+                                    <select
+                                        value={timeFilter}
+                                        onChange={(e) => {
+                                            setTimeFilter(e.target.value as "all" | "7d" | "30d");
+                                            setCurrentPage(1);
+                                        }}
+                                        className="bg-transparent border-none focus:outline-hidden text-sm font-bold text-dark100_light900 cursor-pointer pr-2"
+                                    >
+                                        <option value="all">All Time</option>
+                                        <option value="7d">Last 7 Days</option>
+                                        <option value="30d">Last 30 Days</option>
+                                    </select>
+                                </div>
 
-                            <div className="flex items-center gap-2 px-3.5 py-2 bg-light-800 dark:bg-dark-300 border border-light-700 dark:border-dark-400 rounded-xl text-sm font-medium text-dark200_light800">
-                                <ArrowUpDown className="h-4 w-4 text-brand shrink-0" />
-                                <span className="text-xs text-light-200 dark:text-dark-400 font-bold uppercase tracking-wider shrink-0">Sort:</span>
-                                <select
-                                    value={sortBy}
-                                    onChange={(e) => {
-                                        setSortBy(e.target.value as "newest" | "oldest" | "title-asc" | "title-desc");
-                                        setCurrentPage(1);
-                                    }}
-                                    className="bg-transparent border-none focus:outline-hidden text-sm font-bold text-dark100_light900 cursor-pointer pr-2"
-                                >
-                                    <option value="newest">Newest First</option>
-                                    <option value="oldest">Oldest First</option>
-                                    <option value="title-asc">Title (A-Z)</option>
-                                    <option value="title-desc">Title (Z-A)</option>
-                                </select>
-                            </div>
+                                <div className="flex items-center gap-2 px-3.5 py-2 bg-light-800 dark:bg-dark-300 border border-light-700 dark:border-dark-400 rounded-xl text-sm font-medium text-dark200_light800">
+                                    <ArrowUpDown className="h-4 w-4 text-brand shrink-0" />
+                                    <span className="text-xs text-light-200 dark:text-dark-400 font-bold uppercase tracking-wider shrink-0">Sort:</span>
+                                    <select
+                                        value={sortBy}
+                                        onChange={(e) => {
+                                            setSortBy(e.target.value as "newest" | "oldest" | "title-asc" | "title-desc");
+                                            setCurrentPage(1);
+                                        }}
+                                        className="bg-transparent border-none focus:outline-hidden text-sm font-bold text-dark100_light900 cursor-pointer pr-2"
+                                    >
+                                        <option value="newest">Newest First</option>
+                                        <option value="oldest">Oldest First</option>
+                                        <option value="title-asc">Title (A-Z)</option>
+                                        <option value="title-desc">Title (Z-A)</option>
+                                    </select>
+                                </div>
 
-                            <div className="flex items-center gap-2 px-3.5 py-2 bg-light-800 dark:bg-dark-300 border border-light-700 dark:border-dark-400 rounded-xl text-sm font-medium text-dark200_light800">
-                                <span className="text-xs text-light-200 dark:text-dark-400 font-bold uppercase tracking-wider shrink-0">Show:</span>
-                                <select
-                                    value={pageSize}
-                                    onChange={(e) => {
-                                        setPageSize(Number(e.target.value));
-                                        setCurrentPage(1);
-                                    }}
-                                    className="bg-transparent border-none focus:outline-hidden text-sm font-bold text-dark100_light900 cursor-pointer pr-1"
-                                >
-                                    <option value={6}>6</option>
-                                    <option value={9}>9</option>
-                                    <option value={12}>12</option>
-                                    <option value={24}>24</option>
-                                </select>
+                                <div className="flex items-center gap-2 px-3.5 py-2 bg-light-800 dark:bg-dark-300 border border-light-700 dark:border-dark-400 rounded-xl text-sm font-medium text-dark200_light800">
+                                    <span className="text-xs text-light-200 dark:text-dark-400 font-bold uppercase tracking-wider shrink-0">Show:</span>
+                                    <select
+                                        value={pageSize}
+                                        onChange={(e) => {
+                                            setPageSize(Number(e.target.value));
+                                            setCurrentPage(1);
+                                        }}
+                                        className="bg-transparent border-none focus:outline-hidden text-sm font-bold text-dark100_light900 cursor-pointer pr-1"
+                                    >
+                                        <option value={6}>6</option>
+                                        <option value={9}>9</option>
+                                        <option value={12}>12</option>
+                                        <option value={24}>24</option>
+                                    </select>
+                                </div>
                             </div>
-                        </div>
+                        )}
                     </div>
 
                     {hasActiveFilters && (
@@ -230,7 +283,7 @@ export default function QuizzesDashboardClient({ initialQuizzes }: Props) {
                 </div>
             )}
 
-            {!quizzes || quizzes.length === 0 ? (
+            {!documentsWithQuizzes || documentsWithQuizzes.length === 0 ? (
                 <div className="flex flex-col items-center justify-center flex-1 py-20 px-6 text-center bg-white dark:bg-dark-200 border-2 border-dashed border-light-700 dark:border-dark-400 rounded-3xl w-full">
                     <div className="h-16 w-16 bg-light-800 dark:bg-dark-300 rounded-full flex items-center justify-center shadow-xs mb-4">
                         <BrainCircuit className="h-8 w-8 text-light-200 dark:text-dark-400" />
@@ -246,7 +299,7 @@ export default function QuizzesDashboardClient({ initialQuizzes }: Props) {
                         Go to Home to Select a Document
                     </Link>
                 </div>
-            ) : filteredAndSortedQuizzes.length === 0 ? (
+            ) : totalItems === 0 ? (
                 <div className="flex flex-col items-center justify-center py-16 px-6 text-center bg-white dark:bg-dark-200 border border-light-700 dark:border-dark-400 rounded-3xl w-full shadow-drop-1">
                     <Filter className="h-10 w-10 text-light-200 dark:text-dark-400 mb-3" />
                     <h3 className="text-lg font-bold text-dark100_light900">No matching quizzes found</h3>
@@ -263,72 +316,101 @@ export default function QuizzesDashboardClient({ initialQuizzes }: Props) {
             ) : (
                 <>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 pb-28">
-                        {paginatedQuizzes.map((quiz) => (
-                            <div
-                                key={quiz.id}
-                                className="relative group flex flex-col h-full border border-light-700 dark:border-dark-400 rounded-[2rem] bg-white dark:bg-dark-200 hover:border-brand/40 dark:hover:border-brand/40 shadow-drop-1 hover:shadow-drop-3 transition-all duration-300 hover:-translate-y-1 overflow-hidden"
-                            >
-                                <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-brand to-emerald-400 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                                
-                                <Link href={`/quizzes/${quiz.id}`} className="flex flex-col flex-1 p-6 z-10 pt-7">
-                                    <div className="flex items-start gap-4 mb-4 pr-10">
-                                        <div className="p-3.5 bg-brand/10 dark:bg-brand/20 rounded-2xl text-brand group-hover:bg-brand group-hover:text-white transition-colors duration-300 shrink-0 shadow-xs">
-                                            <BrainCircuit className="h-6 w-6" />
+                        {isDocumentView ? (
+                            paginatedDocuments.map((doc) => (
+                                <div onClick={() => { setSelectedDocumentId(doc.documentId); setCurrentPage(1); }} key={doc.documentId} className="group relative flex flex-col h-full border border-light-700 dark:border-dark-400 rounded-[2rem] bg-white dark:bg-dark-200 hover:border-brand/40 dark:hover:border-brand/40 shadow-drop-1 hover:shadow-drop-3 transition-all duration-300 hover:-translate-y-1 overflow-hidden min-h-[220px] cursor-pointer">
+                                    <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-brand to-emerald-400 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                                    
+                                    <div className="flex flex-col flex-1 p-6 z-10 pt-7 relative">
+                                        <div className="flex items-center justify-between mb-4">
+                                            <div className="p-3.5 bg-brand/10 dark:bg-brand/20 rounded-2xl text-brand group-hover:bg-brand group-hover:text-white transition-colors duration-300 shrink-0 shadow-xs">
+                                                <FileText className="h-6 w-6" />
+                                            </div>
+                                            <span className="text-xs font-extrabold text-brand bg-brand/10 dark:bg-brand/20 px-3.5 py-1.5 rounded-full border border-brand/20 shadow-sm">
+                                                {doc.quizzes.length} Quizzes
+                                            </span>
                                         </div>
-                                        <h3 className="font-bold text-lg text-dark100_light900 leading-snug line-clamp-2 mt-1 group-hover:text-brand transition-colors">
-                                            {quiz.title}
+                                        <h3 className="text-xl font-bold text-dark100_light900 mb-1 leading-snug line-clamp-2 group-hover:text-brand transition-colors" title={doc.documentName}>
+                                            {doc.documentName}
                                         </h3>
                                     </div>
 
-                                    <div className="mt-auto pt-2 flex items-center gap-2 text-xs font-semibold text-light-200 dark:text-dark-400">
-                                        <Clock className="h-3.5 w-3.5" />
-                                        <span>
-                                            Tạo ngày:{" "}
-                                            {new Date(quiz.createdAt).toLocaleDateString('vi-VN', {
-                                                day: "2-digit",
-                                                month: "2-digit",
-                                                year: "numeric",
-                                            })}
-                                        </span>
+                                    <div className="px-6 pb-6 pt-0 relative z-10">
+                                        <div className="w-full flex items-center justify-center gap-2 h-12 rounded-2xl bg-gradient-to-r from-brand to-emerald-500 group-hover:from-emerald-400 group-hover:to-brand text-sm font-bold text-white transition-all shadow-md group-hover:shadow-lg">
+                                            <span>View Quizzes</span>
+                                            <ChevronRight className="h-4 w-4" />
+                                        </div>
                                     </div>
-                                </Link>
-
-                                <div className="px-6 pb-6 pt-4 flex items-center justify-between gap-3 relative z-10">
-                                    <Link
-                                        href={`/quizzes/${quiz.id}/history`}
-                                        className="inline-flex items-center justify-center h-12 w-12 rounded-2xl bg-light-800 dark:bg-dark-300 hover:bg-light-700 dark:hover:bg-dark-400 text-dark500_light400 hover:text-brand transition-colors cursor-pointer border border-light-700 dark:border-dark-400 shrink-0 group/history shadow-inner hover:shadow-none"
-                                        title="Lịch sử làm bài"
-                                    >
-                                        <History className="h-5 w-5 group-hover/history:-rotate-45 transition-transform" />
-                                    </Link>
-
-                                    <Link
-                                        href={`/quizzes/${quiz.id}`}
-                                        className="inline-flex flex-1 items-center justify-center gap-2 h-12 px-6 rounded-2xl bg-gradient-to-r from-brand to-emerald-500 hover:from-emerald-400 hover:to-brand text-sm font-bold text-white transition-all cursor-pointer shadow-md hover:shadow-lg"
-                                    >
-                                        <span>Bắt đầu Quiz</span>
-                                        <Play className="h-4 w-4 fill-current" />
-                                    </Link>
                                 </div>
-
-                                <button
-                                    onClick={(e) => handleDelete(e, quiz.id)}
-                                    disabled={isDeleting === quiz.id}
-                                    className="absolute top-5 right-5 z-20 flex items-center justify-center h-8 w-8 text-light-200 dark:text-dark-400 bg-white/80 dark:bg-dark-300/80 backdrop-blur-sm hover:text-white hover:bg-red dark:hover:bg-red rounded-full transition-all cursor-pointer shadow-xs disabled:opacity-50 border border-light-700 dark:border-dark-400 opacity-0 group-hover:opacity-100 focus:opacity-100"
-                                    title="Xóa Quiz"
+                            ))
+                        ) : (
+                            paginatedQuizzes.map((quiz) => (
+                                <div
+                                    key={quiz.id}
+                                    className="relative group flex flex-col h-full border border-light-700 dark:border-dark-400 rounded-[2rem] bg-white dark:bg-dark-200 hover:border-brand/40 dark:hover:border-brand/40 shadow-drop-1 hover:shadow-drop-3 transition-all duration-300 hover:-translate-y-1 overflow-hidden"
                                 >
-                                    <Trash2 className="h-4 w-4" />
-                                </button>
-                            </div>
-                        ))}
+                                    <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-brand to-emerald-400 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                                    
+                                    <Link href={`/quizzes/${quiz.id}`} className="flex flex-col flex-1 p-6 z-10 pt-7">
+                                        <div className="flex items-start gap-4 mb-4 pr-10">
+                                            <div className="p-3.5 bg-brand/10 dark:bg-brand/20 rounded-2xl text-brand group-hover:bg-brand group-hover:text-white transition-colors duration-300 shrink-0 shadow-xs">
+                                                <BrainCircuit className="h-6 w-6" />
+                                            </div>
+                                            <h3 className="font-bold text-lg text-dark100_light900 leading-snug line-clamp-2 mt-1 group-hover:text-brand transition-colors">
+                                                {quiz.title}
+                                            </h3>
+                                        </div>
+
+                                        <div className="mt-auto pt-2 flex items-center gap-2 text-xs font-semibold text-light-200 dark:text-dark-400">
+                                            <Clock className="h-3.5 w-3.5" />
+                                            <span>
+                                                Tạo ngày:{" "}
+                                                {new Date(quiz.createdAt).toLocaleDateString('vi-VN', {
+                                                    day: "2-digit",
+                                                    month: "2-digit",
+                                                    year: "numeric",
+                                                })}
+                                            </span>
+                                        </div>
+                                    </Link>
+
+                                    <div className="px-6 pb-6 pt-4 flex items-center justify-between gap-3 relative z-10">
+                                        <Link
+                                            href={`/quizzes/${quiz.id}/history`}
+                                            className="inline-flex items-center justify-center h-12 w-12 rounded-2xl bg-light-800 dark:bg-dark-300 hover:bg-light-700 dark:hover:bg-dark-400 text-dark500_light400 hover:text-brand transition-colors cursor-pointer border border-light-700 dark:border-dark-400 shrink-0 group/history shadow-inner hover:shadow-none"
+                                            title="Lịch sử làm bài"
+                                        >
+                                            <History className="h-5 w-5 group-hover/history:-rotate-45 transition-transform" />
+                                        </Link>
+
+                                        <Link
+                                            href={`/quizzes/${quiz.id}`}
+                                            className="inline-flex flex-1 items-center justify-center gap-2 h-12 px-6 rounded-2xl bg-gradient-to-r from-brand to-emerald-500 hover:from-emerald-400 hover:to-brand text-sm font-bold text-white transition-all cursor-pointer shadow-md hover:shadow-lg"
+                                        >
+                                            <span>Bắt đầu Quiz</span>
+                                            <Play className="h-4 w-4 fill-current" />
+                                        </Link>
+                                    </div>
+
+                                    <button
+                                        onClick={(e) => handleDelete(e, quiz.id)}
+                                        disabled={isDeleting === quiz.id}
+                                        className="absolute top-5 right-5 z-20 flex items-center justify-center h-8 w-8 text-light-200 dark:text-dark-400 bg-white/80 dark:bg-dark-300/80 backdrop-blur-sm hover:text-white hover:bg-red dark:hover:bg-red rounded-full transition-all cursor-pointer shadow-xs disabled:opacity-50 border border-light-700 dark:border-dark-400 opacity-0 group-hover:opacity-100 focus:opacity-100"
+                                        title="Xóa Quiz"
+                                    >
+                                        <Trash2 className="h-4 w-4" />
+                                    </button>
+                                </div>
+                            ))
+                        )}
                     </div>
 
                     {totalPages > 1 && (
                         <div className="sticky bottom-4 z-20 flex flex-col sm:flex-row items-center justify-between gap-4 bg-white/90 dark:bg-dark-200/90 backdrop-blur-md border border-light-700 dark:border-dark-400 p-4 sm:px-6 rounded-3xl shadow-drop-1 mt-4">
                             <span className="text-xs font-bold text-light-200 dark:text-dark-400">
                                 Showing <span className="text-dark100_light900 font-extrabold">{(activePage - 1) * pageSize + 1}</span> to{" "}
-                                <span className="text-dark100_light900 font-extrabold">{Math.min(activePage * pageSize, filteredAndSortedQuizzes.length)}</span> of{" "}
-                                <span className="text-dark100_light900 font-extrabold">{filteredAndSortedQuizzes.length}</span> Quizzes
+                                <span className="text-dark100_light900 font-extrabold">{Math.min(activePage * pageSize, totalItems)}</span> of{" "}
+                                <span className="text-dark100_light900 font-extrabold">{totalItems}</span> {isDocumentView ? "Documents" : "Quizzes"}
                             </span>
 
                             <div className="flex items-center gap-1.5 flex-wrap justify-center">

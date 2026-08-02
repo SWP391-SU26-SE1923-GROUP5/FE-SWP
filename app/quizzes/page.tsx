@@ -1,21 +1,39 @@
 import React from "react";
-import { getCreatedQuizzes } from "@/lib/actions/ai.actions";
-import { QuizRecord } from "@/types";
-import QuizzesDashboardClient from "./QuizzesDashboardClient";
+import { getQuizzesByDocument } from "@/lib/actions/ai.actions";
+import { getFiles } from "@/lib/actions/file.actions";
+import QuizzesDashboardClient, { DocumentQuizzes } from "./QuizzesDashboardClient";
 
 export const dynamic = "force-dynamic";
 
 export default async function QuizDashboard() {
-    let quizzes: QuizRecord[] = [];
-    try {
-        quizzes = await getCreatedQuizzes();
-    } catch (error) {
-        console.error("Failed to load quizzes:", error);
-    }
+    const filesData = await getFiles({ types: [], limit: 100 }).catch(() => ({ documents: [] }));
+    const documents = filesData?.documents || [];
+
+    const quizzesNested = await Promise.all(
+        documents.map(doc => getQuizzesByDocument(doc.id).catch(() => []))
+    );
+    const allQuizzes = quizzesNested.flat();
+
+    const fileMap = documents.reduce((acc, doc) => {
+        acc[doc.id] = doc.fileName;
+        return acc;
+    }, {} as Record<string, string>);
+
+    const quizzesByDoc = allQuizzes.reduce((acc, quiz) => {
+        if (!acc[quiz.documentId]) acc[quiz.documentId] = [];
+        acc[quiz.documentId].push(quiz);
+        return acc;
+    }, {} as Record<string, typeof allQuizzes>);
+
+    const documentQuizzes: DocumentQuizzes[] = Object.keys(quizzesByDoc).map(docId => ({
+        documentId,
+        documentName: fileMap[docId] || "Unknown Document",
+        quizzes: quizzesByDoc[docId]
+    }));
 
     return (
         <main className="min-h-screen bg-light-800 dark:bg-dark-100 transition-colors">
-            <QuizzesDashboardClient initialQuizzes={quizzes || []} />
+            <QuizzesDashboardClient initialDocumentQuizzes={documentQuizzes} />
         </main>
     );
 }

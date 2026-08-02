@@ -337,6 +337,26 @@ export const getDecksByDocument = async (docId: string): Promise<FlashcardDeckSu
     return await response.json();
 };
 
+export const getQuizzesByDocument = async (docId: string): Promise<QuizRecord[]> => {
+    const session = await auth();
+    if (!session?.accessToken) throw new Error("Unauthorized. Please log in.");
+
+    const response = await fetch(`${connection_url}/api/Quiz/document/${docId}`, {
+        method: 'GET',
+        headers: {
+            'Authorization': `Bearer ${session.accessToken}`,
+            'Content-Type': 'application/json',
+        },
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(`[${response.status}] ${errorData?.message || errorData?.title || "Failed to fetch quizzes."}`);
+    }
+
+    return await response.json();
+};
+
 export const submitFlashcardReview = async (
     flashcardId: string,
     quality: number,
