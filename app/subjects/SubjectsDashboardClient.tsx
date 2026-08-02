@@ -86,9 +86,9 @@ export default function SubjectsDashboardClient({
             setSubjectToDelete(null);
             setIsDeleteDialogOpen(false);
             router.refresh();
-        } catch (error) {
+        } catch (error: any) {
             console.error(error);
-            toast.error("Failed to delete subject.");
+            toast.error(error.message || "Failed to delete subject.");
         } finally {
             setIsDeleting(false);
         }

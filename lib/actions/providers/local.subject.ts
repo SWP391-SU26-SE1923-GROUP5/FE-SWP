@@ -145,7 +145,16 @@ export class LocalSubject implements ISubjectService {
             });
 
             if (!res.ok) {
-                throw new Error(`[${res.status}] Failed to delete subject`);
+                let errorMessage = `[${res.status}] Failed to delete subject`;
+                try {
+                    const errorData = await res.json();
+                    if (errorData?.detail) errorMessage = errorData.detail;
+                    else if (errorData?.message) errorMessage = errorData.message;
+                    else if (errorData?.title) errorMessage = errorData.title;
+                } catch (e) {
+                    // Ignore parsing error
+                }
+                throw new Error(errorMessage);
             }
         } catch (error) {
             this.handleError(error, "DeleteSubject");
