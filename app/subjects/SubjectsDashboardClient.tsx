@@ -173,7 +173,7 @@ export default function SubjectsDashboardClient({
                     {subjects.map((sub) => (
                             <div 
                                 key={sub.id} 
-                                onClick={() => router.push(`/home?subjectId=${sub.id}`)}
+                                onClick={() => router.push(`/subjects/${sub.id}`)}
                                 className="relative bg-white dark:bg-dark-200 border border-light-800 dark:border-dark-400 rounded-2xl p-5 hover:border-emerald-500/50 hover:shadow-lg transition-all group flex flex-col h-[200px] overflow-hidden cursor-pointer"
                             >
                                 {/* Folder accent line */}
