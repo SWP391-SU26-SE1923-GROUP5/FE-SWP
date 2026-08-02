@@ -817,32 +817,32 @@ export default function ActionDropdown({ file }: { file: File_ }) {
                                     <p className="text-light-400">Successfully generated {(aiResult.data?.cards as unknown[])?.length} flashcards for this document.</p>
                                 </div>
                             )}
+                        </div>
+                    )}
 
-                            {value === "generate-settings" && (
-                                <div className="flex flex-col gap-6 p-2 mt-4">
-                                    <div className="flex flex-col gap-3">
-                                        <label className="text-sm font-bold text-slate-700">
-                                            Number of {action.icon === "quiz" ? "Questions" : "Flashcards"}
-                                        </label>
-                                        <div className="flex items-center gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200">
-                                            <input 
-                                                type="range" 
-                                                min="1" 
-                                                max="20" 
-                                                value={generationAmount} 
-                                                onChange={(e) => setGenerationAmount(Number(e.target.value))}
-                                                className="flex-1 h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-brand"
-                                            />
-                                            <div className="bg-white px-3 py-1.5 rounded-lg border border-slate-200 shadow-xs font-bold text-lg text-brand w-14 text-center">
-                                                {generationAmount}
-                                            </div>
-                                        </div>
-                                        <p className="text-xs font-medium text-slate-500 ml-1">
-                                            Select any amount between 1 and 20.
-                                        </p>
+                    {value === "generate-settings" && (
+                        <div className="flex flex-col gap-6 p-2 mt-4 text-left">
+                            <div className="flex flex-col gap-3">
+                                <label className="text-sm font-bold text-slate-700">
+                                    Number of {action.icon === "quiz" ? "Questions" : "Flashcards"}
+                                </label>
+                                <div className="flex items-center gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200">
+                                    <input 
+                                        type="range" 
+                                        min="1" 
+                                        max="20" 
+                                        value={generationAmount} 
+                                        onChange={(e) => setGenerationAmount(Number(e.target.value))}
+                                        className="flex-1 h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-brand"
+                                    />
+                                    <div className="bg-white px-3 py-1.5 rounded-lg border border-slate-200 shadow-xs font-bold text-lg text-brand w-14 text-center">
+                                        {generationAmount}
                                     </div>
                                 </div>
-                            )}
+                                <p className="text-xs font-medium text-slate-500 ml-1">
+                                    Select any amount between 1 and 20.
+                                </p>
+                            </div>
                         </div>
                     )}
                 </DialogHeader>
