@@ -171,6 +171,8 @@ export default function FlashcardsDashboardClient({ initialDecks, actualDueCount
         setCurrentPage(1);
     };
 
+    const selectedDocName = selectedDocumentId ? groupedDocuments.find(d => d.documentId === selectedDocumentId)?.documentName : null;
+
     return (
         <div className="flex flex-col gap-8 pb-20 pt-6 max-w-7xl mx-auto w-full px-5 sm:px-6 animate-in fade-in duration-500">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-light-700 dark:border-dark-400 pb-5">
@@ -398,8 +400,8 @@ export default function FlashcardsDashboardClient({ initialDecks, actualDueCount
                                 <ArrowLeft className="h-5 w-5" />
                             </button>
                         )}
-                        <h2 className="text-xl font-bold text-dark100_light900">
-                            {isDocumentView ? "Your Documents" : "Document Decks"}
+                        <h2 className="text-xl font-extrabold text-dark100_light900">
+                            {isDocumentView ? "📂 Your Documents" : `🗂️ Flashcard Decks for ${selectedDocName || "Document"}`}
                         </h2>
                     </div>
                     <span className="text-xs font-bold px-3 py-1 rounded-full bg-light-800 dark:bg-dark-300 text-dark200_light800 border border-light-700 dark:border-dark-400 shadow-xs">
@@ -447,8 +449,13 @@ export default function FlashcardsDashboardClient({ initialDecks, actualDueCount
                                         
                                         <div className="flex flex-col flex-1 p-6 z-10 pt-7 relative">
                                             <div className="flex items-center justify-between mb-4">
-                                                <div className="p-3.5 bg-indigo-500/10 dark:bg-indigo-500/20 rounded-2xl text-indigo-500 group-hover:bg-indigo-500 group-hover:text-white transition-colors duration-300 shrink-0 shadow-xs">
-                                                    <FileText className="h-6 w-6" />
+                                                <div className="flex items-center gap-3">
+                                                    <div className="p-3.5 bg-indigo-500/10 dark:bg-indigo-500/20 rounded-2xl text-indigo-500 group-hover:bg-indigo-500 group-hover:text-white transition-colors duration-300 shrink-0 shadow-xs">
+                                                        <FileText className="h-6 w-6" />
+                                                    </div>
+                                                    <span className="text-[10px] font-black uppercase tracking-widest text-indigo-500 bg-indigo-500/10 dark:bg-indigo-500/20 px-2.5 py-1 rounded-md border border-indigo-500/20 shadow-sm group-hover:bg-indigo-500 group-hover:text-white transition-colors duration-300">
+                                                        Document
+                                                    </span>
                                                 </div>
                                                 <span className="text-xs font-extrabold text-indigo-500 bg-indigo-500/10 dark:bg-indigo-500/20 px-3.5 py-1.5 rounded-full border border-indigo-500/20 shadow-sm">
                                                     {doc.decks.length} Decks
@@ -478,8 +485,13 @@ export default function FlashcardsDashboardClient({ initialDecks, actualDueCount
                                         
                                         <div className="flex flex-col flex-1 p-6 z-10 pt-7 relative">
                                             <div className="flex items-center justify-between mb-4">
-                                                <div className="p-3.5 bg-brand/10 dark:bg-brand/20 rounded-2xl text-brand group-hover:bg-brand group-hover:text-white transition-colors duration-300 shrink-0 shadow-xs">
-                                                    <Layers className="h-6 w-6" />
+                                                <div className="flex items-center gap-3">
+                                                    <div className="p-3.5 bg-brand/10 dark:bg-brand/20 rounded-2xl text-brand group-hover:bg-brand group-hover:text-white transition-colors duration-300 shrink-0 shadow-xs">
+                                                        <Layers className="h-6 w-6" />
+                                                    </div>
+                                                    <span className="text-[10px] font-black uppercase tracking-widest text-brand bg-brand/10 dark:bg-brand/20 px-2.5 py-1 rounded-md border border-brand/20 shadow-sm group-hover:bg-brand group-hover:text-white transition-colors duration-300">
+                                                        Deck
+                                                    </span>
                                                 </div>
                                                 <div className="flex items-center gap-2">
                                                     <span className="text-xs font-extrabold text-brand bg-brand/10 dark:bg-brand/20 px-3.5 py-1.5 rounded-full border border-brand/20 shadow-sm">
