@@ -363,6 +363,40 @@ export interface QuizRecord {
     updatedAt: string;
 }
 
+export interface SubmissionOption {
+    answerId: string;
+    text: string;
+    isSelected: boolean;
+    isCorrect: boolean;
+}
+
+export interface SubmissionQuestion {
+    questionId: string;
+    title: string;
+    type: number;
+    position: number;
+    options: SubmissionOption[];
+}
+
+export interface QuizSubmissionDetailResponse {
+    id: string;
+    quizId: string;
+    quizTitle: string;
+    documentId: string;
+    documentTitle: string;
+    subjectId: string;
+    subjectCode: string;
+    subjectName: string;
+    score: number;
+    maxScore: number;
+    totalCorrect: number;
+    durationSeconds: number;
+    percentageScore: number;
+    gradedAt: string;
+    submittedAt: string;
+    questions: SubmissionQuestion[];
+}
+
 export interface QuizSubmissionResponse {
     id: string;
     userId: string;

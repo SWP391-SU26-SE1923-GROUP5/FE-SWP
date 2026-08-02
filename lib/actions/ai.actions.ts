@@ -9,6 +9,7 @@ import {
     QuizResponse,
     QuizRecord,
     QuizSubmissionResponse,
+    QuizSubmissionDetailResponse,
     ReviewFlashcardResult,
     DueFlashcard,
     FlashcardReviewStats
@@ -568,6 +569,25 @@ export const getQuizHistory = async (quizId: string): Promise<QuizSubmissionResp
 
     const data = await response.json();
     return Array.isArray(data) ? data : (data?.items || []);
+};
+
+export const getQuizSubmissionDetail = async (submissionId: string): Promise<QuizSubmissionDetailResponse> => {
+    const session = await auth();
+    if (!session?.accessToken) throw new Error("Unauthorized. Please log in.");
+
+    const response = await fetch(`${connection_url}/api/QuizSubmission/${submissionId}`, {
+        method: 'GET',
+        headers: {
+            'Authorization': `Bearer ${session.accessToken}`,
+            'Content-Type': 'application/json',
+        },
+    });
+
+    if (!response.ok) {
+        throw new Error("Failed to fetch quiz submission detail.");
+    }
+
+    return await response.json();
 };
 
 export const getSessionMessages = async (sessionId: string): Promise<ChatMessage[]> => {

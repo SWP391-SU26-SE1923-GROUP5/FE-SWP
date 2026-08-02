@@ -1,7 +1,7 @@
 import React from "react";
 import Link from "next/link";
 import { getQuizById, getQuizHistory } from "@/lib/actions/ai.actions";
-import { ArrowLeft, History, Trophy, Award, Clock, CheckCircle2, XCircle, BarChart3, Play } from "lucide-react";
+import { ArrowLeft, History, Trophy, Award, Clock, CheckCircle2, XCircle, BarChart3, Play, ChevronRight } from "lucide-react";
 
 type Props = {
     params: Promise<{
@@ -182,9 +182,10 @@ export default async function QuizHistoryPage({ params }: Props) {
                             const isPassed = percentage >= 70;
 
                             return (
-                                <div
+                                <Link
+                                    href={`/quizzes/${quizId}/history/${attempt.id}`}
                                     key={attempt.id || idx}
-                                    className="p-6 rounded-2xl border border-light-700 dark:border-dark-400 hover:border-brand/40 dark:hover:border-brand/40 transition-all bg-light-800/40 dark:bg-dark-300/40 flex flex-col sm:flex-row sm:items-center justify-between gap-6"
+                                    className="p-6 rounded-2xl border border-light-700 dark:border-dark-400 hover:border-brand/40 dark:hover:border-brand/40 hover:shadow-drop-3 transition-all bg-light-800/40 dark:bg-dark-300/40 flex flex-col sm:flex-row sm:items-center justify-between gap-6 cursor-pointer group"
                                 >
                                     <div className="space-y-3 flex-1 min-w-0">
                                         <div className="flex items-center gap-3 flex-wrap">
@@ -233,16 +234,21 @@ export default async function QuizHistoryPage({ params }: Props) {
                                     </div>
 
                                     <div className="flex sm:flex-col items-center sm:items-end justify-between sm:justify-center border-t sm:border-t-0 pt-4 sm:pt-0 border-light-700/60 dark:border-dark-400 shrink-0">
-                                        <div className="text-right">
-                                            <div className="text-3xl font-extrabold text-dark100_light900">
-                                                {percentage}%
+                                        <div className="text-right flex items-center justify-end gap-4">
+                                            <div>
+                                                <div className="text-3xl font-extrabold text-dark100_light900 group-hover:text-brand transition-colors">
+                                                    {percentage}%
+                                                </div>
+                                                <div className="text-xs font-bold text-light-200 dark:text-dark-400 mt-0.5">
+                                                    {scoreVal} / {max} Correct
+                                                </div>
                                             </div>
-                                            <div className="text-xs font-bold text-light-200 dark:text-dark-400 mt-0.5">
-                                                {scoreVal} / {max} Correct
+                                            <div className="p-2 bg-light-800 dark:bg-dark-300 rounded-full group-hover:bg-brand group-hover:text-white text-light-200 dark:text-dark-400 transition-colors">
+                                                <ChevronRight className="w-5 h-5" />
                                             </div>
                                         </div>
                                     </div>
-                                </div>
+                                </Link>
                             );
                         })}
                     </div>
