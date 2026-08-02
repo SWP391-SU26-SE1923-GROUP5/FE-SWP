@@ -64,7 +64,7 @@ const AuthForm = <T extends FieldValues>({
                 const labelText = formatLabel(field);
 
                 const inputType =
-                    field === "password" ? "password" : "text";
+                    field.toLowerCase().includes("password") ? "password" : "text";
 
                 return (
                     <div key={field} className="space-y-2">

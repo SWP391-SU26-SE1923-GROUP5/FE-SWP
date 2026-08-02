@@ -51,6 +51,7 @@ const SignUp = () => {
                 fullName: "",
                 email: "",
                 password: "",
+                confirmPassword: "",
             }}
             onSubmit={handleSignUp}
             formType="SIGN_UP"
