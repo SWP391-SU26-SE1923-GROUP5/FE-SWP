@@ -1,4 +1,4 @@
-import { getCreatedFlashcards, getDueFlashcardsCount, getFlashcardReviewStats } from "@/lib/actions/ai.actions";
+import { getCreatedFlashcards, getDueFlashcardsCount, getFlashcardReviewStats, getDecksByDocument } from "@/lib/actions/ai.actions";
 import { getFiles } from "@/lib/actions/file.actions";
 import FlashcardsDashboardClient, { DeckItem } from "./FlashcardsDashboardClient";
 
@@ -12,37 +12,35 @@ export default async function FlashcardsPage() {
 
     const actualDueCount = typeof dueCount === 'number' ? dueCount : (stats?.dueNow || 0);
 
-    interface FileItem {
-        id: string;
-        fileName: string;
-    }
+    const documents = filesData?.documents || [];
+    
+    // Fetch deck summaries for all documents
+    const deckSummariesNested = await Promise.all(
+        documents.map(doc => getDecksByDocument(doc.id).catch(() => []))
+    );
+    const deckSummaries = deckSummariesNested.flat();
 
-    const fileMap = (filesData?.documents || []).reduce((acc, file: FileItem) => {
-        acc[file.id] = file.fileName;
-        return acc;
-    }, {} as Record<string, string>);
-
+    // Group raw flashcards by deckId
     interface FlashcardItem {
-        documentId: string;
+        deckId: string;
         createdAt?: string;
         front?: string;
         back?: string;
     }
 
-    const groupedDecks = (flashcards || []).reduce((acc, card: FlashcardItem) => {
-        if (!acc[card.documentId]) {
-            acc[card.documentId] = {
-                documentId: card.documentId,
-                documentName: fileMap[card.documentId] || "Document Deck",
-                cards: [],
-                createdAt: card.createdAt
-            };
-        }
-        acc[card.documentId].cards.push(card);
+    const cardsByDeck = (flashcards || []).reduce((acc, card: FlashcardItem) => {
+        if (!acc[card.deckId]) acc[card.deckId] = [];
+        acc[card.deckId].push(card);
         return acc;
-    }, {} as Record<string, DeckItem>);
+    }, {} as Record<string, FlashcardItem[]>);
 
-    const decks: DeckItem[] = Object.values(groupedDecks);
+    // Map Deck Summaries to DeckItem format for the UI
+    const decks: DeckItem[] = deckSummaries.map(summary => ({
+        documentId: summary.deckId, // Mapping deckId -> documentId to maintain routing logic in UI
+        documentName: summary.deckTitle,
+        cards: cardsByDeck[summary.deckId] || [],
+        createdAt: summary.createdAt
+    }));
 
     return (
         <FlashcardsDashboardClient

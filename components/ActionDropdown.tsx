@@ -342,7 +342,7 @@ export default function ActionDropdown({ file }: { file: File_ }) {
             } else if (endpoint === "flashcards") {
                 const amount = Number(extraParams?.amount) || 10;
                 const res = await generateFlashcards(file.id, amount);
-                data = { deckTitle: `${file.fileName} Flashcards`, cards: res };
+                data = { deckId: res.deckId, deckTitle: res.deckTitle || `${file.fileName} Flashcards`, cards: res.flashcardLists };
             } else if (endpoint === "summarize") {
                 const res = await summarizeRagDocument(file.id);
                 data = { summary: res.summary };
@@ -889,7 +889,7 @@ export default function ActionDropdown({ file }: { file: File_ }) {
                             <Button
                                 onClick={() => {
                                     closeAllModals();
-                                    router.push(`/flashcards/${file.id}`);
+                                    router.push(`/flashcards/${aiResult?.data?.deckId}`);
                                 }}
                                 className="w-full py-2 rounded-full bg-brand text-white hover:bg-emerald-400 transition-colors cursor-pointer shadow-sm"
                             >

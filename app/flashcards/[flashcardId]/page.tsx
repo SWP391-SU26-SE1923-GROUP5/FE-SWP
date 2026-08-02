@@ -1,4 +1,4 @@
-import { getFlashcardsByDocument, getDueFlashcards } from "@/lib/actions/ai.actions";
+import { getFlashcardsByDeck, getDueFlashcards } from "@/lib/actions/ai.actions";
 import FlashcardViewer from "./FlashcardViewer";
 import { Flashcard } from "@/types";
 import Link from "next/link";
@@ -14,6 +14,7 @@ export default async function FlashcardStudyPage({ params }: Props) {
         flashcardId?: string;
         id?: string;
         documentId?: string;
+        deckId?: string;
         front?: string;
         back?: string;
     }
@@ -22,14 +23,14 @@ export default async function FlashcardStudyPage({ params }: Props) {
         const dueCards = await getDueFlashcards(1000);
         deckCards = (dueCards || []).map((c: RawDueCard) => ({
             id: c.flashcardId || c.id || "",
-            documentId: c.documentId || "",
+            deckId: c.deckId || c.documentId || "",
             front: c.front || "",
             back: c.back || "",
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
         }));
     } else {
-        deckCards = await getFlashcardsByDocument(flashcardId);
+        deckCards = await getFlashcardsByDeck(flashcardId);
     }
 
     if (!deckCards || deckCards.length === 0) {

@@ -4,6 +4,8 @@ import { auth } from "@/auth";
 import {
     SummaryResponse,
     Flashcard,
+    FlashcardDeckResponse,
+    FlashcardDeckSummary,
     QuizResponse,
     QuizRecord,
     QuizSubmissionResponse,
@@ -183,6 +185,26 @@ export const deleteFlashcard = async (flashcardId: string): Promise<void> => {
     revalidatePath("/flashcards");
 };
 
+export const deleteFlashcardDeck = async (deckId: string): Promise<void> => {
+    const session = await auth();
+    if (!session?.accessToken) throw new Error("Unauthorized. Please log in.");
+
+    const response = await fetch(`${connection_url}/api/Flashcard/by-deck/${deckId}`, {
+        method: 'DELETE',
+        headers: {
+            'Authorization': `Bearer ${session.accessToken}`,
+            'Content-Type': 'application/json',
+        },
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(`[${response.status}] ${errorData?.message || "Failed to delete flashcard deck."}`);
+    }
+
+    revalidatePath("/flashcards");
+};
+
 export const deleteQuiz = async (quizId: string): Promise<void> => {
     const session = await auth();
     if (!session?.accessToken) throw new Error("Unauthorized. Please log in.");
@@ -203,7 +225,7 @@ export const deleteQuiz = async (quizId: string): Promise<void> => {
     revalidatePath("/quizzes");
 };
 
-export const generateFlashcards = async (docId: string, numberOfFlashcards: number = 5): Promise<Flashcard[]> => {
+export const generateFlashcards = async (docId: string, numberOfFlashcards: number = 5): Promise<FlashcardDeckResponse> => {
     const session = await auth();
     if (!session?.accessToken) throw new Error("Unauthorized. Please log in.");
 
@@ -274,11 +296,11 @@ export const getCreatedFlashcards = async (): Promise<Flashcard[]> => {
     return data?.items || [];
 };
 
-export const getFlashcardsByDocument = async (docId: string): Promise<Flashcard[]> => {
+export const getFlashcardsByDeck = async (deckId: string): Promise<Flashcard[]> => {
     const session = await auth();
     if (!session?.accessToken) throw new Error("Unauthorized. Please log in.");
 
-    const response = await fetch(`${connection_url}/api/Flashcard/${docId}/flashcards`, {
+    const response = await fetch(`${connection_url}/api/Flashcard/${deckId}/flashcards`, {
         method: 'GET',
         headers: {
             'Authorization': `Bearer ${session.accessToken}`,
@@ -289,6 +311,26 @@ export const getFlashcardsByDocument = async (docId: string): Promise<Flashcard[
     if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         throw new Error(`[${response.status}] ${errorData?.message || errorData?.title || "Failed to fetch flashcards."}`);
+    }
+
+    return await response.json();
+};
+
+export const getDecksByDocument = async (docId: string): Promise<FlashcardDeckSummary[]> => {
+    const session = await auth();
+    if (!session?.accessToken) throw new Error("Unauthorized. Please log in.");
+
+    const response = await fetch(`${connection_url}/api/Flashcard/document/${docId}`, {
+        method: 'GET',
+        headers: {
+            'Authorization': `Bearer ${session.accessToken}`,
+            'Content-Type': 'application/json',
+        },
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(`[${response.status}] ${errorData?.message || errorData?.title || "Failed to fetch flashcard decks."}`);
     }
 
     return await response.json();

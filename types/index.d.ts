@@ -280,11 +280,25 @@ export interface IFileStorage {
 
 export interface Flashcard {
     id: string;
-    documentId: string;
+    deckId: string;
     front: string;
     back: string;
     createdAt: string;
-    updatedAt: string;
+    updatedAt?: string;
+}
+
+export interface FlashcardDeckSummary {
+    deckId: string;
+    documentId: string;
+    deckTitle: string;
+    createdAt: string;
+    flashcardCount: number;
+}
+
+export interface FlashcardDeckResponse {
+    deckId: string;
+    deckTitle: string;
+    flashcardLists: Flashcard[];
 }
 
 export interface FlashcardReviewResponse {
@@ -380,6 +394,7 @@ export interface AiResultState {
         fileUrl?: string;
         quizTitle?: string;
         questions?: QuizQuestion[];
+        deckId?: string;
         deckTitle?: string;
         cards?: Flashcard[];
         summary?: string;
