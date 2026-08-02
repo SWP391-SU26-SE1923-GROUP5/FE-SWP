@@ -1,6 +1,6 @@
 import { File_, Subject } from "@/types";
 import Thumbnail from "@/components/Thumbnail";
-import {convertFileSize} from "@/lib/utils";
+import {convertFileSize, getFileType} from "@/lib/utils";
 import FormattedDateTime from "@/components/FormattedDateTime";
 import {getUserById} from "@/lib/actions/user.actions";
 import ActionDropdown from "@/components/ActionDropdown";
@@ -15,12 +15,14 @@ const Card = async ({ file, subjects }: { file: File_; subjects?: Subject[] }) =
     const fileSubject = allSubjects?.find((s: Subject) => s.id === file.subjectId);
     const subjectName = file.subjectName || file.subject?.subjectName || fileSubject?.subjectName || fileSubject?.subjectCode || "General";
 
+    const { type, extension } = getFileType(file.fileName);
+
     return (
         <FilePreviewWrapper file={file} className="file-card">
             <div className="flex justify-between">
                 <Thumbnail
-                    type={file.fileType}
-                    extension={file.fileExtension.replace('.', '')}
+                    type={type}
+                    extension={extension}
                     url={file.fileLink}
                     className="!size-20"
                     imageClassName="!size-11"

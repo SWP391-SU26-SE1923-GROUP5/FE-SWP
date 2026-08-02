@@ -3,7 +3,7 @@
 import { File_, User, DocumentShareDto } from "@/types";
 import Thumbnail from "@/components/Thumbnail";
 import FormattedDateTime from "@/components/FormattedDateTime";
-import { convertFileSize, formatDateTime } from "@/lib/utils";
+import { convertFileSize, formatDateTime, getFileType } from "@/lib/utils";
 import { useEffect, useState } from "react";
 import { Input } from "@/components/ui/input";
 import Image from "next/image";
@@ -12,22 +12,25 @@ import { getUserById, getShareableUsers } from "@/lib/actions/user.actions";
 import { getDocumentShares } from "@/lib/actions/file.actions";
 import { parseSharedUsers } from "@/lib/utils";
 
-const ImageThumbnail = ({ file }: { file: File_ }) => (
-    <div className="flex items-center gap-4 bg-slate-50/70 p-4 rounded-2xl border border-slate-100">
-        <div className="bg-white p-2 rounded-xl shadow-2xs border border-slate-100">
-            <Thumbnail type={file.fileType} extension={file.fileExtension.replace('.', '')} url={file.fileLink} className="!size-12 shrink-0" imageClassName="!size-7 shrink-0" />
-        </div>
-        <div className="flex flex-col min-w-0 flex-1">
-            <p className="text-base font-bold text-slate-800 line-clamp-1 break-all" title={file.fileName}>{file.fileName}</p>
-            <div className="flex items-center gap-1.5 mt-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-brand"></span>
-                <div className="text-xs font-medium text-slate-500 flex items-center gap-1">
-                    Created on <FormattedDateTime date={file.createdAt || ""} className="!text-xs !text-slate-500 m-0 p-0" />
+const ImageThumbnail = ({ file }: { file: File_ }) => {
+    const { type, extension } = getFileType(file.fileName);
+    return (
+        <div className="flex items-center gap-4 bg-slate-50/70 p-4 rounded-2xl border border-slate-100">
+            <div className="bg-white p-2 rounded-xl shadow-2xs border border-slate-100">
+                <Thumbnail type={type} extension={extension} url={file.fileLink} className="!size-12 shrink-0" imageClassName="!size-7 shrink-0" />
+            </div>
+            <div className="flex flex-col min-w-0 flex-1">
+                <p className="text-base font-bold text-slate-800 line-clamp-1 break-all" title={file.fileName}>{file.fileName}</p>
+                <div className="flex items-center gap-1.5 mt-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-brand"></span>
+                    <div className="text-xs font-medium text-slate-500 flex items-center gap-1">
+                        Created on <FormattedDateTime date={file.createdAt || ""} className="!text-xs !text-slate-500 m-0 p-0" />
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
-)
+    );
+}
 
 const DetailRow = ({ label, value }: { label: string, value: string }) => (
     <div className="flex flex-col gap-1 py-3 border-b border-slate-100/60 last:border-0">
@@ -38,6 +41,7 @@ const DetailRow = ({ label, value }: { label: string, value: string }) => (
 
 export const FileDetails = ({ file }: { file: File_ }) => {
     const [ownerName, setOwnerName] = useState<string>("Loading...");
+    const { extension } = getFileType(file.fileName);
 
     useEffect(() => {
         let isMounted = true;
@@ -187,8 +191,8 @@ export const ShareInput = ({ file, emails, onInputChange, onRemove, userLevels, 
         <div className="share-wrapper min-w-0 flex flex-col w-full">
             <div className="flex items-center gap-3.5 p-3.5 bg-gradient-to-r from-brand/5 via-indigo-500/5 to-purple-500/5 border border-brand/15 rounded-2xl mb-5 shadow-2xs min-w-0">
                 <Thumbnail
-                    type={file.fileType}
-                    extension={file.fileExtension.replace('.', '')}
+                    type={getFileType(file.fileName).type}
+                    extension={getFileType(file.fileName).extension}
                     url={file.fileLink}
                     className="!size-12 shrink-0 rounded-xl shadow-sm bg-white border border-slate-100/80"
                     imageClassName="!size-6 shrink-0"

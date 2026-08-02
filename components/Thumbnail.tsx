@@ -1,5 +1,6 @@
 import Image from "next/image";
-import {cn, getFileIcon} from "@/lib/utils";
+import {cn} from "@/lib/utils";
+import {DynamicFileIcon} from "@/components/DynamicFileIcon";
 
 interface Props {
     type: string;
@@ -12,17 +13,24 @@ interface Props {
 const Thumbnail = ({ type, extension, url = "", imageClassName, className }: Props) => {
     const cleanExt = extension.replace('.', '').toLowerCase();
     const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'];
-    const isImage = imageExtensions.includes(cleanExt) || (type === 'image' && cleanExt !== 'svg');
+    
+    // Only try to load actual image if it's a temporary local blob (during upload)
+    const isImage = url.startsWith('blob:') && (imageExtensions.includes(cleanExt) || (type === 'image' && cleanExt !== 'svg'));
     
     return (
         <figure className={cn("thumbnail", className)}>
-            <Image
-                src={isImage ? url : getFileIcon(extension, type)}
-                alt="thumbnail"
-                width={100}
-                height={100}
-                className={cn("size-8 object-contain", imageClassName, isImage && "thumbnail-image")}
-            />
+            {isImage ? (
+                <Image
+                    src={url}
+                    alt="thumbnail"
+                    width={100}
+                    height={100}
+                    className={cn("size-8 object-contain", imageClassName, "thumbnail-image")}
+                    unoptimized={true}
+                />
+            ) : (
+                <DynamicFileIcon extension={cleanExt} type={type} className={cn("size-8 object-contain", imageClassName)} />
+            )}
         </figure>
     )
 }

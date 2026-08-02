@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { File_ } from "@/types";
 import { previewFile, downloadFile } from "@/lib/actions/file.actions";
+import { getFileType } from "@/lib/utils";
 import Thumbnail from "@/components/Thumbnail";
 import ApryseViewer from "@/components/ApryseViewer";
 import { Loader2, Shield, AlertCircle } from "lucide-react";
@@ -65,10 +66,11 @@ export default function FilePreviewWrapper({ file, children, className = "" }: P
   const realBlobRef = useRef<string | null>(null);
   const cardRef = useRef<HTMLDivElement | null>(null);
 
-  const fileExt = file.fileExtension?.toLowerCase().replace(".", "") || "";
-  const isImage = ["jpg", "jpeg", "png", "gif", "webp", "svg", "bmp"].includes(fileExt) || file.fileType === "image";
-  const isVideo = ["mp4", "webm", "ogg", "mov"].includes(fileExt) || file.fileType === "video";
-  const isAudio = ["mp3", "wav", "ogg", "aac", "m4a"].includes(fileExt) || file.fileType === "audio";
+  const { type: computedType, extension: computedExt } = getFileType(file.fileName);
+  const fileExt = computedExt || "";
+  const isImage = computedType === "image";
+  const isVideo = computedType === "video";
+  const isAudio = computedType === "audio";
   const isPdf = fileExt === "pdf";
   const isOffice = ["docx", "doc", "xlsx", "xls", "pptx", "ppt"].includes(fileExt);
 
@@ -214,7 +216,7 @@ export default function FilePreviewWrapper({ file, children, className = "" }: P
                 )
               ) : isOffice ? (
                 <div className="w-full h-full flex flex-col items-center justify-center gap-3 bg-slate-50 rounded-xl p-4">
-                  <Thumbnail type={file.fileType} extension={fileExt} url={file.fileLink} className="!size-14" />
+                  <Thumbnail type={computedType} extension={fileExt} url={file.fileLink} className="!size-14" />
                   <span className="text-xs font-bold text-dark-200 text-center line-clamp-2">{file.fileName}</span>
                   <span className="text-[10px] text-brand font-semibold">Click to open document</span>
                 </div>
@@ -233,7 +235,7 @@ export default function FilePreviewWrapper({ file, children, className = "" }: P
         <DialogContent className="max-w-5xl! w-full max-h-[90vh] p-6 overflow-hidden flex flex-col select-none">
           <DialogHeader className="mb-2 pb-3 border-b border-light-700 flex flex-row items-center justify-between">
             <DialogTitle className="flex items-center gap-3 text-dark-200 text-lg font-bold truncate">
-              <Thumbnail type={file.fileType} extension={fileExt} url={file.fileLink} className="!size-8 shrink-0" />
+              <Thumbnail type={computedType} extension={fileExt} url={file.fileLink} className="!size-8 shrink-0" />
               <span className="truncate">{file.fileName}</span>
             </DialogTitle>
             <div className="flex items-center gap-2 mr-6">

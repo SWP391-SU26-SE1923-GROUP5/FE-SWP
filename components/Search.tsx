@@ -13,6 +13,7 @@ import { File_ } from "@/types";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Sparkles, Loader2, FileText, BookOpen } from "lucide-react";
 import ApryseViewer from "@/components/ApryseViewer";
+import { getFileType } from "@/lib/utils";
 
 interface Citation {
     source: string;
@@ -280,8 +281,8 @@ const Search = () => {
                                 >
                                     <div className="flex items-center gap-4">
                                         <Thumbnail
-                                            type={file.fileType}
-                                            extension={file.fileExtension}
+                                            type={getFileType(file.fileName).type}
+                                            extension={getFileType(file.fileName).extension}
                                             url={file.fileLink}
                                             className="size-9 min-w-9"
                                         />

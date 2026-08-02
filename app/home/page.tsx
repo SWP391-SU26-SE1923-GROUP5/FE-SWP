@@ -4,7 +4,7 @@ import ActionDropdown from "@/components/ActionDropdown";
 import { Chart } from "@/components/Chart";
 import { Separator } from "@/components/ui/separator";
 import { getFiles, getTotalSpaceUsed, getSubjects } from "@/lib/actions/file.actions";
-import { convertFileSize, getUsageSummary } from "@/lib/utils";
+import { convertFileSize, getUsageSummary, getFileType } from "@/lib/utils";
 import { BookOpen } from "lucide-react";
 import SubjectFilter from "@/components/SubjectFilter";
 import FormattedDateTime from "@/components/FormattedDateTime";
@@ -60,10 +60,11 @@ const Dashboard = async ({ searchParams }: DashboardProps) => {
                             const fileSubject = subjects?.find((s: any) => s.id === file.subjectId);
                             const subjectName = (file as any).subjectName || (file as any).subject?.subjectName || fileSubject?.subjectName || fileSubject?.subjectCode || "General";
 
+                            const { type, extension } = getFileType(file.fileName);
                             return (
                                 <li key={file.id} className="flex items-center justify-between gap-2 sm:gap-3 py-2 border-b border-light-400/30 last:border-0">
                                     <FilePreviewWrapper file={file} className="flex items-center gap-3 flex-1 min-w-0">
-                                        <Thumbnail type={file.fileType} extension={file.fileExtension} url={file.fileLink} />
+                                        <Thumbnail type={type} extension={extension} url={file.fileLink} />
                                         <div className="flex flex-col gap-1 min-w-0 flex-1">
                                             <p className="subtitle-2 line-clamp-1 truncate w-full text-light-100">{file.fileName}</p>
                                             <FormattedDateTime date={file.createdAt || ""} className="caption" />
