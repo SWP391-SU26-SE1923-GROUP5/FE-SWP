@@ -315,28 +315,42 @@ export default function QuizzesDashboardClient({ initialDocumentQuizzes }: Props
                 </div>
             ) : (
                 <>
+                    <div className="mb-6 flex items-center justify-between">
+                        <h2 className="text-xl font-extrabold text-dark100_light900 flex items-center gap-2">
+                            {isDocumentView ? (
+                                <>📂 Your Documents <span className="text-sm font-medium text-light-200 dark:text-dark-400 font-normal">({documentsWithQuizzes.length})</span></>
+                            ) : (
+                                <>🧠 Quizzes for {selectedDocName} <span className="text-sm font-medium text-light-200 dark:text-dark-400 font-normal">({filteredAndSortedQuizzes.length})</span></>
+                            )}
+                        </h2>
+                    </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 pb-28">
                         {isDocumentView ? (
                             paginatedDocuments.map((doc) => (
-                                <div onClick={() => { setSelectedDocumentId(doc.documentId); setCurrentPage(1); }} key={doc.documentId} className="group relative flex flex-col h-full border border-light-700 dark:border-dark-400 rounded-[2rem] bg-white dark:bg-dark-200 hover:border-brand/40 dark:hover:border-brand/40 shadow-drop-1 hover:shadow-drop-3 transition-all duration-300 hover:-translate-y-1 overflow-hidden min-h-[220px] cursor-pointer">
-                                    <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-brand to-emerald-400 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                                <div onClick={() => { setSelectedDocumentId(doc.documentId); setCurrentPage(1); }} key={doc.documentId} className="group relative flex flex-col h-full border border-light-700 dark:border-dark-400 rounded-[2rem] bg-white dark:bg-dark-200 hover:border-indigo-500/40 dark:hover:border-indigo-500/40 shadow-drop-1 hover:shadow-drop-3 transition-all duration-300 hover:-translate-y-1 overflow-hidden min-h-[220px] cursor-pointer">
+                                    <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-indigo-500 to-purple-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                                     
                                     <div className="flex flex-col flex-1 p-6 z-10 pt-7 relative">
                                         <div className="flex items-center justify-between mb-4">
-                                            <div className="p-3.5 bg-brand/10 dark:bg-brand/20 rounded-2xl text-brand group-hover:bg-brand group-hover:text-white transition-colors duration-300 shrink-0 shadow-xs">
-                                                <FileText className="h-6 w-6" />
+                                            <div className="flex items-center gap-3">
+                                                <div className="p-3.5 bg-indigo-500/10 dark:bg-indigo-500/20 rounded-2xl text-indigo-500 group-hover:bg-indigo-500 group-hover:text-white transition-colors duration-300 shrink-0 shadow-xs">
+                                                    <FileText className="h-6 w-6" />
+                                                </div>
+                                                <span className="text-[10px] font-black uppercase tracking-widest text-indigo-500 bg-indigo-500/10 dark:bg-indigo-500/20 px-2.5 py-1 rounded-md border border-indigo-500/20 shadow-sm group-hover:bg-indigo-500 group-hover:text-white transition-colors duration-300">
+                                                    Document
+                                                </span>
                                             </div>
-                                            <span className="text-xs font-extrabold text-brand bg-brand/10 dark:bg-brand/20 px-3.5 py-1.5 rounded-full border border-brand/20 shadow-sm">
+                                            <span className="text-xs font-extrabold text-indigo-500 bg-indigo-500/10 dark:bg-indigo-500/20 px-3.5 py-1.5 rounded-full border border-indigo-500/20 shadow-sm">
                                                 {doc.quizzes.length} Quizzes
                                             </span>
                                         </div>
-                                        <h3 className="text-xl font-bold text-dark100_light900 mb-1 leading-snug line-clamp-2 group-hover:text-brand transition-colors" title={doc.documentName}>
+                                        <h3 className="text-xl font-bold text-dark100_light900 mb-1 leading-snug line-clamp-2 group-hover:text-indigo-500 transition-colors" title={doc.documentName}>
                                             {doc.documentName}
                                         </h3>
                                     </div>
 
                                     <div className="px-6 pb-6 pt-0 relative z-10">
-                                        <div className="w-full flex items-center justify-center gap-2 h-12 rounded-2xl bg-gradient-to-r from-brand to-emerald-500 group-hover:from-emerald-400 group-hover:to-brand text-sm font-bold text-white transition-all shadow-md group-hover:shadow-lg">
+                                        <div className="w-full flex items-center justify-center gap-2 h-12 rounded-2xl bg-gradient-to-r from-indigo-500 to-purple-500 group-hover:from-purple-500 group-hover:to-indigo-500 text-sm font-bold text-white transition-all shadow-md group-hover:shadow-lg">
                                             <span>View Quizzes</span>
                                             <ChevronRight className="h-4 w-4" />
                                         </div>
@@ -353,13 +367,18 @@ export default function QuizzesDashboardClient({ initialDocumentQuizzes }: Props
                                     
                                     <Link href={`/quizzes/${quiz.id}`} className="flex flex-col flex-1 p-6 z-10 pt-7">
                                         <div className="flex items-start gap-4 mb-4 pr-10">
-                                            <div className="p-3.5 bg-brand/10 dark:bg-brand/20 rounded-2xl text-brand group-hover:bg-brand group-hover:text-white transition-colors duration-300 shrink-0 shadow-xs">
-                                                <BrainCircuit className="h-6 w-6" />
+                                            <div className="flex items-center gap-3">
+                                                <div className="p-3.5 bg-brand/10 dark:bg-brand/20 rounded-2xl text-brand group-hover:bg-brand group-hover:text-white transition-colors duration-300 shrink-0 shadow-xs">
+                                                    <BrainCircuit className="h-6 w-6" />
+                                                </div>
+                                                <span className="text-[10px] font-black uppercase tracking-widest text-brand bg-brand/10 dark:bg-brand/20 px-2.5 py-1 rounded-md border border-brand/20 shadow-sm group-hover:bg-brand group-hover:text-white transition-colors duration-300">
+                                                    Quiz
+                                                </span>
                                             </div>
-                                            <h3 className="font-bold text-lg text-dark100_light900 leading-snug line-clamp-2 mt-1 group-hover:text-brand transition-colors">
-                                                {quiz.title}
-                                            </h3>
                                         </div>
+                                        <h3 className="font-bold text-lg text-dark100_light900 leading-snug line-clamp-2 mt-1 group-hover:text-brand transition-colors">
+                                            {quiz.title}
+                                        </h3>
 
                                         <div className="mt-auto pt-2 flex items-center gap-2 text-xs font-semibold text-light-200 dark:text-dark-400">
                                             <Clock className="h-3.5 w-3.5" />
