@@ -42,6 +42,7 @@ export default function FlashcardsDashboardClient({ initialDecks, actualDueCount
     const [currentPage, setCurrentPage] = useState(1);
     const [pageSize, setPageSize] = useState<number>(9);
     const [deletingDeckId, setDeletingDeckId] = useState<string | null>(null);
+    const [selectedDocumentId, setSelectedDocumentId] = useState<string | null>(null);
 
     const handleDeleteDeck = async (e: React.MouseEvent, deckId: string) => {
         e.preventDefault();
@@ -65,13 +66,39 @@ export default function FlashcardsDashboardClient({ initialDecks, actualDueCount
         }
     };
 
+    const groupedDocuments = useMemo(() => {
+        const map = new Map<string, { documentId: string; documentName: string; decks: DeckItem[]; totalCards: number }>();
+        decks.forEach(deck => {
+            if (!map.has(deck.documentId)) {
+                map.set(deck.documentId, {
+                    documentId: deck.documentId,
+                    documentName: deck.documentName,
+                    decks: [],
+                    totalCards: 0
+                });
+            }
+            const entry = map.get(deck.documentId)!;
+            entry.decks.push(deck);
+            entry.totalCards += deck.cards.length;
+        });
+        return Array.from(map.values()).sort((a, b) => a.documentName.localeCompare(b.documentName));
+    }, [decks]);
+
     const filteredAndSortedDecks = useMemo(() => {
         let result = [...decks];
 
+        if (selectedDocumentId && !searchQuery.trim()) {
+            result = result.filter(deck => deck.documentId === selectedDocumentId);
+        }
+
         if (searchQuery.trim()) {
+            // When searching, clear the selected document to search globally across all decks
+            if (selectedDocumentId) setSelectedDocumentId(null);
+            
             const query = searchQuery.toLowerCase();
             result = result.filter((deck) => {
                 if (deck.documentName.toLowerCase().includes(query)) return true;
+                if (deck.deckTitle.toLowerCase().includes(query)) return true;
                 return deck.cards.some((c: DashboardCard) => 
                     (c.front && c.front.toLowerCase().includes(query)) ||
                     (c.back && c.back.toLowerCase().includes(query))
@@ -95,9 +122,13 @@ export default function FlashcardsDashboardClient({ initialDecks, actualDueCount
             } else if (sortBy === "fewest-cards") {
                 return a.cards.length - b.cards.length;
             } else if (sortBy === "name-asc") {
-                return a.documentName.localeCompare(b.documentName);
+                const docCmp = a.documentName.localeCompare(b.documentName);
+                if (docCmp !== 0) return docCmp;
+                return a.deckTitle.localeCompare(b.deckTitle);
             } else if (sortBy === "name-desc") {
-                return b.documentName.localeCompare(a.documentName);
+                const docCmp = b.documentName.localeCompare(a.documentName);
+                if (docCmp !== 0) return docCmp;
+                return b.deckTitle.localeCompare(a.deckTitle);
             } else if (sortBy === "newest" || sortBy === "oldest") {
                 const getLatestDate = (d: DeckItem) => {
                     if (d.createdAt) return new Date(d.createdAt).getTime();
@@ -114,15 +145,22 @@ export default function FlashcardsDashboardClient({ initialDecks, actualDueCount
         });
 
         return result;
-    }, [decks, searchQuery, sizeFilter, sortBy]);
+    }, [decks, searchQuery, sizeFilter, sortBy, selectedDocumentId]);
 
-    const totalPages = Math.max(1, Math.ceil(filteredAndSortedDecks.length / pageSize));
+    const isDocumentView = !selectedDocumentId && !searchQuery.trim();
+    const totalItems = isDocumentView ? groupedDocuments.length : filteredAndSortedDecks.length;
+    const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
     const activePage = Math.min(currentPage, totalPages);
 
     const paginatedDecks = useMemo(() => {
         const start = (activePage - 1) * pageSize;
         return filteredAndSortedDecks.slice(start, start + pageSize);
     }, [filteredAndSortedDecks, activePage, pageSize]);
+
+    const paginatedDocuments = useMemo(() => {
+        const start = (activePage - 1) * pageSize;
+        return groupedDocuments.slice(start, start + pageSize);
+    }, [groupedDocuments, activePage, pageSize]);
 
     const hasActiveFilters = searchQuery.trim() !== "" || sizeFilter !== "all" || sortBy !== "most-cards";
 
@@ -346,9 +384,26 @@ export default function FlashcardsDashboardClient({ initialDecks, actualDueCount
 
             <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                    <h2 className="text-xl font-bold text-dark100_light900">Document Decks</h2>
-                    <span className="text-xs font-bold px-3 py-1 rounded-full bg-light-800 dark:bg-dark-300 text-dark200_light800 border border-light-700 dark:border-dark-400">
-                        {filteredAndSortedDecks.length} {filteredAndSortedDecks.length === 1 ? "Collection" : "Collections"}
+                    <div className="flex items-center gap-3">
+                        {!isDocumentView && (
+                            <button
+                                onClick={() => {
+                                    setSelectedDocumentId(null);
+                                    setSearchQuery("");
+                                    setCurrentPage(1);
+                                }}
+                                className="p-2 bg-light-800 dark:bg-dark-300 hover:bg-light-700 dark:hover:bg-dark-400 rounded-xl transition-colors text-light-200 dark:text-dark-400 cursor-pointer shadow-xs"
+                                title="Back to Documents"
+                            >
+                                <ArrowLeft className="h-5 w-5" />
+                            </button>
+                        )}
+                        <h2 className="text-xl font-bold text-dark100_light900">
+                            {isDocumentView ? "Your Documents" : "Document Decks"}
+                        </h2>
+                    </div>
+                    <span className="text-xs font-bold px-3 py-1 rounded-full bg-light-800 dark:bg-dark-300 text-dark200_light800 border border-light-700 dark:border-dark-400 shadow-xs">
+                        {totalItems} {isDocumentView ? (totalItems === 1 ? "Document" : "Documents") : (totalItems === 1 ? "Collection" : "Collections")}
                     </span>
                 </div>
 
@@ -368,12 +423,12 @@ export default function FlashcardsDashboardClient({ initialDecks, actualDueCount
                             Go to Home to Select a Document
                         </Link>
                     </div>
-                ) : filteredAndSortedDecks.length === 0 ? (
+                ) : totalItems === 0 ? (
                     <div className="flex flex-col items-center justify-center py-16 px-6 text-center bg-white dark:bg-dark-200 border border-light-700 dark:border-dark-400 rounded-3xl w-full shadow-drop-1">
                         <Filter className="h-10 w-10 text-light-200 dark:text-dark-400 mb-3" />
-                        <h3 className="text-lg font-bold text-dark100_light900">No matching decks found</h3>
+                        <h3 className="text-lg font-bold text-dark100_light900">No matching results found</h3>
                         <p className="text-sm text-light-200 dark:text-dark-400 max-w-xs mt-1">
-                            No flashcard decks match your active filters or search query &quot;{searchQuery}&quot;.
+                            No {isDocumentView ? "documents" : "flashcard decks"} match your active filters or search query &quot;{searchQuery}&quot;.
                         </p>
                         <button
                             onClick={resetFilters}
@@ -385,61 +440,94 @@ export default function FlashcardsDashboardClient({ initialDecks, actualDueCount
                 ) : (
                     <>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            {paginatedDecks.map((deck) => (
-                                <Link href={`/flashcards/${deck.deckId}`} key={deck.deckId} className="group relative flex flex-col h-full border border-light-700 dark:border-dark-400 rounded-[2rem] bg-white dark:bg-dark-200 hover:border-brand/40 dark:hover:border-brand/40 shadow-drop-1 hover:shadow-drop-3 transition-all duration-300 hover:-translate-y-1 overflow-hidden min-h-[220px]">
-                                    <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-brand to-emerald-400 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                                    
-                                    <div className="flex flex-col flex-1 p-6 z-10 pt-7 relative">
-                                        <div className="flex items-center justify-between mb-4">
-                                            <div className="p-3.5 bg-brand/10 dark:bg-brand/20 rounded-2xl text-brand group-hover:bg-brand group-hover:text-white transition-colors duration-300 shrink-0 shadow-xs">
-                                                <Layers className="h-6 w-6" />
-                                            </div>
-                                            <div className="flex items-center gap-2">
-                                                <span className="text-xs font-extrabold text-brand bg-brand/10 dark:bg-brand/20 px-3.5 py-1.5 rounded-full border border-brand/20 shadow-sm">
-                                                    {deck.cards.length} Thẻ
+                            {isDocumentView ? (
+                                paginatedDocuments.map((doc) => (
+                                    <div onClick={() => { setSelectedDocumentId(doc.documentId); setCurrentPage(1); }} key={doc.documentId} className="group relative flex flex-col h-full border border-light-700 dark:border-dark-400 rounded-[2rem] bg-white dark:bg-dark-200 hover:border-indigo-500/40 dark:hover:border-indigo-500/40 shadow-drop-1 hover:shadow-drop-3 transition-all duration-300 hover:-translate-y-1 overflow-hidden min-h-[220px] cursor-pointer">
+                                        <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-indigo-500 to-purple-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                                        
+                                        <div className="flex flex-col flex-1 p-6 z-10 pt-7 relative">
+                                            <div className="flex items-center justify-between mb-4">
+                                                <div className="p-3.5 bg-indigo-500/10 dark:bg-indigo-500/20 rounded-2xl text-indigo-500 group-hover:bg-indigo-500 group-hover:text-white transition-colors duration-300 shrink-0 shadow-xs">
+                                                    <FileText className="h-6 w-6" />
+                                                </div>
+                                                <span className="text-xs font-extrabold text-indigo-500 bg-indigo-500/10 dark:bg-indigo-500/20 px-3.5 py-1.5 rounded-full border border-indigo-500/20 shadow-sm">
+                                                    {doc.decks.length} Decks
                                                 </span>
-                                                <button
-                                                    onClick={(e) => handleDeleteDeck(e, deck.deckId)}
-                                                    disabled={deletingDeckId === deck.deckId}
-                                                    className="p-1.5 text-light-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/20 rounded-full transition-colors cursor-pointer z-20"
-                                                    title="Delete Deck"
-                                                >
-                                                    {deletingDeckId === deck.deckId ? (
-                                                        <Loader2 className="h-4 w-4 animate-spin" />
-                                                    ) : (
-                                                        <Trash2 className="h-4 w-4" />
-                                                    )}
-                                                </button>
+                                            </div>
+                                            <h3 className="text-xl font-bold text-dark100_light900 mb-1 leading-snug line-clamp-2 group-hover:text-indigo-500 transition-colors" title={doc.documentName}>
+                                                {doc.documentName}
+                                            </h3>
+                                            <div className="mt-auto flex items-center gap-2 text-xs font-semibold text-light-200 dark:text-dark-400 mb-4">
+                                                <Layers className="h-3.5 w-3.5 shrink-0" />
+                                                <span>{doc.totalCards} Total Flashcards</span>
                                             </div>
                                         </div>
-                                        <h3 className="text-lg font-bold text-dark100_light900 mb-1 leading-snug line-clamp-2 group-hover:text-brand transition-colors" title={deck.deckTitle}>
-                                            {deck.deckTitle}
-                                        </h3>
-                                        <div className="flex items-center gap-1.5 text-xs font-medium text-light-400 mb-2 truncate">
-                                            <FileText className="h-3 w-3 shrink-0" />
-                                            <span className="truncate" title={deck.documentName}>{deck.documentName}</span>
-                                        </div>
-                                        <div className="mt-auto flex items-center gap-2 text-xs font-semibold text-light-200 dark:text-dark-400 mb-4">
-                                            <Clock className="h-3.5 w-3.5 shrink-0" />
-                                            <span>
-                                                Tạo ngày:{" "}
-                                                {new Date(deck.createdAt || deck.cards[0]?.createdAt || new Date().toISOString()).toLocaleDateString('vi-VN', {
-                                                    day: "2-digit",
-                                                    month: "2-digit",
-                                                    year: "numeric",
-                                                })}
-                                            </span>
-                                        </div>
-                                    </div>
 
-                                    <div className="px-6 pb-6 pt-0 relative z-10">
-                                        <div className="w-full flex items-center justify-center gap-2 h-12 rounded-2xl bg-gradient-to-r from-brand to-emerald-500 group-hover:from-emerald-400 group-hover:to-brand text-sm font-bold text-white transition-all shadow-md group-hover:shadow-lg">
-                                            <span>Học ngay</span>
-                                            <Play className="h-4 w-4 fill-current" />
+                                        <div className="px-6 pb-6 pt-0 relative z-10">
+                                            <div className="w-full flex items-center justify-center gap-2 h-12 rounded-2xl bg-gradient-to-r from-indigo-500 to-purple-500 group-hover:from-purple-500 group-hover:to-indigo-500 text-sm font-bold text-white transition-all shadow-md group-hover:shadow-lg">
+                                                <span>View Decks</span>
+                                                <ChevronRight className="h-4 w-4" />
+                                            </div>
                                         </div>
                                     </div>
-                                </Link>
-                            ))}
+                                ))
+                            ) : (
+                                paginatedDecks.map((deck) => (
+                                    <Link href={`/flashcards/${deck.deckId}`} key={deck.deckId} className="group relative flex flex-col h-full border border-light-700 dark:border-dark-400 rounded-[2rem] bg-white dark:bg-dark-200 hover:border-brand/40 dark:hover:border-brand/40 shadow-drop-1 hover:shadow-drop-3 transition-all duration-300 hover:-translate-y-1 overflow-hidden min-h-[220px]">
+                                        <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-brand to-emerald-400 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                                        
+                                        <div className="flex flex-col flex-1 p-6 z-10 pt-7 relative">
+                                            <div className="flex items-center justify-between mb-4">
+                                                <div className="p-3.5 bg-brand/10 dark:bg-brand/20 rounded-2xl text-brand group-hover:bg-brand group-hover:text-white transition-colors duration-300 shrink-0 shadow-xs">
+                                                    <Layers className="h-6 w-6" />
+                                                </div>
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-xs font-extrabold text-brand bg-brand/10 dark:bg-brand/20 px-3.5 py-1.5 rounded-full border border-brand/20 shadow-sm">
+                                                        {deck.cards.length} Thẻ
+                                                    </span>
+                                                    <button
+                                                        onClick={(e) => handleDeleteDeck(e, deck.deckId)}
+                                                        disabled={deletingDeckId === deck.deckId}
+                                                        className="p-1.5 text-light-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/20 rounded-full transition-colors cursor-pointer z-20"
+                                                        title="Delete Deck"
+                                                    >
+                                                        {deletingDeckId === deck.deckId ? (
+                                                            <Loader2 className="h-4 w-4 animate-spin" />
+                                                        ) : (
+                                                            <Trash2 className="h-4 w-4" />
+                                                        )}
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            <h3 className="text-lg font-bold text-dark100_light900 mb-1 leading-snug line-clamp-2 group-hover:text-brand transition-colors" title={deck.deckTitle}>
+                                                {deck.deckTitle}
+                                            </h3>
+                                            <div className="flex items-center gap-1.5 text-xs font-medium text-light-400 mb-2 truncate">
+                                                <FileText className="h-3 w-3 shrink-0" />
+                                                <span className="truncate" title={deck.documentName}>{deck.documentName}</span>
+                                            </div>
+                                            <div className="mt-auto flex items-center gap-2 text-xs font-semibold text-light-200 dark:text-dark-400 mb-4">
+                                                <Clock className="h-3.5 w-3.5 shrink-0" />
+                                                <span>
+                                                    Tạo ngày:{" "}
+                                                    {new Date(deck.createdAt || deck.cards[0]?.createdAt || new Date().toISOString()).toLocaleDateString('vi-VN', {
+                                                        day: "2-digit",
+                                                        month: "2-digit",
+                                                        year: "numeric",
+                                                    })}
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        <div className="px-6 pb-6 pt-0 relative z-10">
+                                            <div className="w-full flex items-center justify-center gap-2 h-12 rounded-2xl bg-gradient-to-r from-brand to-emerald-500 group-hover:from-emerald-400 group-hover:to-brand text-sm font-bold text-white transition-all shadow-md group-hover:shadow-lg">
+                                                <span>Học ngay</span>
+                                                <Play className="h-4 w-4 fill-current" />
+                                            </div>
+                                        </div>
+                                    </Link>
+                                ))
+                            )}
                         </div>
 
                         {totalPages > 1 && (
