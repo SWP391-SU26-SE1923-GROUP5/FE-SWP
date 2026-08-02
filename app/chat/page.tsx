@@ -25,7 +25,7 @@ interface LibraryFile {
     fileSizeBytes?: number;
     url?: string;
     lifecycleStatus?: number;
-    status?: number;
+    status?: number | string;
 }
 
 interface CitationItem {

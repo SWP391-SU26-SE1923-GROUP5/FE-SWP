@@ -132,7 +132,7 @@ export interface File_ extends BaseDocument {
     fileType: string;
     sharedUsers: string;
     shareStatus: string;
-    status: number;
+    status: number | string;
     fileSizeBytes: number;
     subjectName?: string;
     subject?: Subject;
@@ -271,7 +271,7 @@ export interface IFileStorage {
         used: number;
         all: number;
     }>;
-    getFileStatus(fileId: string): Promise<{ id: string; status: number; errorMessage?: string } | null>;
+    getFileStatus(fileId: string): Promise<{ id: string; status: number | string; message?: string; isChatReady?: boolean; canRetry?: boolean } | null>;
     reprocessFile(fileId: string): Promise<{ documentId: string; status: string; message: string } | null>;
     getTrashFiles(): Promise<{ documents: File_[] }>;
     restoreFile(props: { fileId: string; path?: string }): Promise<{ status: string } | undefined>;
