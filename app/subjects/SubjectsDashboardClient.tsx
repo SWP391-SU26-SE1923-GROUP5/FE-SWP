@@ -81,14 +81,18 @@ export default function SubjectsDashboardClient({
         if (!subjectToDelete) return;
         setIsDeleting(true);
         try {
-            await deleteSubject(subjectToDelete.id);
+            const result = await deleteSubject(subjectToDelete.id);
+            if (result && result.success === false) {
+                toast.error(result.message || "Failed to delete subject.");
+                return;
+            }
             toast.success("Subject deleted successfully.");
             setSubjectToDelete(null);
             setIsDeleteDialogOpen(false);
             router.refresh();
         } catch (error: any) {
             console.error(error);
-            toast.error(error.message || "Failed to delete subject.");
+            toast.error(error.message || "An unexpected error occurred.");
         } finally {
             setIsDeleting(false);
         }
@@ -268,7 +272,7 @@ export default function SubjectsDashboardClient({
                         <AlertDialogTitle className="text-dark100_light900 font-bold">Delete Subject</AlertDialogTitle>
                         <AlertDialogDescription className="text-dark500_light400">
                             Are you sure you want to delete <span className="font-bold text-dark200_light800">{subjectToDelete?.subjectName}</span>? 
-                            This action cannot be undone. Files associated with this subject will lose their association.
+                            This action cannot be undone. Please note that you cannot delete a subject if it still contains documents.
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter className="mt-6">

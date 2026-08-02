@@ -135,7 +135,7 @@ export class LocalSubject implements ISubjectService {
         }
     }
 
-    async deleteSubject(id: string): Promise<void> {
+    async deleteSubject(id: string): Promise<{ success: boolean; message?: string }> {
         try {
             const headers = await this.getHeaders();
             const res = await fetch(`${connection_url}/api/Subject/${id}`, {
@@ -154,10 +154,12 @@ export class LocalSubject implements ISubjectService {
                 } catch (e) {
                     // Ignore parsing error
                 }
-                throw new Error(errorMessage);
+                return { success: false, message: errorMessage };
             }
+            return { success: true };
         } catch (error) {
-            this.handleError(error, "DeleteSubject");
+            console.error("DeleteSubject Error:", error);
+            return { success: false, message: "An unexpected error occurred while deleting the subject." };
         }
     }
 }

@@ -180,7 +180,7 @@ export interface ISubjectService {
     getSubjectById(id: string): Promise<Subject>;
     createSubject(data: CreateSubjectDto): Promise<Subject>;
     updateSubject(data: UpdateSubjectDto): Promise<Subject>;
-    deleteSubject(id: string): Promise<void>;
+    deleteSubject(id: string): Promise<{ success: boolean; message?: string }>;
 }
 
 export interface GetFilesProps {
