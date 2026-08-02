@@ -10,7 +10,10 @@ interface Props {
 }
 
 const Thumbnail = ({ type, extension, url = "", imageClassName, className }: Props) => {
-    const isImage = type === 'image' && extension !== 'svg';
+    const cleanExt = extension.replace('.', '').toLowerCase();
+    const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'];
+    const isImage = imageExtensions.includes(cleanExt) || (type === 'image' && cleanExt !== 'svg');
+    
     return (
         <figure className={cn("thumbnail", className)}>
             <Image

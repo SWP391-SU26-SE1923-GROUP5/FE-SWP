@@ -21,6 +21,25 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog";
 
+const ALLOWED_EXTENSIONS = [
+    ".pdf", "pdf",
+    ".docx", "docx",
+    ".txt", "txt",
+    ".md", "md",
+    ".jpg", "jpg",
+    ".jpeg", "jpeg",
+    ".png", "png",
+    ".gif", "gif",
+    ".mp4", "mp4",
+    ".avi", "avi",
+    ".mov", "mov",
+    ".webm", "webm",
+    ".mp3", "mp3",
+    ".wav", "wav",
+    ".ogg", "ogg",
+    ".m4a", "m4a"
+];
+
 interface FileUploaderProps {
     subjects?: Subject[];
     className?: string;
@@ -60,6 +79,19 @@ const FileUploader = ({ subjects: initialSubjects = [], className }: FileUploade
                 toast.error(`${file.name} exceeds maximum file size of 5MB.`);
                 return false;
             }
+
+            const fileNameParts = file.name.split('.');
+            if (fileNameParts.length < 2) {
+                toast.error(`${file.name} has no valid extension.`);
+                return false;
+            }
+            
+            const ext = fileNameParts.pop()?.toLowerCase() || '';
+            if (!ALLOWED_EXTENSIONS.includes(ext) && !ALLOWED_EXTENSIONS.includes(`.${ext}`)) {
+                toast.error(`File ${file.name} has an unsupported extension.`);
+                return false;
+            }
+
             return true;
         });
 
@@ -189,7 +221,7 @@ const FileUploader = ({ subjects: initialSubjects = [], className }: FileUploade
                                     Drag & drop your file here, or <span className="text-emerald-600 font-semibold underline">browse</span>
                                 </p>
                                 <p className="text-xs text-dark500_light400 mt-1">
-                                    Supports PDF, DOCX, PPTX (Max size: 5MB)
+                                    Supports Docs, Images, Audio, Video (Max size: 5MB)
                                 </p>
                             </div>
                         </div>

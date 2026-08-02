@@ -132,6 +132,12 @@ export const getFileIcon = (
       return "/assets/icons/file-document.svg";
       // Image
     case "svg":
+    case "jpg":
+    case "jpeg":
+    case "png":
+    case "gif":
+    case "bmp":
+    case "webp":
       return "/assets/icons/file-image.svg";
       // Video
     case "mkv":
