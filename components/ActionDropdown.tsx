@@ -210,6 +210,7 @@ export default function ActionDropdown({ file }: { file: File_ }) {
 
     const [emails, setEmails] = useState<string[]>(parseSharedUsers(file.sharedUsers));
     const [userLevels, setUserLevels] = useState<Record<string, number>>({});
+    const [generationAmount, setGenerationAmount] = useState<number>(10);
 
     const [aiResult, setAiResult] = useState<AiResultState | null>(null);
     const [userAnswers, setUserAnswers] = useState<Record<number, string>>({});
@@ -816,6 +817,32 @@ export default function ActionDropdown({ file }: { file: File_ }) {
                                     <p className="text-light-400">Successfully generated {(aiResult.data?.cards as unknown[])?.length} flashcards for this document.</p>
                                 </div>
                             )}
+
+                            {value === "generate-settings" && (
+                                <div className="flex flex-col gap-6 p-2 mt-4">
+                                    <div className="flex flex-col gap-3">
+                                        <label className="text-sm font-bold text-slate-700">
+                                            Number of {action.icon === "quiz" ? "Questions" : "Flashcards"}
+                                        </label>
+                                        <div className="flex items-center gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200">
+                                            <input 
+                                                type="range" 
+                                                min="1" 
+                                                max="20" 
+                                                value={generationAmount} 
+                                                onChange={(e) => setGenerationAmount(Number(e.target.value))}
+                                                className="flex-1 h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-brand"
+                                            />
+                                            <div className="bg-white px-3 py-1.5 rounded-lg border border-slate-200 shadow-xs font-bold text-lg text-brand w-14 text-center">
+                                                {generationAmount}
+                                            </div>
+                                        </div>
+                                        <p className="text-xs font-medium text-slate-500 ml-1">
+                                            Select any amount between 1 and 20.
+                                        </p>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     )}
                 </DialogHeader>
@@ -860,6 +887,25 @@ export default function ActionDropdown({ file }: { file: File_ }) {
                             className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-brand to-indigo-600 hover:from-brand/90 hover:to-indigo-600/90 text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer h-10"
                         >
                             <span>Confirm & Save</span>
+                        </Button>
+                    </DialogFooter>
+                )}
+
+                {value === "generate-settings" && (
+                    <DialogFooter className="flex flex-col gap-3 sm:flex-row justify-end mt-6 pt-4 border-t border-slate-100">
+                        <Button
+                            type="button"
+                            onClick={closeAllModals}
+                            className="px-5 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-semibold text-sm transition-all shadow-2xs cursor-pointer h-10"
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            type="button"
+                            onClick={() => triggerAIFeature(action.icon as "quiz" | "flashcards", action.label, { amount: String(generationAmount) })}
+                            className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-brand to-indigo-600 hover:from-brand/90 hover:to-indigo-600/90 text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer h-10"
+                        >
+                            <span>Generate {action.label}</span>
                         </Button>
                     </DialogFooter>
                 )}
@@ -1008,61 +1054,27 @@ export default function ActionDropdown({ file }: { file: File_ }) {
                                 <AlignLeft className="h-4 w-4 text-brand opacity-80" /> Summarize
                             </DropdownMenuItem>
 
-                            <DropdownMenuSub>
-                                <DropdownMenuSubTrigger className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer text-sm font-medium text-slate-700 hover:!bg-brand/5 focus:!bg-brand/5 mx-0.5 transition-all duration-150">
-                                    <BrainCircuit className="h-4 w-4 text-brand opacity-80" /> Generate Quiz
-                                </DropdownMenuSubTrigger>
-                                <DropdownMenuPortal>
-                                    <DropdownMenuSubContent className="p-1.5 rounded-xl border border-slate-200/80 bg-white/95 backdrop-blur-md shadow-xl min-w-[140px]">
-                                        <DropdownMenuItem
-                                            onClick={() => triggerAIFeature("quiz", "Quiz Engine", { amount: "10" })}
-                                            className="px-3 py-2 rounded-lg cursor-pointer text-sm font-medium text-slate-700 hover:!bg-brand/5 focus:!bg-brand/5 transition-all duration-150"
-                                        >
-                                            10 Questions
-                                        </DropdownMenuItem>
-                                        <DropdownMenuItem
-                                            onClick={() => triggerAIFeature("quiz", "Quiz Engine", { amount: "15" })}
-                                            className="px-3 py-2 rounded-lg cursor-pointer text-sm font-medium text-slate-700 hover:!bg-brand/5 focus:!bg-brand/5 transition-all duration-150"
-                                        >
-                                            15 Questions
-                                        </DropdownMenuItem>
-                                        <DropdownMenuItem
-                                            onClick={() => triggerAIFeature("quiz", "Quiz Engine", { amount: "20" })}
-                                            className="px-3 py-2 rounded-lg cursor-pointer text-sm font-medium text-slate-700 hover:!bg-brand/5 focus:!bg-brand/5 transition-all duration-150"
-                                        >
-                                            20 Questions
-                                        </DropdownMenuItem>
-                                    </DropdownMenuSubContent>
-                                </DropdownMenuPortal>
-                            </DropdownMenuSub>
+                            <DropdownMenuItem
+                                onClick={() => {
+                                    setAction({ value: "generate-settings", label: "Quiz Engine", icon: "quiz" });
+                                    setGenerationAmount(10);
+                                    setIsModalOpen(true);
+                                }}
+                                className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer text-sm font-medium text-slate-700 hover:!bg-brand/5 focus:!bg-brand/5 mx-0.5 transition-all duration-150"
+                            >
+                                <BrainCircuit className="h-4 w-4 text-brand opacity-80" /> Generate Quiz
+                            </DropdownMenuItem>
 
-                            <DropdownMenuSub>
-                                <DropdownMenuSubTrigger className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer text-sm font-medium text-slate-700 hover:!bg-brand/5 focus:!bg-brand/5 mx-0.5 transition-all duration-150">
-                                    <FileText className="h-4 w-4 text-brand opacity-80" /> Flashcards
-                                </DropdownMenuSubTrigger>
-                                <DropdownMenuPortal>
-                                    <DropdownMenuSubContent className="p-1.5 rounded-xl border border-slate-200/80 bg-white/95 backdrop-blur-md shadow-xl min-w-[140px]">
-                                        <DropdownMenuItem
-                                            onClick={() => triggerAIFeature("flashcards", "Flashcards", { amount: "10" })}
-                                            className="px-3 py-2 rounded-lg cursor-pointer text-sm font-medium text-slate-700 hover:!bg-brand/5 focus:!bg-brand/5 transition-all duration-150"
-                                        >
-                                            10 Cards
-                                        </DropdownMenuItem>
-                                        <DropdownMenuItem
-                                            onClick={() => triggerAIFeature("flashcards", "Flashcards", { amount: "15" })}
-                                            className="px-3 py-2 rounded-lg cursor-pointer text-sm font-medium text-slate-700 hover:!bg-brand/5 focus:!bg-brand/5 transition-all duration-150"
-                                        >
-                                            15 Cards
-                                        </DropdownMenuItem>
-                                        <DropdownMenuItem
-                                            onClick={() => triggerAIFeature("flashcards", "Flashcards", { amount: "20" })}
-                                            className="px-3 py-2 rounded-lg cursor-pointer text-sm font-medium text-slate-700 hover:!bg-brand/5 focus:!bg-brand/5 transition-all duration-150"
-                                        >
-                                            20 Cards
-                                        </DropdownMenuItem>
-                                    </DropdownMenuSubContent>
-                                </DropdownMenuPortal>
-                            </DropdownMenuSub>
+                            <DropdownMenuItem
+                                onClick={() => {
+                                    setAction({ value: "generate-settings", label: "Flashcards", icon: "flashcards" });
+                                    setGenerationAmount(10);
+                                    setIsModalOpen(true);
+                                }}
+                                className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer text-sm font-medium text-slate-700 hover:!bg-brand/5 focus:!bg-brand/5 mx-0.5 transition-all duration-150"
+                            >
+                                <FileText className="h-4 w-4 text-brand opacity-80" /> Generate Flashcards
+                            </DropdownMenuItem>
                         </>
                     )}
                 </DropdownMenuContent>
