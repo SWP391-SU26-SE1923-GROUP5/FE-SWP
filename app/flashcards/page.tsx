@@ -34,10 +34,17 @@ export default async function FlashcardsPage() {
         return acc;
     }, {} as Record<string, FlashcardItem[]>);
 
+    const fileMap = documents.reduce((acc, doc) => {
+        acc[doc.id] = doc.fileName;
+        return acc;
+    }, {} as Record<string, string>);
+
     // Map Deck Summaries to DeckItem format for the UI
     const decks: DeckItem[] = deckSummaries.map(summary => ({
-        documentId: summary.deckId, // Mapping deckId -> documentId to maintain routing logic in UI
-        documentName: summary.deckTitle,
+        deckId: summary.deckId,
+        deckTitle: summary.deckTitle || "Untitled Deck",
+        documentId: summary.documentId,
+        documentName: fileMap[summary.documentId] || "Unknown Document",
         cards: cardsByDeck[summary.deckId] || [],
         createdAt: summary.createdAt
     }));

@@ -2,8 +2,10 @@
 
 import React, { useState, useMemo } from "react";
 import Link from "next/link";
-import { Layers, ArrowLeft, Sparkles, Clock, Award, BrainCircuit, Search, ArrowUpDown, Filter, X, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Play } from "lucide-react";
+import { Layers, ArrowLeft, Sparkles, Clock, Award, BrainCircuit, Search, ArrowUpDown, Filter, X, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Play, Trash2, Loader2, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { deleteFlashcardDeck } from "@/lib/actions/ai.actions";
+import { toast } from "sonner";
 
 export type DashboardCard = {
     front?: string;
@@ -18,6 +20,8 @@ export type DashboardStats = {
 };
 
 export type DeckItem = {
+    deckId: string;
+    deckTitle: string;
     documentId: string;
     documentName: string;
     cards: DashboardCard[];
@@ -37,6 +41,29 @@ export default function FlashcardsDashboardClient({ initialDecks, actualDueCount
     const [sortBy, setSortBy] = useState<"most-cards" | "fewest-cards" | "name-asc" | "name-desc" | "newest" | "oldest">("most-cards");
     const [currentPage, setCurrentPage] = useState(1);
     const [pageSize, setPageSize] = useState<number>(9);
+    const [deletingDeckId, setDeletingDeckId] = useState<string | null>(null);
+
+    const handleDeleteDeck = async (e: React.MouseEvent, deckId: string) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        if (!confirm("Are you sure you want to delete this deck? This action cannot be undone.")) {
+            return;
+        }
+
+        setDeletingDeckId(deckId);
+        const toastId = toast.loading("Deleting deck...");
+
+        try {
+            await deleteFlashcardDeck(deckId);
+            setDecks((prev) => prev.filter((d) => d.deckId !== deckId));
+            toast.success("Deck deleted successfully!", { id: toastId });
+        } catch (error) {
+            toast.error("Failed to delete deck.", { id: toastId });
+        } finally {
+            setDeletingDeckId(null);
+        }
+    };
 
     const filteredAndSortedDecks = useMemo(() => {
         let result = [...decks];
@@ -359,21 +386,39 @@ export default function FlashcardsDashboardClient({ initialDecks, actualDueCount
                     <>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                             {paginatedDecks.map((deck) => (
-                                <Link href={`/flashcards/${deck.documentId}`} key={deck.documentId} className="group relative flex flex-col h-full border border-light-700 dark:border-dark-400 rounded-[2rem] bg-white dark:bg-dark-200 hover:border-brand/40 dark:hover:border-brand/40 shadow-drop-1 hover:shadow-drop-3 transition-all duration-300 hover:-translate-y-1 overflow-hidden min-h-[220px]">
+                                <Link href={`/flashcards/${deck.deckId}`} key={deck.deckId} className="group relative flex flex-col h-full border border-light-700 dark:border-dark-400 rounded-[2rem] bg-white dark:bg-dark-200 hover:border-brand/40 dark:hover:border-brand/40 shadow-drop-1 hover:shadow-drop-3 transition-all duration-300 hover:-translate-y-1 overflow-hidden min-h-[220px]">
                                     <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-brand to-emerald-400 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                                     
-                                    <div className="flex flex-col flex-1 p-6 z-10 pt-7">
+                                    <div className="flex flex-col flex-1 p-6 z-10 pt-7 relative">
                                         <div className="flex items-center justify-between mb-4">
                                             <div className="p-3.5 bg-brand/10 dark:bg-brand/20 rounded-2xl text-brand group-hover:bg-brand group-hover:text-white transition-colors duration-300 shrink-0 shadow-xs">
                                                 <Layers className="h-6 w-6" />
                                             </div>
-                                            <span className="text-xs font-extrabold text-brand bg-brand/10 dark:bg-brand/20 px-3.5 py-1.5 rounded-full border border-brand/20 shadow-sm">
-                                                {deck.cards.length} Thẻ
-                                            </span>
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-xs font-extrabold text-brand bg-brand/10 dark:bg-brand/20 px-3.5 py-1.5 rounded-full border border-brand/20 shadow-sm">
+                                                    {deck.cards.length} Thẻ
+                                                </span>
+                                                <button
+                                                    onClick={(e) => handleDeleteDeck(e, deck.deckId)}
+                                                    disabled={deletingDeckId === deck.deckId}
+                                                    className="p-1.5 text-light-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/20 rounded-full transition-colors cursor-pointer z-20"
+                                                    title="Delete Deck"
+                                                >
+                                                    {deletingDeckId === deck.deckId ? (
+                                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                                    ) : (
+                                                        <Trash2 className="h-4 w-4" />
+                                                    )}
+                                                </button>
+                                            </div>
                                         </div>
-                                        <h3 className="text-lg font-bold text-dark100_light900 mb-2 leading-snug line-clamp-2 group-hover:text-brand transition-colors" title={deck.documentName}>
-                                            {deck.documentName}
+                                        <h3 className="text-lg font-bold text-dark100_light900 mb-1 leading-snug line-clamp-2 group-hover:text-brand transition-colors" title={deck.deckTitle}>
+                                            {deck.deckTitle}
                                         </h3>
+                                        <div className="flex items-center gap-1.5 text-xs font-medium text-light-400 mb-2 truncate">
+                                            <FileText className="h-3 w-3 shrink-0" />
+                                            <span className="truncate" title={deck.documentName}>{deck.documentName}</span>
+                                        </div>
                                         <div className="mt-auto flex items-center gap-2 text-xs font-semibold text-light-200 dark:text-dark-400 mb-4">
                                             <Clock className="h-3.5 w-3.5 shrink-0" />
                                             <span>
