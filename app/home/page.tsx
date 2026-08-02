@@ -10,7 +10,6 @@ import SubjectFilter from "@/components/SubjectFilter";
 import FormattedDateTime from "@/components/FormattedDateTime";
 import Thumbnail from "@/components/Thumbnail";
 import { File_ } from "@/types";
-import StatusPoller from "@/components/StatusPoller";
 import FilePreviewWrapper from "@/components/FilePreviewWrapper";
 
 interface DashboardProps {
@@ -70,31 +69,12 @@ const Dashboard = async ({ searchParams }: DashboardProps) => {
                                             <FormattedDateTime date={file.createdAt || ""} className="caption" />
                                         </div>
                                     </FilePreviewWrapper>
-
-                                    <StatusPoller fileId={file.id} status={file.status} />
-
                                     <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 ml-2">
                                         <div className="flex flex-col sm:flex-row items-end sm:items-center gap-1 sm:gap-1.5">
                                             <span className="px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-indigo-50 text-indigo-600 border border-indigo-200 flex items-center gap-1 shadow-xs max-w-[110px] sm:max-w-[130px]">
                                                 <BookOpen className="w-3 h-3 text-indigo-500 shrink-0" />
                                                 <span className="truncate">{subjectName}</span>
                                             </span>
-                                            {(file.status === 5 || String(file.status).toLowerCase() === "processing") && (
-                                                <span className="px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-amber-50 text-amber-600 border border-amber-200 flex items-center gap-1 shadow-xs whitespace-nowrap">
-                                                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping shrink-0" />
-                                                    AI Processing...
-                                                </span>
-                                            )}
-                                            {(file.status === 2 || String(file.status).toLowerCase() === "done") && (
-                                                <span className="px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-emerald-50 text-brand border border-brand/30 shadow-xs whitespace-nowrap">
-                                                    ✓ AI Completed
-                                                </span>
-                                            )}
-                                            {(file.status === 6 || String(file.status).toLowerCase() === "failed") && (
-                                                <span className="px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-rose-50 text-rose-600 border border-rose-200 shadow-xs whitespace-nowrap">
-                                                    ⚠ Failed
-                                                </span>
-                                            )}
                                         </div>
 
                                         <div className="shrink-0 flex items-center">

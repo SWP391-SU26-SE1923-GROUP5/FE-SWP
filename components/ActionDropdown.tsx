@@ -15,7 +15,8 @@ import {
     Trash2,
     Check,
     X,
-    Copy
+    Copy,
+    RotateCw
 } from "lucide-react";
 
 import {
@@ -43,7 +44,7 @@ import { Button } from "@/components/ui/button";
 import { ActionType, AiResultState, File_, Flashcard, QuizQuestion } from "@/types";
 import { actionsDropdownItems } from "@/constants/actionsDropdownItems";
 import { triggerDownload, parseSharedUsers } from "@/lib/utils";
-import { deleteFile, renameFile, updateFileUsers, revokeDocumentShare, getDocumentShares } from "@/lib/actions/file.actions";
+import { deleteFile, renameFile, updateFileUsers, revokeDocumentShare, getDocumentShares, getFileStatus, reprocessFile } from "@/lib/actions/file.actions";
 import {
     generateQuiz,
     generateFlashcards,
@@ -204,8 +205,40 @@ export default function ActionDropdown({ file }: { file: File_ }) {
 
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+    const [localStatus, setLocalStatus] = useState(file.status);
     const [isLoading, setIsLoading] = useState(false);
     const [action, setAction] = useState<ActionType | null>(null);
+
+    const handleDropdownOpen = async (open: boolean) => {
+        setIsDropdownOpen(open);
+        if (open && localStatus !== 2 && isAiDocSupported) {
+            try {
+                const res = await getFileStatus(file.id);
+                if (res) setLocalStatus(res.status);
+            } catch (e) {}
+        }
+    };
+
+    useEffect(() => {
+        if (!isDropdownOpen || localStatus !== 5 || !isAiDocSupported) return;
+
+        const interval = setInterval(async () => {
+            try {
+                const res = await getFileStatus(file.id);
+                if (res) {
+                    setLocalStatus(res.status);
+                    if (res.status !== 5) {
+                        clearInterval(interval);
+                    }
+                }
+            } catch (error) {
+                console.error("Error polling status in dropdown:", error);
+            }
+        }, 3000);
+
+        return () => clearInterval(interval);
+    }, [isDropdownOpen, localStatus, isAiDocSupported, file.id]);
+
     const [name, setName] = useState(file.fileName);
 
     const [emails, setEmails] = useState<string[]>(parseSharedUsers(file.sharedUsers));
@@ -314,11 +347,43 @@ export default function ActionDropdown({ file }: { file: File_ }) {
         }
     };
 
+    const handleReprocess = async () => {
+        setIsDropdownOpen(false);
+        const toastId = toast.loading("Sending file for reprocessing...");
+        try {
+            await reprocessFile(file.id);
+            setLocalStatus(5);
+            toast.success("File sent for reprocessing...", { id: toastId });
+        } catch (error) {
+            toast.error("Failed to reprocess file", { id: toastId });
+        }
+    };
+
     const triggerAIFeature = async (
         endpoint: string,
         label: string,
         extraParams?: Record<string, string>
     ) => {
+        const checkToastId = toast.loading(`Checking file status...`);
+        try {
+            const currentStatusRes = await getFileStatus(file.id);
+            if (currentStatusRes) {
+                setLocalStatus(currentStatusRes.status);
+                if (currentStatusRes.status === 5) {
+                    toast.error("AI is still processing this document. Please wait a moment.", { id: checkToastId });
+                    return;
+                }
+                if (currentStatusRes.status === 6) {
+                    toast.error("AI processing failed for this document. Please reprocess.", { id: checkToastId });
+                    return;
+                }
+                toast.dismiss(checkToastId);
+            }
+        } catch (e) {
+            toast.error("Failed to check file status.", { id: checkToastId });
+            return;
+        }
+
         setAction({ value: endpoint, label, icon: "" } as ActionType);
         setIsModalOpen(true);
         setIsLoading(true);
@@ -960,7 +1025,7 @@ export default function ActionDropdown({ file }: { file: File_ }) {
     return (
         <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
             <DropdownMenu open={isDropdownOpen} onOpenChange={(open) => {
-                setIsDropdownOpen(open);
+                handleDropdownOpen(open);
                 if (open && !isOwner) fetchAccessLevel();
             }}>
                 <DropdownMenuTrigger asChild className="shad-no-focus">
@@ -1040,18 +1105,43 @@ export default function ActionDropdown({ file }: { file: File_ }) {
                                 <Sparkles className="h-3.5 w-3.5" /> AI Tools
                             </DropdownMenuLabel>
 
+                            {localStatus === 5 && (
+                                <div className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-amber-600 bg-amber-50/50 mx-0.5 rounded-lg mb-1 border border-amber-100/50">
+                                    <Loader2 className="h-4 w-4 animate-spin shrink-0" />
+                                    AI is processing...
+                                </div>
+                            )}
+
+                            {localStatus === 2 && (
+                                <div className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-emerald-600 bg-emerald-50/50 mx-0.5 rounded-lg mb-1 border border-emerald-100/50">
+                                    <Check className="h-4 w-4 shrink-0" />
+                                    Ready for AI tools
+                                </div>
+                            )}
+
+                            {localStatus === 6 && (
+                                <DropdownMenuItem
+                                    onClick={(e) => { e.preventDefault(); handleReprocess(); }}
+                                    className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer text-sm font-medium text-amber-600 focus:text-amber-600 hover:!bg-amber-50 focus:!bg-amber-50 dark:hover:!bg-amber-900/20 dark:focus:!bg-amber-900/20 mx-0.5 transition-all duration-150"
+                                >
+                                    <RotateCw className="h-4 w-4 shrink-0" /> Reprocess Document
+                                </DropdownMenuItem>
+                            )}
+
                             <DropdownMenuItem
                                 onClick={() => triggerAIFeature("ask-ai", "Ask AI")}
-                                className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer text-sm font-medium text-slate-700 hover:!bg-brand/5 focus:!bg-brand/5 mx-0.5 transition-all duration-150"
+                                disabled={localStatus === 5 || localStatus === 6}
+                                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer text-sm font-medium text-slate-700 hover:!bg-brand/5 focus:!bg-brand/5 mx-0.5 transition-all duration-150 ${(localStatus === 5 || localStatus === 6) ? "opacity-50 !cursor-not-allowed pointer-events-none" : ""}`}
                             >
-                                <MessageSquare className="h-4 w-4 text-brand opacity-80" /> Ask AI
+                                <MessageSquare className="h-4 w-4 text-brand opacity-80 shrink-0" /> Ask AI
                             </DropdownMenuItem>
 
                             <DropdownMenuItem
                                 onClick={() => triggerAIFeature("summarize", "Document Summary")}
-                                className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer text-sm font-medium text-slate-700 hover:!bg-brand/5 focus:!bg-brand/5 mx-0.5 transition-all duration-150"
+                                disabled={localStatus === 5 || localStatus === 6}
+                                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer text-sm font-medium text-slate-700 hover:!bg-brand/5 focus:!bg-brand/5 mx-0.5 transition-all duration-150 ${(localStatus === 5 || localStatus === 6) ? "opacity-50 !cursor-not-allowed pointer-events-none" : ""}`}
                             >
-                                <AlignLeft className="h-4 w-4 text-brand opacity-80" /> Summarize
+                                <AlignLeft className="h-4 w-4 text-brand opacity-80 shrink-0" /> Summarize
                             </DropdownMenuItem>
 
                             <DropdownMenuItem
@@ -1060,9 +1150,10 @@ export default function ActionDropdown({ file }: { file: File_ }) {
                                     setGenerationAmount(10);
                                     setIsModalOpen(true);
                                 }}
-                                className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer text-sm font-medium text-slate-700 hover:!bg-brand/5 focus:!bg-brand/5 mx-0.5 transition-all duration-150"
+                                disabled={localStatus === 5 || localStatus === 6}
+                                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer text-sm font-medium text-slate-700 hover:!bg-brand/5 focus:!bg-brand/5 mx-0.5 transition-all duration-150 ${(localStatus === 5 || localStatus === 6) ? "opacity-50 !cursor-not-allowed pointer-events-none" : ""}`}
                             >
-                                <BrainCircuit className="h-4 w-4 text-brand opacity-80" /> Generate Quiz
+                                <BrainCircuit className="h-4 w-4 text-brand opacity-80 shrink-0" /> Generate Quiz
                             </DropdownMenuItem>
 
                             <DropdownMenuItem
@@ -1071,9 +1162,10 @@ export default function ActionDropdown({ file }: { file: File_ }) {
                                     setGenerationAmount(10);
                                     setIsModalOpen(true);
                                 }}
-                                className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer text-sm font-medium text-slate-700 hover:!bg-brand/5 focus:!bg-brand/5 mx-0.5 transition-all duration-150"
+                                disabled={localStatus === 5 || localStatus === 6}
+                                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer text-sm font-medium text-slate-700 hover:!bg-brand/5 focus:!bg-brand/5 mx-0.5 transition-all duration-150 ${(localStatus === 5 || localStatus === 6) ? "opacity-50 !cursor-not-allowed pointer-events-none" : ""}`}
                             >
-                                <FileText className="h-4 w-4 text-brand opacity-80" /> Generate Flashcards
+                                <FileText className="h-4 w-4 text-brand opacity-80 shrink-0" /> Generate Flashcards
                             </DropdownMenuItem>
                         </>
                     )}
