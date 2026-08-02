@@ -45,33 +45,33 @@ interface FileUploaderProps {
     className?: string;
 }
 
-const FileUploader = ({ subjects: initialSubjects = [], className }: FileUploaderProps) => {
+const FileUploader = ({ subjects, className }: FileUploaderProps) => {
     const [isOpen, setIsOpen] = useState(false);
     const [files, setFiles] = useState<File[]>([]);
     const [fileSubjects, setFileSubjects] = useState<Record<string, string>>({});
     const [isUploading, setIsUploading] = useState(false);
-    const [subjectsList, setSubjectsList] = useState<Subject[]>(initialSubjects);
+    const [subjectsList, setSubjectsList] = useState<Subject[]>(subjects || []);
     const path = usePathname();
 
     React.useEffect(() => {
-        if (initialSubjects && initialSubjects.length > 0) {
-            setSubjectsList(initialSubjects);
+        if (subjects && subjects.length > 0) {
+            setSubjectsList(subjects);
         }
-    }, [initialSubjects]);
+    }, [subjects]);
 
     React.useEffect(() => {
         let isMounted = true;
-        if (isOpen && (!subjectsList || subjectsList.length === 0)) {
+        if (!subjects || subjects.length === 0) {
             getSubjects()
                 .then(res => {
                     if (isMounted && res && Array.isArray(res)) setSubjectsList(res);
                 })
-                .catch(err => console.error("Failed to load fallback subjects inside modal:", err));
+                .catch(err => console.error("Failed to load fallback subjects:", err));
         }
         return () => {
             isMounted = false;
         };
-    }, [isOpen, subjectsList]);
+    }, [subjects]);
 
     const onDrop = useCallback((acceptedFiles: File[]) => {
         const validFiles = acceptedFiles.filter(file => {
@@ -173,8 +173,17 @@ const FileUploader = ({ subjects: initialSubjects = [], className }: FileUploade
         <div className={cn("flex items-center", className)}>
             <Button
                 type="button"
-                onClick={() => setIsOpen(true)}
-                className="uploader-button py-6 px-7 rounded-full cursor-pointer flex items-center gap-2 shadow-sm"
+                onClick={() => {
+                    if (subjectsList && subjectsList.length > 0) {
+                        setIsOpen(true);
+                    } else {
+                        toast.error("Please create a subject first before uploading files.");
+                    }
+                }}
+                className={cn(
+                    "uploader-button py-6 px-7 rounded-full flex items-center gap-2 shadow-sm",
+                    (!subjectsList || subjectsList.length === 0) ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
+                )}
             >
                 <Image
                     src="/assets/icons/upload.svg"
