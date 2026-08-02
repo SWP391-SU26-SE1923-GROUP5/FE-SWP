@@ -22,6 +22,12 @@ export const actionsDropdownItems = [
         editOnly: true,
     },
     {
+        label: "Assign Subject",
+        icon: "/assets/icons/document.svg", 
+        value: "assign-subject",
+        editOnly: true,
+    },
+    {
         label: "Download",
         icon: "/assets/icons/download.svg",
         value: "download",

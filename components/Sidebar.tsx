@@ -8,7 +8,7 @@ import {cn} from "@/lib/utils";
 import {avatarPlaceholderUrl} from "@/constants/avatar";
 import { getMyStats } from "@/lib/actions/gamification.actions";
 import { UserStatsResponseDto } from "@/types";
-import { BarChart3, Bell, Trophy, Trash2, Sparkles } from "lucide-react";
+import { BarChart3, Bell, Trophy, Trash2, Sparkles, BookOpen } from "lucide-react";
 
 interface Props {
     fullName: string;
@@ -31,6 +31,9 @@ const renderNavIcon = (name: string, icon: string, isActive: boolean) => {
     }
     if (name === "AI Chat") {
         return <Sparkles className={cn("w-[22px] h-[22px] text-brand transition-colors shrink-0", isActive && "text-white")} />;
+    }
+    if (name === "Subjects") {
+        return <BookOpen className={cn("w-[22px] h-[22px] text-brand transition-colors shrink-0", isActive && "text-white")} />;
     }
     return (
         <Image

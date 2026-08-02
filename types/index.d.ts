@@ -147,6 +147,42 @@ export interface Subject extends BaseDocument {
     updatedAt?: string;
 }
 
+export interface SubjectResponseDto {
+    items: Subject[];
+    totalCount: number;
+    offset: number;
+    limit: number;
+}
+
+export interface GetSubjectsProps {
+    offset?: number;
+    limit?: number;
+    searchTerm?: string;
+    sortBy?: string;
+    isDescending?: boolean;
+}
+
+export interface CreateSubjectDto {
+    subjectCode: string;
+    subjectName: string;
+    description: string;
+}
+
+export interface UpdateSubjectDto {
+    id: string;
+    subjectCode: string;
+    subjectName: string;
+    description: string;
+}
+
+export interface ISubjectService {
+    getSubjects(props?: GetSubjectsProps): Promise<SubjectResponseDto>;
+    getSubjectById(id: string): Promise<Subject>;
+    createSubject(data: CreateSubjectDto): Promise<Subject>;
+    updateSubject(data: UpdateSubjectDto): Promise<Subject>;
+    deleteSubject(id: string): Promise<void>;
+}
+
 export interface GetFilesProps {
     types?: FileType[];
     searchText?: string;

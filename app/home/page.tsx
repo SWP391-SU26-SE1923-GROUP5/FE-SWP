@@ -6,6 +6,7 @@ import { Separator } from "@/components/ui/separator";
 import { getFiles, getTotalSpaceUsed, getSubjects } from "@/lib/actions/file.actions";
 import { convertFileSize, getUsageSummary } from "@/lib/utils";
 import { BookOpen } from "lucide-react";
+import SubjectFilter from "@/components/SubjectFilter";
 import FormattedDateTime from "@/components/FormattedDateTime";
 import Thumbnail from "@/components/Thumbnail";
 import { File_ } from "@/types";
@@ -49,7 +50,10 @@ const Dashboard = async ({ searchParams }: DashboardProps) => {
                 </ul>
             </section>
             <section className="dashboard-recent-files w-full">
-                <h2 className="h3 xl:h2 text-light-100">Recent files uploaded</h2>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between w-full gap-4 mb-2">
+                    <h2 className="h3 xl:h2 text-light-100">Recent files uploaded</h2>
+                    <SubjectFilter subjects={subjects || []} />
+                </div>
                 {files.documents.length > 0 ? (
                     <ul className="mt-5 flex flex-col gap-5">
                         {files.documents.map((file: File_) => {

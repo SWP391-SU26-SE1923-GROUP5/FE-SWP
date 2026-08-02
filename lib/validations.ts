@@ -73,3 +73,18 @@ export const ResetPasswordSchema = z.object({
     message: "Passwords do not match.",
     path: ["confirmPassword"]
 });
+
+export const SubjectSchema = z.object({
+    subjectCode: z
+        .string()
+        .min(1, { message: "Subject code is required." })
+        .max(20, { message: "Subject code must not exceed 20 characters." }),
+    subjectName: z
+        .string()
+        .min(1, { message: "Subject name is required." })
+        .max(255, { message: "Subject name must not exceed 255 characters." }),
+    description: z
+        .string()
+        .max(1000, { message: "Description must not exceed 1000 characters." })
+        .optional()
+});

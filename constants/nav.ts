@@ -43,6 +43,12 @@ export const navItems: NavItem[] = [
         section: "main",
     },
     {
+        name: "Subjects",
+        icon: "/assets/icons/book.svg",
+        url: "/subjects",
+        section: "main",
+    },
+    {
         name: "Analytics",
         icon: "/assets/icons/others.svg",
         url: "/analytics",
