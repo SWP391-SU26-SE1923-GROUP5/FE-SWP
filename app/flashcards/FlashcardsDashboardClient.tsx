@@ -4,6 +4,7 @@ import React, { useState, useMemo } from "react";
 import Link from "next/link";
 import { Layers, ArrowLeft, Sparkles, Clock, Award, BrainCircuit, Search, ArrowUpDown, Filter, X, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Play, Trash2, Loader2, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { parseAsUTC, formatDateGMT7 } from "@/lib/utils";
 import { deleteFlashcardDeck } from "@/lib/actions/ai.actions";
 import { toast } from "sonner";
 
@@ -131,9 +132,9 @@ export default function FlashcardsDashboardClient({ initialDecks, actualDueCount
                 return b.deckTitle.localeCompare(a.deckTitle);
             } else if (sortBy === "newest" || sortBy === "oldest") {
                 const getLatestDate = (d: DeckItem) => {
-                    if (d.createdAt) return new Date(d.createdAt).getTime();
+                    if (d.createdAt) return parseAsUTC(d.createdAt).getTime();
                     if (d.cards.length > 0 && d.cards[0].createdAt) {
-                        return Math.max(...d.cards.map((c: DashboardCard) => new Date(c.createdAt || 0).getTime()));
+                        return Math.max(...d.cards.map((c: DashboardCard) => parseAsUTC(c.createdAt || undefined).getTime()));
                     }
                     return 0;
                 };
@@ -522,7 +523,7 @@ export default function FlashcardsDashboardClient({ initialDecks, actualDueCount
                                                 <Clock className="h-3.5 w-3.5 shrink-0" />
                                                 <span>
                                                     Tạo ngày:{" "}
-                                                    {new Date(deck.createdAt || deck.cards[0]?.createdAt || new Date().toISOString()).toLocaleDateString('vi-VN', {
+                                                    {formatDateGMT7(deck.createdAt || deck.cards[0]?.createdAt || new Date().toISOString(), {
                                                         day: "2-digit",
                                                         month: "2-digit",
                                                         year: "numeric",

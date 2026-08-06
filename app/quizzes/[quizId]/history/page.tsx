@@ -1,5 +1,6 @@
 import React from "react";
 import Link from "next/link";
+import { formatDateGMT7 } from "@/lib/utils";
 import { getQuizById, getQuizHistory } from "@/lib/actions/ai.actions";
 import { ArrowLeft, History, Trophy, Award, Clock, CheckCircle2, XCircle, BarChart3, Play, ChevronRight } from "lucide-react";
 
@@ -36,15 +37,10 @@ export default async function QuizHistoryPage({ params }: Props) {
     }
 
     const formatDate = (dateStr?: string | null) => {
-        if (!dateStr) return "N/A";
-        try {
-            return new Intl.DateTimeFormat("en-US", {
-                dateStyle: "medium",
-                timeStyle: "short",
-            }).format(new Date(dateStr));
-        } catch {
-            return dateStr;
-        }
+        return formatDateGMT7(dateStr, {
+            dateStyle: "medium",
+            timeStyle: "short",
+        });
     };
 
     return (

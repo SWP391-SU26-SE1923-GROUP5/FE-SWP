@@ -39,15 +39,14 @@ const Page = async ({ searchParams, params }: SearchParamProps) => {
                         Total Size: <span className="h5 text-dark-200 font-bold ml-1">{convertFileSize(totalSizeInBytes)}</span>
                     </p>
 
-                    <div className="sort-container flex items-center gap-2">
-                        <p className="body-1 hidden sm:block text-slate-500">Sort by:</p>
+                    <div className="sort-container flex items-center gap-4">
                         <Sort subjects={subjects} />
                     </div>
                 </div>
             </section>
 
             {files.documents && files.documents.length > 0 ? (
-                <div className="flex flex-col flex-1 justify-between">
+                <div className="flex flex-col flex-1 justify-between w-full">
                     <section className="file-list grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 pb-28">
                         {files.documents.map((file: File_) => (
                             <Card key={file.id} file={file} />

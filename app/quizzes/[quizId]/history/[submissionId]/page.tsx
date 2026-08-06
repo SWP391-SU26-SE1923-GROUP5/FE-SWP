@@ -1,5 +1,7 @@
 import React from "react";
 import Link from "next/link";
+import { notFound } from "next/navigation";
+import { formatDateGMT7 } from "@/lib/utils";
 import { ArrowLeft, Clock, CheckCircle2, XCircle, Award, LayoutList } from "lucide-react";
 import { getQuizSubmissionDetail } from "@/lib/actions/ai.actions";
 
@@ -33,15 +35,11 @@ export default async function QuizSubmissionDetailPage({ params }: Props) {
         );
     }
 
-    const formatDate = (dateStr: string) => {
-        try {
-            return new Intl.DateTimeFormat("en-US", {
-                dateStyle: "medium",
-                timeStyle: "short",
-            }).format(new Date(dateStr));
-        } catch {
-            return dateStr;
-        }
+    const formatDate = (dateStr?: string | null) => {
+        return formatDateGMT7(dateStr, {
+            dateStyle: "medium",
+            timeStyle: "short",
+        });
     };
 
     const formatDuration = (seconds: number) => {

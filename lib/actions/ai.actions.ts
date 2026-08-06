@@ -166,25 +166,7 @@ export const sendChatMessage = async (
     };
 };
 
-export const deleteFlashcard = async (flashcardId: string): Promise<void> => {
-    const session = await auth();
-    if (!session?.accessToken) throw new Error("Unauthorized. Please log in.");
 
-    const response = await fetch(`${connection_url}/api/Flashcard/${flashcardId}`, {
-        method: 'DELETE',
-        headers: {
-            'Authorization': `Bearer ${session.accessToken}`,
-            'Content-Type': 'application/json',
-        },
-    });
-
-    if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(`[${response.status}] ${errorData?.message || "Failed to delete flashcard."}`);
-    }
-
-    revalidatePath("/flashcards");
-};
 
 export const deleteFlashcardDeck = async (deckId: string): Promise<void> => {
     const session = await auth();

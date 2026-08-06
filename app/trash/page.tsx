@@ -35,8 +35,9 @@ import {
     AlertDialogTitle,
     AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { getTrashFiles, restoreFile, permanentDeleteFile } from '@/lib/actions/file.actions';
-import { File_ } from '@/types';
+import { getTrashFiles, restoreFile, permanentDeleteFile, getSubjects } from '@/lib/actions/file.actions';
+import { File_, Subject } from '@/types';
+import { parseAsUTC, formatDateGMT7 } from '@/lib/utils';
 import Pagination from '@/components/Pagination';
 
 interface TrashItemView {
@@ -70,24 +71,27 @@ export default function TrashPage() {
     useEffect(() => {
         let isMounted = true;
         
-        getTrashFiles()
-            .then(data => {
+        Promise.all([getTrashFiles(), getSubjects()])
+            .then(([data, subjects]) => {
                 if (!isMounted) return;
                 const docs = data?.documents || [];
                 const mapped: TrashItemView[] = docs.map((doc: File_) => {
-                    const deletedTimestamp = doc.updatedAt ? new Date(doc.updatedAt).getTime() : Date.now();
+                    const deletedTimestamp = doc.updatedAt ? parseAsUTC(doc.updatedAt).getTime() : Date.now();
                     const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000;
                     const remainingMs = Math.max(0, (deletedTimestamp + thirtyDaysMs) - Date.now());
                     const daysRemaining = Math.max(1, Math.ceil(remainingMs / (24 * 60 * 60 * 1000)));
 
+                    const fileSubject = subjects?.find((s: Subject) => s.id === doc.subjectId);
+                    const subjectNameStr = doc.subjectName || doc.subject?.subjectName || fileSubject?.subjectName || fileSubject?.subjectCode || (doc.subjectId ? `Subject #${doc.subjectId.slice(0, 6)}` : 'General');
+
                     return {
                         id: doc.id,
                         name: doc.fileName || doc.title || 'Untitled file',
-                        subjectName: doc.subjectId ? `Subject #${doc.subjectId.slice(0, 6)}` : 'General',
+                        subjectName: subjectNameStr,
                         size: doc.fileSizeBytes || 0,
                         deletedAt: doc.updatedAt
-                            ? new Date(doc.updatedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
-                            : new Date().toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }),
+                            ? formatDateGMT7(doc.updatedAt, { month: 'short', day: 'numeric', year: 'numeric' })
+                            : formatDateGMT7(new Date(), { month: 'short', day: 'numeric', year: 'numeric' }),
                         deletedTimestamp,
                         daysRemaining,
                         url: doc.fileLink || ''
@@ -437,8 +441,9 @@ export default function TrashPage() {
                             return (
                                 <div
                                     key={file.id}
-                                    className="grid grid-cols-12 gap-4 px-6 py-4 items-center hover:bg-light-800/40 dark:hover:bg-dark-200/40 transition-colors group"
+                                    className="grid grid-cols-12 gap-4 px-6 py-4 items-center hover:bg-light-800/40 dark:hover:bg-dark-200/40 transition-colors group relative overflow-hidden"
                                 >
+                                    <div className="absolute left-0 top-0 bottom-0 w-1 bg-indigo-500" />
                                     <div className="col-span-12 sm:col-span-5 flex items-center gap-3.5 min-w-0">
                                         <Thumbnail
                                             type={type}
@@ -450,10 +455,9 @@ export default function TrashPage() {
                                             <p className="font-semibold text-dark100_light900 text-sm truncate group-hover:text-brand transition-colors" title={file.name}>
                                                 {file.name}
                                             </p>
-                                            <div className="flex items-center gap-2">
-                                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11px] font-medium bg-indigo-50 text-indigo-600 dark:bg-indigo-950/40 dark:text-indigo-400 border border-indigo-200/60 dark:border-indigo-800/60">
-                                                    <BookOpen className="h-3 w-3 shrink-0" />
-                                                    <span className="truncate max-w-[130px]">{file.subjectName}</span>
+                                            <div className="flex items-center gap-2 mt-0.5">
+                                                <span className="text-[11px] font-bold text-indigo-600 uppercase tracking-wider">
+                                                    {file.subjectName}
                                                 </span>
                                             </div>
                                         </div>
@@ -554,16 +558,18 @@ export default function TrashPage() {
                             return (
                                 <div
                                     key={file.id}
-                                    className={`group flex flex-col justify-between rounded-2xl bg-white dark:bg-dark-300 p-5 border transition-all duration-200 shadow-xs hover:shadow-md hover:-translate-y-0.5 ${
+                                    className={`group flex flex-col justify-between rounded-2xl bg-white dark:bg-dark-300 overflow-hidden border transition-all duration-200 shadow-xs hover:shadow-md hover:-translate-y-0.5 ${
                                         isUrgent ? 'border-red-500/40 dark:border-red-500/30' : 'border-light-700 dark:border-dark-400'
                                     }`}
                                 >
-                                    <div>
-                                        <div className="flex items-center justify-between gap-2 mb-3">
-                                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[11px] font-medium bg-indigo-50 text-indigo-600 dark:bg-indigo-950/40 dark:text-indigo-400 border border-indigo-200/60 truncate max-w-[140px]">
-                                                <BookOpen className="h-3 w-3 shrink-0" />
-                                                <span>{file.subjectName}</span>
-                                            </span>
+                                    <div className="w-full bg-indigo-50/80 dark:bg-indigo-950/30 border-b border-indigo-100 dark:border-indigo-900/50 px-5 py-2.5 flex items-center gap-2">
+                                        <BookOpen className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
+                                        <span className="text-[11px] font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider line-clamp-1">{file.subjectName}</span>
+                                    </div>
+
+                                    <div className="p-5 pt-4 flex flex-col flex-1">
+                                        <div className="flex items-center justify-end gap-2 mb-3">
+
                                             <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold ${
                                                 isUrgent ? 'bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20' : 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20'
                                             }`}>

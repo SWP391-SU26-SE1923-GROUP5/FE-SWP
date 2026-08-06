@@ -17,8 +17,14 @@ const Card = async ({ file, subjects }: { file: File_; subjects?: Subject[] }) =
     const { type, extension } = getFileType(file.fileName);
 
     return (
-        <FilePreviewWrapper file={file} className="file-card">
-            <div className="flex justify-between">
+        <FilePreviewWrapper file={file} className="file-card w-full p-0 flex flex-col">
+            <div className="w-full bg-indigo-50/80 border-b border-indigo-100 rounded-t-[18px] px-5 py-2.5 flex items-center gap-2">
+                <BookOpen className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
+                <span className="text-[11px] font-bold text-indigo-600 uppercase tracking-wider line-clamp-1">{subjectName}</span>
+            </div>
+
+            <div className="p-5 pt-4 flex flex-col gap-6 flex-1 w-full">
+                <div className="flex justify-between w-full">
                 <Thumbnail
                     type={type}
                     extension={extension}
@@ -34,21 +40,15 @@ const Card = async ({ file, subjects }: { file: File_; subjects?: Subject[] }) =
                 </div>
             </div>
 
-            <div className="file-card-details">
+            <div className="file-card-details w-full">
                 <p className="subtitle-2 line-clamp-1">{file.fileName}</p>
                 <FormattedDateTime
                     date={file.createdAt || ""}
                     className="body-2 text-light-100"
                 />
                 <p className="caption line-clamp-1 text-light-200">By: {owner?.fullName || "Unknown User"}</p>
-                <div className="mt-2.5 flex items-center gap-2 flex-wrap">
-                    <span className="px-3 py-1 rounded-[20px] text-[11px] font-medium bg-indigo-50 text-indigo-600 border border-indigo-200 flex items-center gap-1.5 shadow-drop-3">
-                        <BookOpen className="w-3 h-3 text-indigo-500 shrink-0" />
-                        <span className="line-clamp-1 max-w-[120px]">{subjectName}</span>
-                    </span>
-                </div>
             </div>
-
+            </div>
         </FilePreviewWrapper>
     )
 }

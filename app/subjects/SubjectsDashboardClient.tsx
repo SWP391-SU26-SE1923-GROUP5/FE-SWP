@@ -5,7 +5,8 @@ import Link from 'next/link';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { BookOpen, Search, Plus, MoreHorizontal, Edit, Trash2, Tag, Calendar, Database, ArrowLeft } from 'lucide-react';
 import { SubjectResponseDto, Subject } from '@/types';
-import { Button } from '@/components/ui/button';
+import { Button } from "@/components/ui/button";
+import { formatDateGMT7 } from "@/lib/utils";
 import { Input } from '@/components/ui/input';
 import { useDebounce } from 'use-debounce';
 import Pagination from '@/components/Pagination';
@@ -219,7 +220,7 @@ export default function SubjectsDashboardClient({
                                 <div className="mt-4 pt-4 border-t border-light-800 dark:border-dark-400 flex items-center justify-between text-xs font-semibold text-dark500_light400 shrink-0">
                                     <div className="flex items-center gap-1.5" title="Creation Date">
                                         <Calendar className="h-3.5 w-3.5" />
-                                        <span>{sub.createdAt ? new Date(sub.createdAt).toLocaleDateString() : 'N/A'}</span>
+                                        <span>{sub.createdAt ? formatDateGMT7(sub.createdAt) : 'N/A'}</span>
                                     </div>
                                     <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-500">
                                         <Database className="h-3.5 w-3.5" />

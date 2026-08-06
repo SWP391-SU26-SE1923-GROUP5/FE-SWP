@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { formatDateGMT7 } from '@/lib/utils';
 import Link from 'next/link';
 import {
   Trophy,
@@ -80,7 +81,7 @@ export default function ProfilePage() {
   const avatarChar = fullName.charAt(0).toUpperCase();
   const currentTierName = currentTier?.tierName || 'Free';
   const expireDateStr = currentTier?.tierExpireAt
-      ? new Date(currentTier.tierExpireAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
+      ? formatDateGMT7(currentTier.tierExpireAt, { year: 'numeric', month: 'short', day: 'numeric' })
       : 'No expiration';
 
   const storageLimit = currentTier?.storageLimitMb || 1024;

@@ -265,10 +265,13 @@ const Search = () => {
                         {query.trim().length > 0 && (
                             <li
                                 onClick={() => handleAISearch(query)}
-                                className="flex items-center gap-3 p-3 bg-brand-100/40 hover:bg-brand-100 text-brand font-medium cursor-pointer transition-colors border-b border-slate-100/80"
+                                className="flex items-center gap-3 p-3 bg-brand-100/40 hover:bg-brand-100 text-brand font-medium cursor-pointer transition-colors border-b border-slate-100/80 group"
                             >
-                                <Sparkles className="h-4 w-4 animate-pulse shrink-0" />
-                                <span className="text-sm line-clamp-1">Ask AI about &ldquo;{query}&rdquo;...</span>
+                                <Sparkles className="h-5 w-5 animate-pulse shrink-0" />
+                                <div className="flex-1 min-w-0 flex flex-col">
+                                    <span className="text-sm font-bold truncate">Ask AI</span>
+                                    <span className="text-xs opacity-80 truncate">Search for: &ldquo;{query}&rdquo;</span>
+                                </div>
                             </li>
                         )}
 
@@ -430,11 +433,11 @@ const Search = () => {
             <Dialog open={!!activeCitation} onOpenChange={(open) => !open && setActiveCitation(null)}>
                 <DialogContent className="sm:max-w-[80vw] h-[85vh] p-0 overflow-hidden rounded-2xl flex flex-col bg-white">
                     <DialogHeader className="px-6 py-4 border-b border-slate-100 flex-shrink-0 bg-slate-50/50">
-                        <DialogTitle className="flex items-center gap-3">
+                        <DialogTitle className="flex items-center gap-3 min-w-0 flex-1">
                             <div className="w-8 h-8 rounded-lg bg-brand/10 flex items-center justify-center shrink-0">
                                 <BookOpen className="h-4 w-4 text-brand" />
                             </div>
-                            <span className="text-base font-bold text-slate-800 line-clamp-1">
+                            <span className="text-base font-bold text-slate-800 line-clamp-1 truncate">
                                 {activeCitation?.source}
                             </span>
                         </DialogTitle>

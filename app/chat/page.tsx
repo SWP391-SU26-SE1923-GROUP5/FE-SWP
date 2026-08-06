@@ -18,6 +18,7 @@ import FileUploader from '@/components/FileUploader';
 import { toast } from 'sonner';
 import ApryseViewer from '@/components/ApryseViewer';
 import { File_ } from '@/types';
+import { parseAsUTC, formatDateGMT7 } from '@/lib/utils';
 
 interface LibraryFile {
     id: string;
@@ -138,7 +139,7 @@ export default function AIChatPage() {
             setIsLoading(p => ({ ...p, sessions: true }));
             try {
                 const data = await getUserSessions();
-                const sorted = data.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+                const sorted = data.sort((a, b) => parseAsUTC(b.createdAt).getTime() - parseAsUTC(a.createdAt).getTime());
                 setSessions(sorted);
 
                 if (sorted.length > 0) {
@@ -178,7 +179,7 @@ export default function AIChatPage() {
     const handleCreateNewNotebook = async () => {
         setIsLoading(p => ({ ...p, sessions: true }));
         try {
-            const newTitle = `AI Notebook ${new Date().toLocaleDateString()}`;
+            const newTitle = `AI Notebook ${formatDateGMT7(new Date())}`;
             const newSession = await createChatSession(newTitle);
 
             setSessions(prev => [newSession, ...prev]);
@@ -429,7 +430,7 @@ export default function AIChatPage() {
                                         {doc.title || doc.fileName || "Untitled Document"}
                                     </p>
                                     <p className="text-[10px] text-slate-400 truncate mt-0.5">
-                                        Added {new Date(doc.addedAt).toLocaleDateString()}
+                                        Added {formatDateGMT7(doc.addedAt)}
                                     </p>
                                 </div>
                             </div>

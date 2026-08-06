@@ -234,7 +234,7 @@ export default function FilePreviewWrapper({ file, children, className = "" }: P
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogContent className="max-w-5xl! w-full max-h-[90vh] p-6 overflow-hidden flex flex-col select-none">
           <DialogHeader className="mb-2 pb-3 border-b border-light-700 flex flex-row items-center justify-between">
-            <DialogTitle className="flex items-center gap-3 text-dark-200 text-lg font-bold truncate">
+            <DialogTitle className="flex items-center gap-3 text-dark-200 text-lg font-bold truncate min-w-0 flex-1">
               <Thumbnail type={computedType} extension={fileExt} url={file.fileLink} className="!size-8 shrink-0" />
               <span className="truncate">{file.fileName}</span>
             </DialogTitle>

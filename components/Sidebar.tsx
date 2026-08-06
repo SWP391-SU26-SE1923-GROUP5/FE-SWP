@@ -29,6 +29,9 @@ const renderNavIcon = (name: string, icon: string, isActive: boolean) => {
     if (name === "Trash Bin" || name === "Trash") {
         return <Trash2 className={cn("w-[22px] h-[22px] text-red-500/80 transition-colors shrink-0", isActive && "text-white")} />;
     }
+    if (name === "Subjects") {
+        return <BookOpen className={cn("w-[22px] h-[22px] text-indigo-500 transition-colors shrink-0", isActive && "text-white")} />;
+    }
     if (name === "AI Chat") {
         return <Sparkles className={cn("w-[22px] h-[22px] text-brand transition-colors shrink-0", isActive && "text-white")} />;
     }
@@ -198,7 +201,7 @@ const Sidebar = ({fullName, avatar, email}: Props) => {
                         height={40}
                         className="sidebar-user-avatar !w-9 !h-9"
                     />
-                    <div className="hidden lg:block truncate">
+                    <div className="hidden lg:block truncate min-w-0 flex-1">
                         <p className="subtitle-2 capitalize truncate leading-tight">{fullName}</p>
                         <p className="caption truncate text-slate-500">{email}</p>
                     </div>

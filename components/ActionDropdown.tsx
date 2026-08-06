@@ -45,6 +45,7 @@ import { ActionType, AiResultState, File_, Flashcard, QuizQuestion } from "@/typ
 import { actionsDropdownItems } from "@/constants/actionsDropdownItems";
 import { triggerDownload, parseSharedUsers } from "@/lib/utils";
 import { deleteFile, renameFile, updateFileUsers, revokeDocumentShare, getDocumentShares, getFileStatus, reprocessFile } from "@/lib/actions/file.actions";
+import { parseAsUTC } from "@/lib/utils";
 import {
     generateQuiz,
     generateFlashcards,
@@ -436,7 +437,7 @@ export default function ActionDropdown({ file }: { file: File_ }) {
 
                     if (matchedSessions.length > 0) {
                         docSessions = matchedSessions.sort(
-                            (a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
+                            (a, b) => parseAsUTC(b.createdAt || undefined).getTime() - parseAsUTC(a.createdAt || undefined).getTime()
                         );
                     }
                 }

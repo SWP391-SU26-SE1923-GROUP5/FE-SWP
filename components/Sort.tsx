@@ -10,6 +10,7 @@ import {
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { sortTypes } from "@/constants/sortTypes";
 import { Subject } from "@/types";
+import { Filter, ArrowUpDown } from "lucide-react";
 
 interface SortProps {
     subjects: Subject[];
@@ -42,10 +43,14 @@ const Sort = ({ subjects }: SortProps) => {
     };
 
     return (
-        <div className="flex flex-col sm:flex-row items-center gap-3">
+        <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
             <Select onValueChange={handleSubject} value={currentSubject}>
-                <SelectTrigger className="sort-select min-w-[200px]">
-                    <SelectValue placeholder="All Subjects" />
+                <SelectTrigger className="sort-select min-w-[220px]">
+                    <div className="flex items-center gap-2">
+                        <Filter className="h-4 w-4 text-brand shrink-0" />
+                        <span className="text-slate-500 font-medium hidden sm:inline">Subject:</span>
+                        <SelectValue placeholder="All Subjects" />
+                    </div>
                 </SelectTrigger>
                 <SelectContent className="sort-select-content max-h-[300px]">
                     <SelectItem className="shad-select-item" value="all">
@@ -64,8 +69,12 @@ const Sort = ({ subjects }: SortProps) => {
             </Select>
 
             <Select onValueChange={handleSort} value={currentSort}>
-                <SelectTrigger className="sort-select">
-                    <SelectValue placeholder={sortTypes[0].label} />
+                <SelectTrigger className="sort-select min-w-[220px]">
+                    <div className="flex items-center gap-2">
+                        <ArrowUpDown className="h-4 w-4 text-brand shrink-0" />
+                        <span className="text-slate-500 font-medium hidden sm:inline">Sort:</span>
+                        <SelectValue placeholder={sortTypes[0].label} />
+                    </div>
                 </SelectTrigger>
                 <SelectContent className="sort-select-content">
                     {sortTypes.map((sort) => (

@@ -19,6 +19,7 @@ import {
     markAllNotificationsAsRead
 } from '@/lib/actions/notification.actions';
 import { NotificationResponseDto } from '@/types';
+import { formatDateGMT7 } from "@/lib/utils";
 import Pagination from '@/components/Pagination';
 
 export default function NotificationsPage() {
@@ -214,7 +215,7 @@ export default function NotificationsPage() {
                     {paginatedNotifications.map((item) => {
                         const style = getNotificationStyle(item.type, item.message);
                         const dateStr = item.createdAt
-                            ? new Date(item.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+                            ? formatDateGMT7(item.createdAt, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
                             : 'Just now';
 
                         return (

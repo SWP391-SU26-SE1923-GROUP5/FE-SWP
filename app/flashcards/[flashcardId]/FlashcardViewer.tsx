@@ -1,18 +1,17 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { RotateCcw, Trash2, ArrowLeft, ChevronLeft, ChevronRight, Clock } from "lucide-react";
+import { RotateCcw, ArrowLeft, ChevronLeft, ChevronRight, Clock } from "lucide-react";
 import { Flashcard } from "@/types";
-import { deleteFlashcard, submitFlashcardReview } from "@/lib/actions/ai.actions";
+import { submitFlashcardReview } from "@/lib/actions/ai.actions";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { formatDateGMT7 } from "@/lib/utils";
 
-export default function FlashcardViewer({ cards: initialCards }: { cards: Flashcard[] }) {
-    const [cards, setCards] = useState<Flashcard[]>(initialCards);
+export default function FlashcardViewer({ cards }: { cards: Flashcard[] }) {
     const [currentIndex, setCurrentIndex] = useState(0);
     const [isFlipped, setIsFlipped] = useState(false);
-    const [isDeleting, setIsDeleting] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [lastSchedule, setLastSchedule] = useState<{ interval: number; date: string } | null>(null);
     const [cardSeconds, setCardSeconds] = useState(0);
@@ -20,12 +19,12 @@ export default function FlashcardViewer({ cards: initialCards }: { cards: Flashc
 
     useEffect(() => {
         const interval = setInterval(() => {
-            if (!isSubmitting && !isDeleting) {
+            if (!isSubmitting) {
                 setCardSeconds((prev) => prev + 1);
             }
         }, 1000);
         return () => clearInterval(interval);
-    }, [isSubmitting, isDeleting]);
+    }, [isSubmitting]);
 
     const formatTime = (secs: number) => {
         const m = Math.floor(secs / 60);
@@ -62,25 +61,6 @@ export default function FlashcardViewer({ cards: initialCards }: { cards: Flashc
         }
     };
 
-    const handleDelete = async () => {
-        try {
-            setIsDeleting(true);
-            await deleteFlashcard(currentCard.id);
-
-            const updatedCards = cards.filter((_, index) => index !== currentIndex);
-            setCards(updatedCards);
-
-            if (currentIndex >= updatedCards.length && updatedCards.length > 0) {
-                setCurrentIndex(updatedCards.length - 1);
-            }
-            setIsFlipped(false);
-        } catch (error) {
-            console.error("Failed to delete flashcard:", error);
-        } finally {
-            setIsDeleting(false);
-        }
-    };
-
     interface ReviewResponse {
         review?: { interval?: number; nextReviewDate?: string };
         Review?: { interval?: number; nextReviewDate?: string };
@@ -96,7 +76,7 @@ export default function FlashcardViewer({ cards: initialCards }: { cards: Flashc
             const res = await submitFlashcardReview(currentCard.id, quality, timeSpent) as ReviewResponse;
             const rev = res?.review || res?.Review;
             if (rev && typeof rev.interval !== "undefined") {
-                const dateStr = rev.nextReviewDate ? new Date(rev.nextReviewDate).toLocaleDateString() : "";
+                const dateStr = rev.nextReviewDate ? formatDateGMT7(rev.nextReviewDate) : "";
                 setLastSchedule({ interval: rev.interval, date: dateStr });
                 const scheduleMsg = rev.interval <= 1 ? " • Next: Tomorrow" : ` • Next in ${rev.interval} days`;
                 const xpMsg = (res?.xpEarned ?? 0) > 0 ? ` (+${res.xpEarned} XP)` : "";
@@ -139,15 +119,6 @@ export default function FlashcardViewer({ cards: initialCards }: { cards: Flashc
                         <span>{formatTime(cardSeconds)}</span>
                     </div>
                 </div>
-
-                <Button
-                    variant="destructive"
-                    onClick={handleDelete}
-                    disabled={isDeleting}
-                    className="flex items-center gap-2 rounded-full cursor-pointer"
-                >
-                    <Trash2 className="h-4 w-4" /> {isDeleting ? "Deleting..." : "Delete"}
-                </Button>
             </div>
 
             {lastSchedule && (

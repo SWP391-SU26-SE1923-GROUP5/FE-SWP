@@ -4,6 +4,14 @@
 
 @plugin "@tailwindcss/typography";
 
+@layer base {
+  button {
+    @apply cursor-pointer disabled:cursor-not-allowed;
+  }
+}
+
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
     /* Colors */
     --color-primary-100: #ecfdf5;
@@ -612,10 +620,10 @@
     @apply relative w-full md:max-w-[480px];
 }
 @utility search-input-wrapper {
-    @apply flex h-[52px] flex-1 items-center gap-3 rounded-full px-4 shadow-drop-3;
+    @apply flex h-[52px] flex-1 items-center gap-3 rounded-full px-4 shadow-sm bg-slate-50 border border-slate-200 transition-all duration-300 focus-within:bg-white focus-within:border-brand focus-within:ring-4 focus-within:ring-brand/10 hover:border-slate-300;
 }
 @utility search-input {
-    @apply body-2 shad-no-focus placeholder:body-1 w-full border-none p-0 shadow-none placeholder:text-light-200;
+    @apply body-2 shad-no-focus placeholder:body-1 w-full border-none p-0 shadow-none bg-transparent placeholder:text-light-200 focus:outline-none focus-visible:ring-0 focus-visible:ring-offset-0;
 }
 @utility search-result {
     @apply absolute left-0 top-16 z-50 flex w-full flex-col gap-3 rounded-[20px] bg-white p-4;

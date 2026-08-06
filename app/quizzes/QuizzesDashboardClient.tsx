@@ -3,6 +3,7 @@
 import React, { useState, useMemo } from "react";
 import Link from "next/link";
 import { BrainCircuit, Clock, ArrowLeft, Trash2, Search, ArrowUpDown, History, Play, Filter, X, Calendar, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, FileText } from "lucide-react";
+import { parseAsUTC, formatDateGMT7 } from "@/lib/utils";
 import { QuizRecord } from "@/types";
 import { deleteQuiz } from "@/lib/actions/ai.actions";
 import { toast } from "sonner";
@@ -49,16 +50,16 @@ export default function QuizzesDashboardClient({ initialDocumentQuizzes }: Props
             const now = new Date().getTime();
             const daysMs = timeFilter === "7d" ? 7 * 24 * 60 * 60 * 1000 : 30 * 24 * 60 * 60 * 1000;
             result = result.filter((q) => {
-                const createdTime = new Date(q.createdAt).getTime();
+                const createdTime = parseAsUTC(q.createdAt).getTime();
                 return now - createdTime <= daysMs;
             });
         }
 
         result.sort((a, b) => {
             if (sortBy === "newest") {
-                return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+                return parseAsUTC(b.createdAt).getTime() - parseAsUTC(a.createdAt).getTime();
             } else if (sortBy === "oldest") {
-                return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+                return parseAsUTC(a.createdAt).getTime() - parseAsUTC(b.createdAt).getTime();
             } else if (sortBy === "title-asc") {
                 return (a.title || "").localeCompare(b.title || "");
             } else if (sortBy === "title-desc") {
@@ -384,7 +385,7 @@ export default function QuizzesDashboardClient({ initialDocumentQuizzes }: Props
                                             <Clock className="h-3.5 w-3.5" />
                                             <span>
                                                 Tạo ngày:{" "}
-                                                {new Date(quiz.createdAt).toLocaleDateString('vi-VN', {
+                                                {formatDateGMT7(quiz.createdAt, {
                                                     day: "2-digit",
                                                     month: "2-digit",
                                                     year: "numeric",

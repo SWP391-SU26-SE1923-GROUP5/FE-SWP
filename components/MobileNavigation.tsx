@@ -17,7 +17,8 @@ import {cn} from "@/lib/utils";
 import {Button} from "@/components/ui/button";
 import FileUploader from "@/components/FileUploader";
 import {signOutUser} from "@/lib/actions/user.actions";
-import { BarChart3, Bell, Trophy, Trash2, BrainCircuit, FileText } from "lucide-react";
+import { BarChart3, Bell, Trophy, Trash2, BrainCircuit, FileText, BookOpen } from "lucide-react";
+import Search from "@/components/Search";
 
 interface Props {
     fullName: string;
@@ -37,6 +38,9 @@ const renderNavIcon = (name: string, icon: string, isActive: boolean) => {
     }
     if (name === "Trash Bin" || name === "Trash") {
         return <Trash2 className={cn("w-[24px] h-[24px] text-red-500/80 transition-colors shrink-0", isActive && "text-white")} />;
+    }
+    if (name === "Subjects") {
+        return <BookOpen className={cn("w-[24px] h-[24px] text-indigo-500 transition-colors shrink-0", isActive && "text-white")} />;
     }
     return (
         <Image
@@ -89,12 +93,12 @@ const MobileNavigation = ({fullName, avatar, email}: Props) => {
                                 className="header-user-avatar"
                             />
 
-                            <div className="sm:hidden lg:block">
-                                <p className="subtitle-2 capitalize">
+                            <div className="sm:hidden lg:block truncate min-w-0 flex-1">
+                                <p className="subtitle-2 capitalize truncate">
                                     {fullName}
                                 </p>
 
-                                <p className="caption">
+                                <p className="caption truncate">
                                     {email}
                                 </p>
                             </div>
@@ -102,6 +106,10 @@ const MobileNavigation = ({fullName, avatar, email}: Props) => {
 
                         <Separator className="mb-4 bg-light-200/20"/>
                     </SheetTitle>
+
+                    <div className="px-1 mb-6">
+                        <Search />
+                    </div>
 
                     <nav className="mobile-nav space-y-4">
                         <div>
