@@ -4,7 +4,6 @@ import React, { useState, useRef, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { File_ } from "@/types";
-import { previewFile, downloadFile } from "@/lib/actions/file.actions";
 import { getFileType } from "@/lib/utils";
 import Thumbnail from "@/components/Thumbnail";
 import ApryseViewer from "@/components/ApryseViewer";
@@ -103,25 +102,14 @@ export default function FilePreviewWrapper({ file, children, className = "" }: P
   };
 
   const handleMouseEnter = () => {
-    hoverTimeoutRef.current = setTimeout(() => {
-      setPreviewPosition(computePreviewPosition());
-      setIsHovered(true);
-      if (!previewUrl && !isOffice) {
-        setIsLoadingPreview(true);
-        previewFile({ fileId: file.id })
-          .then((res) => {
-            if (res?.data) {
-              const mime = getMimeType(fileExt, res.contentType || file.fileType);
-              const url = base64ToBlobUrl(res.data, mime);
-              previewBlobRef.current = url;
-              setPreviewUrl(url);
-            }
-          })
-          .catch((err) => console.error("Preview document fetch failed", err))
-          .finally(() => setIsLoadingPreview(false));
-      }
-    }, 300);
-  };
+      hoverTimeoutRef.current = setTimeout(() => {
+        setPreviewPosition(computePreviewPosition());
+        setIsHovered(true);
+        if (!previewUrl && !isOffice) {
+          setPreviewUrl(`/api/files/${file.id}/preview`);
+        }
+      }, 300);
+    };
 
   const handleMouseLeave = () => {
     if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
@@ -129,7 +117,7 @@ export default function FilePreviewWrapper({ file, children, className = "" }: P
   };
 
   const handleOpenRealDoc = async (e: React.MouseEvent) => {
-    if ((e.target as HTMLElement).closest('[role="menuitem"], [role="button"], button, .shad-no-focus')) {
+    if ((e.target as HTMLElement).closest('[role="menuitem"], [role="menu"], [role="dialog"], [role="button"], button, .shad-no-focus')) {
       return;
     }
     if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
@@ -137,21 +125,7 @@ export default function FilePreviewWrapper({ file, children, className = "" }: P
     setIsOpen(true);
 
     if (!realDocUrl && !isOffice && !isPdf) {
-      setIsLoadingRealDoc(true);
-      try {
-        const res = await downloadFile({ fileId: file.id });
-        if (res?.data) {
-          const mime = getMimeType(fileExt, res.contentType || file.fileType);
-          const url = base64ToBlobUrl(res.data, mime);
-          realBlobRef.current = url;
-          setRealDocUrl(url);
-        }
-      } catch (error) {
-        console.error("Failed to load real document:", error);
-        toast.error("Could not load real document.");
-      } finally {
-        setIsLoadingRealDoc(false);
-      }
+      setRealDocUrl(`/api/files/${file.id}/download`);
     }
   };
 
@@ -192,7 +166,7 @@ export default function FilePreviewWrapper({ file, children, className = "" }: P
 
         {isHovered && (
           <div
-            onClick={(e) => e.stopPropagation()}
+            onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
             className={`absolute z-50 ${positionClasses[previewPosition]} ${bridgePadding[previewPosition]}`}
           >
             <div className={`w-[300px] h-[280px] p-2 bg-white/95 backdrop-blur-sm rounded-2xl shadow-2xl border border-slate-200/80 flex flex-col items-center justify-center overflow-hidden relative ${slideAnim[previewPosition]}`}>
@@ -231,8 +205,8 @@ export default function FilePreviewWrapper({ file, children, className = "" }: P
         )}
       </div>
 
-      <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogContent className="max-w-5xl! w-full max-h-[90vh] p-6 overflow-hidden flex flex-col select-none">
+      <Dialog open={isOpen} onOpenChange={setIsOpen} modal={false}>
+        <DialogContent onInteractOutside={(e) => e.preventDefault()} className="max-w-5xl! w-full max-h-[90vh] p-6 overflow-y-auto custom-scrollbar flex flex-col select-none">
           <DialogHeader className="mb-2 pb-3 border-b border-light-700 flex flex-row items-center justify-between">
             <DialogTitle className="flex items-center gap-3 text-dark-200 text-lg font-bold truncate min-w-0 flex-1">
               <Thumbnail type={computedType} extension={fileExt} url={file.fileLink} className="!size-8 shrink-0" />
@@ -276,10 +250,8 @@ export default function FilePreviewWrapper({ file, children, className = "" }: P
                   <Thumbnail type="audio" extension={fileExt} url={file.fileLink} className="!size-20" />
                   <audio src={realDocUrl} controls controlsList="nodownload" autoPlay className="w-full shadow-sm" />
                 </div>
-              ) : isPdf ? (
-                <iframe src={`${realDocUrl}#toolbar=0`} className="w-full h-[72vh] border-0 rounded-lg" />
               ) : (
-                <p className="text-slate-500 text-sm">Real document loaded.</p>
+                <iframe src={`${realDocUrl}#toolbar=0`} className="w-full h-[72vh] border-0 rounded-lg bg-white" />
               )
             ) : (
               <div className="flex flex-col items-center justify-center gap-3 py-20 text-slate-500">

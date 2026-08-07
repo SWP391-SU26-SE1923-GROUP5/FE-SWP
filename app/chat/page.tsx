@@ -299,7 +299,7 @@ export default function AIChatPage() {
 
         try {
             if (sessionDocuments.length === 0) {
-                toast.warning("No sources in this notebook. AI response will be general.");
+                toast.warning("No documents attached. The AI's response will be generalized.");
             }
             const aiResponse = await sendChatMessage(currentSessionId, content);
             setMessages(prev => [...prev, aiResponse]);
@@ -421,7 +421,8 @@ export default function AIChatPage() {
                     sessionDocuments.map(doc => (
                         <div
                             key={doc.documentId}
-                            className="flex items-center justify-between p-3 rounded-xl border border-light-700 dark:border-dark-400 bg-white dark:bg-dark-300 shadow-2xs group hover:border-brand/40 transition-colors"
+                            onClick={() => setActiveCitation({ docId: doc.documentId })}
+                            className="flex items-center justify-between p-3 rounded-xl border border-light-700 dark:border-dark-400 bg-white dark:bg-dark-300 shadow-2xs group hover:border-brand/40 transition-colors cursor-pointer"
                         >
                             <div className="flex items-center gap-3 flex-1 min-w-0">
                                 <FileText className="w-5 h-5 text-brand shrink-0" />
@@ -435,7 +436,10 @@ export default function AIChatPage() {
                                 </div>
                             </div>
                             <button
-                                onClick={() => handleRemoveSource(doc.documentId)}
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleRemoveSource(doc.documentId);
+                                }}
                                 className="p-1.5 ml-2 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg transition-colors cursor-pointer shrink-0"
                                 title="Remove from Session"
                             >

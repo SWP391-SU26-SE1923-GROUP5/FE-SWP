@@ -32,7 +32,14 @@ const Page = async ({ searchParams, params }: SearchParamProps) => {
     return (
         <div className="page-container flex flex-col flex-1 h-full">
             <section className="w-full">
-                <h1 className="h1 capitalize text-dark-200">{type}</h1>
+                <h1 className="h1 capitalize text-dark-200">
+                    {type}
+                    {files.total !== undefined && (
+                        <span className="text-lg font-normal text-slate-400 ml-2">
+                            (Showing {files.documents.length} of {files.total} files)
+                        </span>
+                    )}
+                </h1>
 
                 <div className="total-size-section mt-4 mb-6">
                     <p className="body-1 text-slate-500">
@@ -47,16 +54,13 @@ const Page = async ({ searchParams, params }: SearchParamProps) => {
 
             {files.documents && files.documents.length > 0 ? (
                 <div className="flex flex-col flex-1 justify-between w-full">
-                    <section className="file-list grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 pb-28">
+                    <section className="file-list grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 pb-6">
                         {files.documents.map((file: File_) => (
                             <Card key={file.id} file={file} />
                         ))}
                     </section>
 
-                    <div 
-                        className="w-full sticky bottom-0 pt-10 pb-4 z-10"
-                        style={{ background: 'linear-gradient(to top, var(--color-light-300) 0%, var(--color-light-300) 70%, transparent 100%)' }}
-                    >
+                    <div className="w-full mt-auto pt-4 pb-8 z-10 flex justify-center">
                         <Pagination
                             page={page}
                             totalPages={totalPages}
@@ -67,7 +71,7 @@ const Page = async ({ searchParams, params }: SearchParamProps) => {
                 </div>
             ) : (
                 <div className="w-full flex flex-col items-center justify-center flex-1 py-16 text-center bg-slate-50/50 border border-dashed border-slate-200 rounded-3xl mt-4">
-                    <p className="text-base font-semibold text-slate-600 mb-1">No {type} found</p>
+                    <p className="text-base font-semibold text-slate-600 mb-1">No {type.toLowerCase()} found</p>
                     <p className="text-xs text-slate-400">Upload new documents using the upload button above.</p>
                 </div>
             )}

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { File_ } from "@/types";
-import { downloadFile, updateEditedFile } from "@/lib/actions/file.actions";
+import { updateEditedFile } from "@/lib/actions/file.actions";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Loader2, Save, FileText, Shield, Pencil } from "lucide-react";
@@ -67,20 +67,7 @@ export default function ApryseViewer({ file, path, closeModals, readOnly = false
         if (instanceRef.current) return;
         instanceRef.current = "initializing";
 
-        downloadFile({ fileId: file.id })
-            .then((result) => {
-                if (!isMounted) return;
-                const binaryString = window.atob(result.data);
-                const bytes = new Uint8Array(binaryString.length);
-                for (let i = 0; i < binaryString.length; i++) {
-                    bytes[i] = binaryString.charCodeAt(i);
-                }
-
-                const blob = new Blob([bytes], { type: 'application/octet-stream' });
-                blobUrlRef.current = window.URL.createObjectURL(blob);
-
-                return import('@pdftron/webviewer');
-            })
+        import('@pdftron/webviewer')
             .then((webviewerModule) => {
                 if (!isMounted || !webviewerModule) return;
                 const WebViewer = webviewerModule.default;
@@ -89,7 +76,7 @@ export default function ApryseViewer({ file, path, closeModals, readOnly = false
                 if (viewer.current) {
                     const options: Record<string, unknown> = {
                         path: '/lib/webviewer',
-                        initialDoc: blobUrlRef.current ?? "",
+                        initialDoc: `/api/files/${file.id}/download`,
                         extension: ext,
                         enableOfficeEditing: !readOnly,
                         isReadOnly: readOnly,

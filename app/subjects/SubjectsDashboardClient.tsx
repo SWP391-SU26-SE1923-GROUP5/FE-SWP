@@ -134,6 +134,11 @@ export default function SubjectsDashboardClient({
                     <div>
                         <h1 className="h1 capitalize text-dark100_light900 font-bold">
                             Subjects
+                            {initialData.totalCount !== undefined && (
+                                <span className="text-lg font-normal text-slate-400 ml-2">
+                                    ({initialData.totalCount} subjects total)
+                                </span>
+                            )}
                         </h1>
                         <p className="text-sm text-dark500_light400 mt-1">
                             Organize your study files into distinct subjects.

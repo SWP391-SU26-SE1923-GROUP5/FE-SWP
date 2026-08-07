@@ -610,6 +610,8 @@ export default function ActionDropdown({ file }: { file: File_ }) {
 
         return (
             <DialogContent
+                onInteractOutside={(e) => e.preventDefault()}
+                onClick={(e) => e.stopPropagation()}
                 className={`p-6 sm:p-8 ${
                     value === "edit" || isAiAction
                         ? "max-w-5xl! w-full max-h-[90vh] overflow-y-auto custom-scrollbar"
@@ -1028,7 +1030,7 @@ export default function ActionDropdown({ file }: { file: File_ }) {
     };
 
     return (
-        <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+        <Dialog open={isModalOpen} onOpenChange={setIsModalOpen} modal={action?.value !== "edit"}>
             <DropdownMenu open={isDropdownOpen} onOpenChange={(open) => {
                 handleDropdownOpen(open);
                 if (open && !isOwner) fetchAccessLevel();

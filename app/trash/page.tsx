@@ -171,7 +171,7 @@ export default function TrashPage() {
         try {
             await restoreFile({ fileId: id, path: '/trash' });
             setTrashFiles(prev => prev.filter(f => f.id !== id));
-            toast.success(`Restored "${name}" successfully. Storage quota has been refunded!`);
+            toast.success(`Restored "${name}" successfully. Storage space has been reclaimed.`);
         } catch (error) {
             toast.error((error as Error)?.message || `Failed to restore "${name}".`);
         } finally {
@@ -236,7 +236,7 @@ export default function TrashPage() {
                         <div className="flex items-center gap-2.5">
                             <h1 className="h2 text-dark100_light900 font-bold">Trash Bin</h1>
                             <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20">
-                                {trashFiles.length} {trashFiles.length === 1 ? 'document' : 'documents'}
+                                {trashFiles.length} {trashFiles.length === 1 ? 'item' : 'items'}
                             </span>
                         </div>
                         <p className="caption text-dark500_light400 mt-0.5">
@@ -370,9 +370,9 @@ export default function TrashPage() {
                     <div className="flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500/10 text-brand mb-4">
                         <CheckCircle2 className="h-8 w-8" />
                     </div>
-                    <h3 className="h3 font-bold text-dark100_light900 mb-1.5">Your Trash Bin is Clean</h3>
+                    <h3 className="h3 font-bold text-dark100_light900 mb-1.5">Your Trash Bin is Empty</h3>
                     <p className="caption text-dark500_light400 max-w-md mb-6 leading-relaxed">
-                        There are no deleted documents occupying your storage quota. When you remove items from your subjects, they will appear here for 30 days before permanent automatic purge.
+                        There are no deleted documents occupying your storage quota. When you remove items from your subjects, they will appear here for 30 days before being permanently deleted.
                     </p>
                     <Link href="/home">
                         <Button className="primary-btn h-10 px-6 text-xs rounded-xl cursor-pointer">
@@ -535,7 +535,7 @@ export default function TrashPage() {
                         })}
                     </div>
 
-                    <div className="px-6 pb-4">
+                    <div className="w-full mt-auto px-6 pt-4 pb-8 z-10 flex justify-center">
                         <Pagination
                             page={currentPage}
                             totalPages={totalPages}
@@ -648,10 +648,7 @@ export default function TrashPage() {
                         })}
                     </div>
 
-                    <div 
-                        className="sticky bottom-0 px-6 pt-10 pb-4 z-10"
-                        style={{ background: 'linear-gradient(to top, var(--color-light-300) 0%, var(--color-light-300) 70%, transparent 100%)' }}
-                    >
+                    <div className="w-full mt-auto px-6 pt-4 pb-8 z-10 flex justify-center">
                         <Pagination
                             page={currentPage}
                             totalPages={totalPages}

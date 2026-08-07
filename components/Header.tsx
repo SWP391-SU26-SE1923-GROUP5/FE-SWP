@@ -6,6 +6,7 @@ import Search from "@/components/Search";
 import FileUploader from "@/components/FileUploader";
 import { signOutUser } from "@/lib/actions/user.actions";
 import { getSubjects } from "@/lib/actions/file.actions";
+import HeaderNotifications from "@/components/HeaderNotifications";
 
 const Header = async () => {
     const subjects = await getSubjects();
@@ -15,6 +16,8 @@ const Header = async () => {
             <Search />
 
             <div className="header-wrapper flex items-center gap-4">
+                <HeaderNotifications />
+                
                 <Link href="/quizzes">
                     <Button
                         className="flex items-center gap-2 rounded-full py-6 px-5 border border-slate-200 bg-white text-brand [&:hover]:bg-slate-100 [&:hover]:text-brand transition-colors cursor-pointer shadow-sm"

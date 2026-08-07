@@ -37,7 +37,13 @@ const ALLOWED_EXTENSIONS = [
     ".mp3", "mp3",
     ".wav", "wav",
     ".ogg", "ogg",
-    ".m4a", "m4a"
+    ".m4a", "m4a",
+    ".xlsx", "xlsx",
+    ".xls", "xls",
+    ".pptx", "pptx",
+    ".ppt", "ppt",
+    ".csv", "csv",
+    ".json", "json"
 ];
 
 interface FileUploaderProps {
@@ -82,7 +88,7 @@ const FileUploader = ({ subjects, className }: FileUploaderProps) => {
 
             const fileNameParts = file.name.split('.');
             if (fileNameParts.length < 2) {
-                toast.error(`${file.name} has no valid extension.`);
+                toast.error(`${file.name} has an unsupported or missing format.`);
                 return false;
             }
             
