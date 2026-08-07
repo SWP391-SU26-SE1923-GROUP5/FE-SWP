@@ -15,19 +15,19 @@ export const actionsDropdownItems = [
         icon: "/assets/icons/edit.svg",
         value: "edit",
     },
-    {
-        label: "Share",
-        icon: "/assets/icons/share.svg",
-        value: "share",
-        editOnly: true,
-    },
+    // {
+    //     label: "Share",
+    //     icon: "/assets/icons/share.svg",
+    //     value: "share",
+    //     editOnly: true,
+    // },
     {
         label: "Download",
         icon: "/assets/icons/download.svg",
         value: "download",
     },
     {
-        label: "Delete",
+        label: "Move to Trash",
         icon: "/assets/icons/delete.svg",
         value: "delete",
         editOnly: true,

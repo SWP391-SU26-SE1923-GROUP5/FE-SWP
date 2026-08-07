@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { formatDateGMT7 } from "@/lib/utils";
 import { ArrowLeft, Clock, CheckCircle2, XCircle, Award, LayoutList } from "lucide-react";
 import { getQuizSubmissionDetail } from "@/lib/actions/ai.actions";
+import { QuizSubmissionDetailResponse } from "@/types";
 
 type Props = {
     params: Promise<{
@@ -15,7 +16,9 @@ type Props = {
 export default async function QuizSubmissionDetailPage({ params }: Props) {
     const { quizId, submissionId } = await params;
 
-    const detail = await getQuizSubmissionDetail(submissionId).catch(() => null);
+    const detailRes = await getQuizSubmissionDetail(submissionId).catch(() => null);
+    if (detailRes && 'error' in detailRes) throw new Error(detailRes.error);
+    const detail = detailRes as QuizSubmissionDetailResponse | null;
 
     if (!detail) {
         return (

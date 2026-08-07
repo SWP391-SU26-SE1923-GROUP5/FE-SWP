@@ -138,7 +138,10 @@ export default function AIChatPage() {
         const initSessions = async () => {
             setIsLoading(p => ({ ...p, sessions: true }));
             try {
-                const data = await getUserSessions();
+                const dataRes = await getUserSessions();
+                if (dataRes && 'error' in dataRes) throw new Error(dataRes.error);
+                const data = dataRes as ChatSession[];
+                
                 const sorted = data.sort((a, b) => parseAsUTC(b.createdAt).getTime() - parseAsUTC(a.createdAt).getTime());
                 setSessions(sorted);
 
@@ -163,10 +166,14 @@ export default function AIChatPage() {
         setCurrentSessionId(sessionId);
         setIsLoading(p => ({ ...p, messages: true, sources: true, sessions: false }));
         try {
-            const [docs, msgs] = await Promise.all([
+            const [docsRes, msgsRes] = await Promise.all([
                 getSessionDocuments(sessionId).catch(() => []),
                 getSessionMessages(sessionId).catch(() => [])
             ]);
+            
+            const docs = (Array.isArray(docsRes) ? docsRes : []) as ChatSessionDocument[];
+            const msgs = (Array.isArray(msgsRes) ? msgsRes : []) as ChatMessage[];
+            
             setSessionDocuments(docs);
             setMessages(msgs);
         } catch (error) {
@@ -180,7 +187,9 @@ export default function AIChatPage() {
         setIsLoading(p => ({ ...p, sessions: true }));
         try {
             const newTitle = `AI Notebook ${formatDateGMT7(new Date())}`;
-            const newSession = await createChatSession(newTitle);
+            const newSessionRes = await createChatSession(newTitle);
+            if (newSessionRes && 'error' in newSessionRes) throw new Error(newSessionRes.error);
+            const newSession = newSessionRes as ChatSession;
 
             setSessions(prev => [newSession, ...prev]);
             await handleSelectSession(newSession.id);
@@ -195,7 +204,9 @@ export default function AIChatPage() {
         if (!currentSessionId || !renameTitleInput.trim()) return;
         setIsLoading(p => ({ ...p, action: true }));
         try {
-            const updatedSession = await renameChatSession(currentSessionId, renameTitleInput.trim());
+            const updatedSessionRes = await renameChatSession(currentSessionId, renameTitleInput.trim());
+            if (updatedSessionRes && 'error' in updatedSessionRes) throw new Error(updatedSessionRes.error);
+            const updatedSession = updatedSessionRes as ChatSession;
             setSessions(prev => prev.map(s => s.id === currentSessionId ? updatedSession : s));
             setModalState(p => ({ ...p, rename: false }));
             toast.success("Notebook renamed!");
@@ -210,7 +221,9 @@ export default function AIChatPage() {
         if (!currentSessionId) return;
         setIsLoading(p => ({ ...p, action: true }));
         try {
-            await deleteChatSession(currentSessionId);
+            const deleteRes = await deleteChatSession(currentSessionId);
+            if (deleteRes && typeof deleteRes === 'object' && 'error' in deleteRes) throw new Error(deleteRes.error);
+            
             const remaining = sessions.filter(s => s.id !== currentSessionId);
             setSessions(remaining);
             setModalState(p => ({ ...p, delete: false }));
@@ -234,7 +247,9 @@ export default function AIChatPage() {
     const handleRemoveSource = async (documentId: string) => {
         if (!currentSessionId) return;
         try {
-            await removeDocumentFromSession(currentSessionId, documentId);
+            const removeRes = await removeDocumentFromSession(currentSessionId, documentId);
+            if (removeRes && typeof removeRes === 'object' && 'error' in removeRes) throw new Error(removeRes.error);
+            
             setSessionDocuments(prev => prev.filter(s => s.documentId !== documentId));
             toast.success("Source removed from notebook.");
             if (activeCitation?.docId === documentId) setActiveCitation(null);
@@ -266,7 +281,10 @@ export default function AIChatPage() {
         if (!currentSessionId) return;
         setIsAddingDocId(docId);
         try {
-            const addedDoc = await addDocumentToSession(currentSessionId, docId);
+            const addedDocRes = await addDocumentToSession(currentSessionId, docId);
+            if (addedDocRes && 'error' in addedDocRes) throw new Error(addedDocRes.error);
+            const addedDoc = addedDocRes as ChatSessionDocument;
+            
             setSessionDocuments(prev => {
                 if (prev.some(d => d.documentId === addedDoc.documentId)) return prev;
                 return [...prev, addedDoc];
@@ -301,7 +319,10 @@ export default function AIChatPage() {
             if (sessionDocuments.length === 0) {
                 toast.warning("No documents attached. The AI's response will be generalized.");
             }
-            const aiResponse = await sendChatMessage(currentSessionId, content);
+            const aiResponseRes = await sendChatMessage(currentSessionId, content);
+            if (aiResponseRes && 'error' in aiResponseRes) throw new Error(aiResponseRes.error);
+            const aiResponse = aiResponseRes as ChatMessage;
+            
             setMessages(prev => [...prev, aiResponse]);
         } catch (error) {
             toast.error("Failed to get AI response. Please try again.");

@@ -492,7 +492,7 @@ export class LocalStorage implements IFileStorage {
             const headers = await this.getHeaders();
             const session = await auth();
 
-            const res = await fetch(`${connection_url}/api/Document`, {
+            const res = await fetch(`${connection_url}/api/Document?Limit=100000`, {
                 method: 'GET',
                 headers,
             });

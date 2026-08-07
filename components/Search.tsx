@@ -169,12 +169,13 @@ const Search = () => {
         setAiResult(null);
 
         try {
-            const response: SemanticSearchResponse = await semanticSearch(searchQueryText);
+            const response = await semanticSearch(searchQueryText);
+            if (response && 'error' in response) throw new Error(response.error);
             if (controller.signal.aborted) return;
-            setAiResult(response);
+            setAiResult(response as SemanticSearchResponse);
         } catch (error: Error | unknown) {
             if (controller.signal.aborted) return;
-            console.error("AI Search Error:", error);
+            console.error("Smart Search Error:", error);
             const cleanMsg = ((error as Error).message || "").replace(/^\[\d+\]\s*/, '');
             setAiResult(cleanMsg || "Sorry, I encountered an error searching inside your documents.");
         } finally {
@@ -252,7 +253,7 @@ const Search = () => {
                 />
                 <Input
                     value={query}
-                    placeholder="Search files or ask AI..."
+                    placeholder="Search files or ask questions..."
                     className="search-input w-full"
                     onChange={(e) => {
                         isNavigating.current = false;
@@ -269,7 +270,7 @@ const Search = () => {
                             >
                                 <Sparkles className="h-5 w-5 animate-pulse shrink-0" />
                                 <div className="flex-1 min-w-0 flex flex-col">
-                                    <span className="text-sm font-bold truncate">Ask AI</span>
+                                    <span className="text-sm font-bold truncate">Smart Search</span>
                                     <span className="text-xs opacity-80 truncate">Search for: &ldquo;{query}&rdquo;</span>
                                 </div>
                             </li>
@@ -312,7 +313,7 @@ const Search = () => {
                     <DialogHeader className="mb-4 pb-4 border-b border-light-200 flex flex-row items-center gap-2">
                         <Sparkles className="h-5 w-5 text-brand" />
                         <DialogTitle className="h2-bold text-dark-100">
-                            Discovery Engine
+                            Search Documents
                         </DialogTitle>
                     </DialogHeader>
 
@@ -320,7 +321,7 @@ const Search = () => {
                         {isLoadingAI ? (
                             <div className="flex flex-col items-center justify-center gap-3 py-12 text-light-200 flex-1">
                                 <Loader2 className="h-10 w-10 animate-spin text-brand" />
-                                <p className="subtitle-2">Scanning multi-tenant vector namespaces...</p>
+                                <p className="subtitle-2">Searching documents...</p>
                             </div>
                         ) : (
                             <div className="space-y-6">

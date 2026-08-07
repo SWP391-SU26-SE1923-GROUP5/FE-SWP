@@ -1,6 +1,6 @@
 import Sort from "@/components/Sort";
 import Pagination from "@/components/Pagination";
-import { getFiles, getSubjects } from "@/lib/actions/file.actions";
+import { getFiles, getSubjects, getTotalSpaceUsed } from "@/lib/actions/file.actions";
 import { File_, FileType, SearchParamProps } from "@/types";
 import Card from "@/components/Card";
 import { getFileTypesParams, convertFileSize } from "@/lib/utils";
@@ -18,14 +18,18 @@ const Page = async ({ searchParams, params }: SearchParamProps) => {
 
     const types = getFileTypesParams(type) as FileType[];
 
-    const [files, subjects] = await Promise.all([
+    const [files, subjects, totalSpace] = await Promise.all([
         getFiles({ types, searchText, sort, subjectId, page, limit }),
-        getSubjects()
+        getSubjects(),
+        getTotalSpaceUsed()
     ]);
 
-    const totalSizeInBytes = files.documents.reduce((acc: number, file: File_) => {
-        return acc + (file.fileSizeBytes || 0);
-    }, 0);
+    let totalSizeInBytes = 0;
+    if (type === "documents") totalSizeInBytes = totalSpace.document.size;
+    else if (type === "images") totalSizeInBytes = totalSpace.image.size;
+    else if (type === "media") totalSizeInBytes = totalSpace.video.size + totalSpace.audio.size;
+    else if (type === "others") totalSizeInBytes = totalSpace.other.size;
+    else totalSizeInBytes = totalSpace.document.size;
 
     const totalPages = Math.max(1, Math.ceil((files.total || 0) / limit));
 

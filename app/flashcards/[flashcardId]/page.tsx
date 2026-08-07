@@ -20,7 +20,10 @@ export default async function FlashcardStudyPage({ params }: Props) {
     }
 
     if (flashcardId === "due") {
-        const dueCards = await getDueFlashcards(1000);
+        const dueCardsRes = await getDueFlashcards(1000);
+        if (dueCardsRes && 'error' in dueCardsRes) throw new Error(dueCardsRes.error);
+        const dueCards = dueCardsRes as any[];
+        
         deckCards = (dueCards || []).map((c: RawDueCard) => ({
             id: c.flashcardId || c.id || "",
             deckId: c.deckId || c.documentId || "",
@@ -30,7 +33,9 @@ export default async function FlashcardStudyPage({ params }: Props) {
             updatedAt: new Date().toISOString(),
         }));
     } else {
-        deckCards = await getFlashcardsByDeck(flashcardId);
+        const deckCardsRes = await getFlashcardsByDeck(flashcardId);
+        if (deckCardsRes && 'error' in deckCardsRes) throw new Error(deckCardsRes.error);
+        deckCards = deckCardsRes as Flashcard[];
     }
 
     if (!deckCards || deckCards.length === 0) {

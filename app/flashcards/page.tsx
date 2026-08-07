@@ -3,12 +3,16 @@ import { getFiles } from "@/lib/actions/file.actions";
 import FlashcardsDashboardClient, { DeckItem } from "./FlashcardsDashboardClient";
 
 export default async function FlashcardsPage() {
-    const [flashcards, filesData, dueCount, stats] = await Promise.all([
+    const [flashcardsRes, filesData, dueCountRes, statsRes] = await Promise.all([
         getCreatedFlashcards().catch(() => []),
         getFiles({ types: [], limit: 100 }).catch(() => ({ documents: [] })),
         getDueFlashcardsCount().catch(() => 0),
         getFlashcardReviewStats().catch(() => null)
     ]);
+    
+    const flashcards = (flashcardsRes && 'error' in flashcardsRes ? [] : flashcardsRes) as any[];
+    const dueCount = dueCountRes && typeof dueCountRes === 'object' && 'error' in dueCountRes ? 0 : dueCountRes;
+    const stats = (statsRes && 'error' in statsRes ? null : statsRes) as any;
 
     const actualDueCount = typeof dueCount === 'number' ? dueCount : (stats?.dueNow || 0);
 
@@ -18,7 +22,7 @@ export default async function FlashcardsPage() {
     const deckSummariesNested = await Promise.all(
         documents.map(doc => getDecksByDocument(doc.id).catch(() => []))
     );
-    const deckSummaries = deckSummariesNested.flat();
+    const deckSummaries = deckSummariesNested.map(res => (res && 'error' in res ? [] : res)).flat() as any[];
 
     // Group raw flashcards by deckId
     interface FlashcardItem {

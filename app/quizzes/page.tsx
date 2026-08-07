@@ -10,7 +10,11 @@ export default async function QuizDashboard() {
     const documents = filesData?.documents || [];
 
     const quizzesNested = await Promise.all(
-        documents.map(doc => getQuizzesByDocument(doc.id).catch(() => []))
+        documents.map(async doc => {
+            const res = await getQuizzesByDocument(doc.id).catch(() => []);
+            if (!Array.isArray(res)) return [];
+            return res;
+        })
     );
     const allQuizzes = quizzesNested.flat();
 

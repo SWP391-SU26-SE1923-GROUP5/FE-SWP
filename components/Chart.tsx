@@ -125,7 +125,7 @@ export const Chart = ({ used = 0 }: { used?: number }) => {
                         {tierName}
                     </span>
                 </div>
-                <CardTitle className="text-2xl xl:text-3xl font-bold text-white">Available Storage</CardTitle>
+                <CardTitle className="text-2xl xl:text-3xl font-bold text-white">Storage Used</CardTitle>
                 <CardDescription className="text-base text-white/90">
                     {convertFileSize(used)} / {totalBytes > 0 ? convertFileSize(totalBytes) : "0 B"}
                 </CardDescription>

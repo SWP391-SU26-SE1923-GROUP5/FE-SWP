@@ -415,7 +415,7 @@ export default function QuizzesDashboardClient({ initialDocumentQuizzes }: Props
                                     <button
                                         onClick={(e) => handleDelete(e, quiz.id)}
                                         disabled={isDeleting === quiz.id}
-                                        className="absolute top-5 right-5 z-20 flex items-center justify-center h-8 w-8 text-light-200 dark:text-dark-400 bg-white/80 dark:bg-dark-300/80 backdrop-blur-sm hover:text-white hover:bg-red dark:hover:bg-red rounded-full transition-all cursor-pointer shadow-xs disabled:opacity-50 border border-light-700 dark:border-dark-400 opacity-0 group-hover:opacity-100 focus:opacity-100"
+                                        className="absolute top-5 right-5 z-20 flex items-center justify-center h-8 w-8 text-light-200 dark:text-dark-400 bg-white/80 dark:bg-dark-300/80 backdrop-blur-sm hover:text-white hover:bg-red dark:hover:bg-red rounded-full transition-all cursor-pointer shadow-xs disabled:opacity-50 border border-light-700 dark:border-dark-400"
                                         title="Xóa Quiz"
                                     >
                                         <Trash2 className="h-4 w-4" />

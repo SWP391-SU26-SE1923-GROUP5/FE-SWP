@@ -130,7 +130,7 @@ const Sidebar = ({fullName, avatar, email}: Props) => {
                 {aiNavItems.length > 0 && (
                     <div className="space-y-1 pt-2 border-t border-slate-200/60">
                         <div className="hidden lg:block px-3 py-1 text-[10px] font-extrabold uppercase tracking-widest text-brand">
-                            AI Workspace
+                            Study Tools
                         </div>
                         {aiNavItems.map(({url, name, icon}) => {
                             const isActive = pathname === url;

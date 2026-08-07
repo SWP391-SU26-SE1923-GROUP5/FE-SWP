@@ -321,7 +321,7 @@ const FileUploader = ({ subjects, className }: FileUploaderProps) => {
                             {isUploading ? (
                                 <>
                                     <Image src="/assets/icons/loader.svg" alt="loader" width={18} height={18} className="animate-spin" />
-                                    <span>AI Processing ({files.length})...</span>
+                                    <span>Processing ({files.length})...</span>
                                 </>
                             ) : (
                                 <span>Upload & Process</span>

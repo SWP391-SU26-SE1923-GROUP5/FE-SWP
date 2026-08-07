@@ -167,6 +167,13 @@ const SUPPORTED_AI_DOC_EXTENSIONS = [
 
 const AI_ACTIONS = ["quiz", "flashcards", "summarize", "ask-ai"];
 
+function unwrap<T>(res: T | { error: string }): T {
+    if (res && typeof res === 'object' && 'error' in res) {
+        throw new Error(res.error as string);
+    }
+    return res as T;
+}
+
 export default function ActionDropdown({ file }: { file: File_ }) {
     const path = usePathname();
     const router = useRouter();
@@ -375,17 +382,76 @@ export default function ActionDropdown({ file }: { file: File_ }) {
             if (currentStatusRes) {
                 setLocalStatus(currentStatusRes.status);
                 if (currentStatusRes.status === 5 || String(currentStatusRes.status).toLowerCase() === "processing") {
-                    toast.error("AI is still processing this document. Please wait a moment.", { id: checkToastId });
+                    toast.error("Still processing this document. Please wait a moment.", { id: checkToastId });
                     return;
                 }
                 if (currentStatusRes.status === 6 || String(currentStatusRes.status).toLowerCase() === "failed") {
-                    toast.error("AI processing failed for this document. Please reprocess.", { id: checkToastId });
+                    toast.error("Processing failed for this document. Please reprocess.", { id: checkToastId });
                     return;
                 }
                 toast.dismiss(checkToastId);
             }
         } catch (e) {
             toast.error("Failed to check file status.", { id: checkToastId });
+            return;
+        }
+
+        if (endpoint === "quiz" || endpoint === "flashcards" || endpoint === "summarize") {
+            setIsDropdownOpen(false);
+            closeAllModals();
+            
+            const amount = Number(extraParams?.amount) || 10;
+            const actionVerb = endpoint === "summarize" ? "Summarizing" : "Generating";
+            const toastId = toast.loading(`${actionVerb} ${label} in background...`);
+            
+            (async () => {
+                try {
+                    let res: any;
+                    if (endpoint === "quiz") {
+                        res = await generateQuiz(file.id, amount);
+                    } else if (endpoint === "flashcards") {
+                        res = await generateFlashcards(file.id, amount);
+                    } else {
+                        res = await summarizeRagDocument(file.id);
+                    }
+                    
+                    if (res && res.error) {
+                        toast.error(res.error, { id: toastId });
+                        return;
+                    }
+                    
+                    if (endpoint === "summarize") {
+                        toast.success(`${label} generated successfully!`, {
+                            id: toastId,
+                            duration: 10000,
+                            action: {
+                                label: `View ${label}`,
+                                onClick: () => {
+                                    setAction({ value: endpoint, label, icon: "" } as ActionType);
+                                    setAiResult({ type: endpoint, data: { summary: res.summary } });
+                                    setIsModalOpen(true);
+                                }
+                            }
+                        });
+                    } else {
+                        const targetId = endpoint === "quiz" ? (res.id || res.quizId) : res.deckId;
+                        const path = endpoint === "quiz" ? `/quizzes/${targetId}` : `/flashcards/${targetId}`;
+                        
+                        toast.success(`${label} generated successfully!`, {
+                            id: toastId,
+                            duration: 10000,
+                            action: {
+                                label: `View ${label}`,
+                                onClick: () => {
+                                    router.push(path);
+                                }
+                            }
+                        });
+                    }
+                } catch (e: any) {
+                    toast.error(`Failed to generate ${label}.`, { id: toastId });
+                }
+            })();
             return;
         }
 
@@ -397,28 +463,8 @@ export default function ActionDropdown({ file }: { file: File_ }) {
         try {
             let data: Record<string, unknown> = {};
 
-            if (endpoint === "quiz") {
-                const amount = Number(extraParams?.amount) || 10;
-                const res = await generateQuiz(file.id, amount);
-
-                data = {
-                    id: res.id || res.quizId,
-                    quizTitle: res.title || res.quizTitle || res.documentName || `${file.fileName} Quiz`,
-                    questions: res.questions?.map((q: QuizQuestion & { title?: string }) => ({
-                        id: q.id,
-                        questionTitle: q.title || q.questionTitle,
-                        answers: q.answers || []
-                    })) || []
-                };
-            } else if (endpoint === "flashcards") {
-                const amount = Number(extraParams?.amount) || 10;
-                const res = await generateFlashcards(file.id, amount);
-                data = { deckId: res.deckId, deckTitle: res.deckTitle || `${file.fileName} Flashcards`, cards: res.flashcardLists };
-            } else if (endpoint === "summarize") {
-                const res = await summarizeRagDocument(file.id);
-                data = { summary: res.summary };
-            } else if (endpoint === "ask-ai") {
-                const sessions = await getUserSessions();
+            if (endpoint === "ask-ai") {
+                const sessions = unwrap(await getUserSessions());
                 let docSessions = sessions.filter(s => s.documentId === file.id);
 
                 if (docSessions.length === 0 && sessions.length > 0) {
@@ -427,7 +473,7 @@ export default function ActionDropdown({ file }: { file: File_ }) {
                     await Promise.all(
                         recentSessions.map(async (s) => {
                             try {
-                                const docs = await getSessionDocuments(s.id);
+                                const docs = unwrap(await getSessionDocuments(s.id));
                                 if (docs.some(d => d.documentId === file.id || d.id === file.id)) {
                                     matchedSessions.push({ ...s, documentId: file.id });
                                 }
@@ -447,12 +493,12 @@ export default function ActionDropdown({ file }: { file: File_ }) {
                 if (docSessions.length > 0) {
                     const firstSession = docSessions[0];
                     setSelectedSessionId(firstSession.id);
-                    const msgs = await getSessionMessages(firstSession.id);
+                    const msgs = unwrap(await getSessionMessages(firstSession.id));
                     setChatMessages(msgs);
                 }
 
                 try {
-                    const prompts = await getSuggestedPrompts(file.id);
+                    const prompts = unwrap(await getSuggestedPrompts(file.id));
                     setSuggestedPrompts(prompts);
                 } catch (e) {
                     console.error("Failed to fetch suggested prompts", e);
@@ -478,7 +524,7 @@ export default function ActionDropdown({ file }: { file: File_ }) {
     const handleCreateSession = async () => {
         setIsChatLoading(true);
         try {
-            const newSession = await createChatSession(`Chat about ${file.fileName}`, file.id);
+            const newSession = unwrap(await createChatSession(`Chat about ${file.fileName}`, file.id));
             setChatSessions((prev) => [newSession, ...prev]);
             setSelectedSessionId(newSession.id);
             setChatMessages([]);
@@ -493,7 +539,7 @@ export default function ActionDropdown({ file }: { file: File_ }) {
         setSelectedSessionId(sessionId);
         setIsChatLoading(true);
         try {
-            const msgs = await getSessionMessages(sessionId);
+            const msgs = unwrap(await getSessionMessages(sessionId));
             setChatMessages(msgs);
         } catch (error: unknown) {
             toast.error("Failed to load chat messages.");
@@ -511,7 +557,7 @@ export default function ActionDropdown({ file }: { file: File_ }) {
         if (!currentSessionId) {
             setIsChatLoading(true);
             try {
-                const newSession = await createChatSession(`Chat about ${file.fileName}`, file.id);
+                const newSession = unwrap(await createChatSession(`Chat about ${file.fileName}`, file.id));
                 setChatSessions((prev) => [newSession, ...prev]);
                 currentSessionId = newSession.id;
                 setSelectedSessionId(newSession.id);
@@ -538,7 +584,7 @@ export default function ActionDropdown({ file }: { file: File_ }) {
         setIsSending(true);
 
         try {
-            const aiResponse = await sendChatMessage(currentSessionId, textToSend);
+            const aiResponse = unwrap(await sendChatMessage(currentSessionId, textToSend));
             setChatMessages((prev) => [...prev, aiResponse]);
         } catch (error: unknown) {
             setChatMessages((prev) => prev.filter(msg => msg.id !== userMessage.id));
@@ -569,7 +615,7 @@ export default function ActionDropdown({ file }: { file: File_ }) {
         setIsRenamingSession(true);
         const toastId = toast.loading("Renaming session...");
         try {
-            const updated = await renameChatSession(selectedSessionId, renameSessionTitle);
+            const updated = unwrap(await renameChatSession(selectedSessionId, renameSessionTitle));
             setChatSessions(prev => prev.map(s => s.id === selectedSessionId ? { ...s, sessionTitle: updated.sessionTitle } : s));
             setIsRenameSessionModalOpen(false);
             toast.success("Session renamed successfully!", { id: toastId });
@@ -585,7 +631,7 @@ export default function ActionDropdown({ file }: { file: File_ }) {
         setIsDeletingSession(true);
         const toastId = toast.loading("Deleting session...");
         try {
-            await deleteChatSession(selectedSessionId);
+            unwrap(await deleteChatSession(selectedSessionId));
             const remaining = chatSessions.filter(s => s.id !== selectedSessionId);
             setChatSessions(remaining);
             if (remaining.length > 0) {
@@ -631,7 +677,7 @@ export default function ActionDropdown({ file }: { file: File_ }) {
                                 : "text-center text-light-100"
                         }
                     >
-                        {value === "share" ? "Share Document" : value === "rename" ? "Rename Document" : value === "delete" ? "Delete Document" : value === "details" ? "Document Details" : label}
+                        {value === "share" ? "Share Document" : value === "rename" ? "Rename Document" : value === "delete" ? "Move to Trash" : value === "details" ? "Document Details" : label}
                     </DialogTitle>
 
                     {value === "rename" && (
@@ -655,8 +701,8 @@ export default function ActionDropdown({ file }: { file: File_ }) {
                     )}
                     {value === "delete" && (
                         <p className="delete-confirmation">
-                            Are you sure you want to delete{" "}
-                            <span className="delete-file-name">{file.fileName}</span>?
+                            Are you sure you want to move{" "}
+                            <span className="delete-file-name">{file.fileName}</span> to trash?
                         </p>
                     )}
 
@@ -671,7 +717,7 @@ export default function ActionDropdown({ file }: { file: File_ }) {
                                             <Sparkles className="w-5 h-5" />
                                         </div>
                                         <div>
-                                            <h3 className="text-lg font-bold text-slate-800">AI Summary</h3>
+                                            <h3 className="text-lg font-bold text-slate-800">Summary</h3>
                                             <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Key Insights Extracted</p>
                                         </div>
                                     </div>
@@ -938,7 +984,7 @@ export default function ActionDropdown({ file }: { file: File_ }) {
                                     : "bg-gradient-to-r from-brand to-indigo-600 hover:from-brand/90 hover:to-indigo-600/90"
                             }`}
                         >
-                            <span className="capitalize">{value === "rename" ? "Save Changes" : value}</span>
+                            <span className="capitalize">{value === "rename" ? "Save Changes" : value === "delete" ? "Move to Trash" : value}</span>
                         </Button>
                     </DialogFooter>
                 )}
@@ -977,7 +1023,7 @@ export default function ActionDropdown({ file }: { file: File_ }) {
                             onClick={() => triggerAIFeature(action.icon as "quiz" | "flashcards", action.label, { amount: String(generationAmount) })}
                             className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-brand to-indigo-600 hover:from-brand/90 hover:to-indigo-600/90 text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer h-10"
                         >
-                            <span>Generate {action.label}</span>
+                            <span>{action.label}</span>
                         </Button>
                     </DialogFooter>
                 )}
@@ -1115,14 +1161,14 @@ export default function ActionDropdown({ file }: { file: File_ }) {
                             {isProcessing && (
                                 <div className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-amber-600 bg-amber-50/50 mx-0.5 rounded-lg mb-1 border border-amber-100/50">
                                     <Loader2 className="h-4 w-4 animate-spin shrink-0" />
-                                    AI is processing...
+                                    Processing...
                                 </div>
                             )}
 
                             {isReady && (
                                 <div className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-emerald-600 bg-emerald-50/50 mx-0.5 rounded-lg mb-1 border border-emerald-100/50">
                                     <Check className="h-4 w-4 shrink-0" />
-                                    Ready for AI tools
+                                    Ready for analysis
                                 </div>
                             )}
 
@@ -1153,7 +1199,7 @@ export default function ActionDropdown({ file }: { file: File_ }) {
 
                             <DropdownMenuItem
                                 onClick={() => {
-                                    setAction({ value: "generate-settings", label: "Quiz Engine", icon: "quiz" });
+                                    setAction({ value: "generate-settings", label: "Generate Quiz", icon: "quiz" });
                                     setGenerationAmount(10);
                                     setIsModalOpen(true);
                                 }}
@@ -1165,7 +1211,7 @@ export default function ActionDropdown({ file }: { file: File_ }) {
 
                             <DropdownMenuItem
                                 onClick={() => {
-                                    setAction({ value: "generate-settings", label: "Flashcards", icon: "flashcards" });
+                                    setAction({ value: "generate-settings", label: "Generate Flashcards", icon: "flashcards" });
                                     setGenerationAmount(10);
                                     setIsModalOpen(true);
                                 }}

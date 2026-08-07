@@ -100,10 +100,10 @@ export interface SemanticSearchResponse {
 export const createChatSession = async (
     sessionTitle: string = "New Chat Session",
     documentId?: string | null
-): Promise<ChatSession> => {
+): Promise<ChatSession | { error: string }> => {
     const session = await auth();
     if (!session?.accessToken) {
-        throw new Error("Unauthorized. Please log in.");
+        return { error: "Unauthorized. Please log in." };
     }
 
     const payload: Record<string, unknown> = { sessionTitle };
@@ -119,7 +119,7 @@ export const createChatSession = async (
 
     if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(`[${response.status}] ${errorData?.message || errorData?.title || "Failed to create chat session."}`);
+        return { error: `[${response.status}] ${errorData?.message || errorData?.title || "Failed to create chat session."}` };
     }
 
     const data = await response.json();
@@ -138,9 +138,9 @@ export const createChatSession = async (
 export const sendChatMessage = async (
     sessionId: string,
     message: string
-): Promise<ChatMessage> => {
+): Promise<ChatMessage | { error: string }> => {
     const session = await auth();
-    if (!session?.accessToken) throw new Error("Unauthorized. Please log in.");
+    if (!session?.accessToken) return { error: "Unauthorized. Please log in." };
 
     const response = await fetch(`${connection_url}/api/Chat/messages`, {
         method: 'POST',
@@ -156,7 +156,7 @@ export const sendChatMessage = async (
 
     if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(`[${response.status}] ${errorData?.message || "Failed to send message."}`);
+        return { error: `[${response.status}] ${errorData?.message || "Failed to send message."}` };
     }
 
     const data: ChatMessage = await response.json();
@@ -168,9 +168,9 @@ export const sendChatMessage = async (
 
 
 
-export const deleteFlashcardDeck = async (deckId: string): Promise<void> => {
+export const deleteFlashcardDeck = async (deckId: string): Promise<void | { error: string }> => {
     const session = await auth();
-    if (!session?.accessToken) throw new Error("Unauthorized. Please log in.");
+    if (!session?.accessToken) return { error: "Unauthorized. Please log in." };
 
     const response = await fetch(`${connection_url}/api/Flashcard/by-deck/${deckId}`, {
         method: 'DELETE',
@@ -182,15 +182,15 @@ export const deleteFlashcardDeck = async (deckId: string): Promise<void> => {
 
     if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(`[${response.status}] ${errorData?.message || "Failed to delete flashcard deck."}`);
+        return { error: `[${response.status}] ${errorData?.message || "Failed to delete flashcard deck."}` };
     }
 
     revalidatePath("/flashcards");
 };
 
-export const deleteQuiz = async (quizId: string): Promise<void> => {
+export const deleteQuiz = async (quizId: string): Promise<void | { error: string }> => {
     const session = await auth();
-    if (!session?.accessToken) throw new Error("Unauthorized. Please log in.");
+    if (!session?.accessToken) return { error: "Unauthorized. Please log in." };
 
     const response = await fetch(`${connection_url}/api/Quiz/${quizId}`, {
         method: 'DELETE',
@@ -202,15 +202,15 @@ export const deleteQuiz = async (quizId: string): Promise<void> => {
 
     if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(`[${response.status}] ${errorData?.message || "Failed to delete quiz."}`);
+        return { error: `[${response.status}] ${errorData?.message || "Failed to delete quiz."}` };
     }
 
     revalidatePath("/quizzes");
 };
 
-export const generateFlashcards = async (docId: string, numberOfFlashcards: number = 5): Promise<FlashcardDeckResponse> => {
+export const generateFlashcards = async (docId: string, numberOfFlashcards: number = 5): Promise<FlashcardDeckResponse | { error: string }> => {
     const session = await auth();
-    if (!session?.accessToken) throw new Error("Unauthorized. Please log in.");
+    if (!session?.accessToken) return { error: "Unauthorized. Please log in." };
 
     const safeAmount = Math.min(Math.max(1, numberOfFlashcards), 20);
 
@@ -227,15 +227,15 @@ export const generateFlashcards = async (docId: string, numberOfFlashcards: numb
 
     if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(`[${response.status}] ${errorData?.message || errorData?.title || "Failed to generate flashcards."}`);
+        return { error: `[${response.status}] ${errorData?.message || errorData?.title || "Failed to generate flashcards."}` };
     }
 
     return await response.json();
 };
 
-export const generateQuiz = async (docId: string, numberOfQuestions: number = 5): Promise<QuizResponse> => {
+export const generateQuiz = async (docId: string, numberOfQuestions: number = 5): Promise<QuizResponse | { error: string }> => {
     const session = await auth();
-    if (!session?.accessToken) throw new Error("Unauthorized. Please log in.");
+    if (!session?.accessToken) return { error: "Unauthorized. Please log in." };
 
     const safeAmount = Math.min(Math.max(1, numberOfQuestions), 20);
 
@@ -252,15 +252,15 @@ export const generateQuiz = async (docId: string, numberOfQuestions: number = 5)
 
     if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(`[${response.status}] ${errorData?.message || errorData?.title || "Failed to generate quiz."}`);
+        return { error: `[${response.status}] ${errorData?.message || errorData?.title || "Failed to generate quiz."}` };
     }
 
     return await response.json();
 };
 
-export const getCreatedFlashcards = async (): Promise<Flashcard[]> => {
+export const getCreatedFlashcards = async (): Promise<Flashcard[] | { error: string }> => {
     const session = await auth();
-    if (!session?.accessToken) throw new Error("Unauthorized. Please log in.");
+    if (!session?.accessToken) return { error: "Unauthorized. Please log in." };
 
     const response = await fetch(`${connection_url}/api/Flashcard?limit=100`, {
         method: 'GET',
@@ -272,16 +272,16 @@ export const getCreatedFlashcards = async (): Promise<Flashcard[]> => {
 
     if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(`[${response.status}] ${errorData?.message || errorData?.title || "Failed to fetch flashcards."}`);
+        return { error: `[${response.status}] ${errorData?.message || errorData?.title || "Failed to fetch flashcards."}` };
     }
 
     const data = await response.json();
     return data?.items || [];
 };
 
-export const getFlashcardsByDeck = async (deckId: string): Promise<Flashcard[]> => {
+export const getFlashcardsByDeck = async (deckId: string): Promise<Flashcard[] | { error: string }> => {
     const session = await auth();
-    if (!session?.accessToken) throw new Error("Unauthorized. Please log in.");
+    if (!session?.accessToken) return { error: "Unauthorized. Please log in." };
 
     const response = await fetch(`${connection_url}/api/Flashcard/${deckId}/flashcards`, {
         method: 'GET',
@@ -293,15 +293,15 @@ export const getFlashcardsByDeck = async (deckId: string): Promise<Flashcard[]> 
 
     if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(`[${response.status}] ${errorData?.message || errorData?.title || "Failed to fetch flashcards."}`);
+        return { error: `[${response.status}] ${errorData?.message || errorData?.title || "Failed to fetch flashcards."}` };
     }
 
     return await response.json();
 };
 
-export const getDecksByDocument = async (docId: string): Promise<FlashcardDeckSummary[]> => {
+export const getDecksByDocument = async (docId: string): Promise<FlashcardDeckSummary[] | { error: string }> => {
     const session = await auth();
-    if (!session?.accessToken) throw new Error("Unauthorized. Please log in.");
+    if (!session?.accessToken) return { error: "Unauthorized. Please log in." };
 
     const response = await fetch(`${connection_url}/api/Flashcard/document/${docId}`, {
         method: 'GET',
@@ -313,15 +313,15 @@ export const getDecksByDocument = async (docId: string): Promise<FlashcardDeckSu
 
     if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(`[${response.status}] ${errorData?.message || errorData?.title || "Failed to fetch flashcard decks."}`);
+        return { error: `[${response.status}] ${errorData?.message || errorData?.title || "Failed to fetch flashcard decks."}` };
     }
 
     return await response.json();
 };
 
-export const getQuizzesByDocument = async (docId: string): Promise<QuizRecord[]> => {
+export const getQuizzesByDocument = async (docId: string): Promise<QuizRecord[] | { error: string }> => {
     const session = await auth();
-    if (!session?.accessToken) throw new Error("Unauthorized. Please log in.");
+    if (!session?.accessToken) return { error: "Unauthorized. Please log in." };
 
     const response = await fetch(`${connection_url}/api/Quiz/document/${docId}`, {
         method: 'GET',
@@ -333,7 +333,7 @@ export const getQuizzesByDocument = async (docId: string): Promise<QuizRecord[]>
 
     if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(`[${response.status}] ${errorData?.message || errorData?.title || "Failed to fetch quizzes."}`);
+        return { error: `[${response.status}] ${errorData?.message || errorData?.title || "Failed to fetch quizzes."}` };
     }
 
     return await response.json();
@@ -343,9 +343,9 @@ export const submitFlashcardReview = async (
     flashcardId: string,
     quality: number,
     timeSpentSeconds?: number
-): Promise<ReviewFlashcardResult> => {
+): Promise<ReviewFlashcardResult | { error: string }> => {
     const session = await auth();
-    if (!session?.accessToken) throw new Error("Unauthorized. Please log in.");
+    if (!session?.accessToken) return { error: "Unauthorized. Please log in." };
 
     const response = await fetch(`${connection_url}/api/FlashcardReview/review`, {
         method: 'POST',
@@ -362,15 +362,15 @@ export const submitFlashcardReview = async (
 
     if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(`[${response.status}] ${errorData?.message || errorData?.title || "Failed to submit flashcard review."}`);
+        return { error: `[${response.status}] ${errorData?.message || errorData?.title || "Failed to submit flashcard review."}` };
     }
 
     return await response.json();
 };
 
-export const getDueFlashcards = async (limit: number = 50): Promise<DueFlashcard[]> => {
+export const getDueFlashcards = async (limit: number = 50): Promise<DueFlashcard[] | { error: string }> => {
     const session = await auth();
-    if (!session?.accessToken) throw new Error("Unauthorized. Please log in.");
+    if (!session?.accessToken) return { error: "Unauthorized. Please log in." };
 
     const response = await fetch(`${connection_url}/api/FlashcardReview/due?limit=${limit}`, {
         method: 'GET',
@@ -382,15 +382,15 @@ export const getDueFlashcards = async (limit: number = 50): Promise<DueFlashcard
 
     if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(`[${response.status}] ${errorData?.message || errorData?.title || "Failed to fetch due flashcards."}`);
+        return { error: `[${response.status}] ${errorData?.message || errorData?.title || "Failed to fetch due flashcards."}` };
     }
 
     return await response.json();
 };
 
-export const getDueFlashcardsCount = async (): Promise<number> => {
+export const getDueFlashcardsCount = async (): Promise<number | { error: string }> => {
     const session = await auth();
-    if (!session?.accessToken) throw new Error("Unauthorized. Please log in.");
+    if (!session?.accessToken) return { error: "Unauthorized. Please log in." };
 
     const response = await fetch(`${connection_url}/api/FlashcardReview/due/count`, {
         method: 'GET',
@@ -407,13 +407,13 @@ export const getDueFlashcardsCount = async (): Promise<number> => {
     return await response.json();
 };
 
-export const getFlashcardReviewStats = async (userId?: string): Promise<FlashcardReviewStats> => {
+export const getFlashcardReviewStats = async (userId?: string): Promise<FlashcardReviewStats | { error: string }> => {
     const session = await auth();
-    if (!session?.accessToken) throw new Error("Unauthorized. Please log in.");
+    if (!session?.accessToken) return { error: "Unauthorized. Please log in." };
 
     const targetId = userId || session.user?.id;
     if (!targetId) {
-        throw new Error("Unauthorized. User ID is required.");
+        return { error: "Unauthorized. User ID is required." };
     }
 
     const response = await fetch(`${connection_url}/api/FlashcardReview/stats/${targetId}`, {
@@ -426,7 +426,7 @@ export const getFlashcardReviewStats = async (userId?: string): Promise<Flashcar
 
     if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(`[${response.status}] ${errorData?.message || errorData?.title || "Failed to fetch flashcard stats."}`);
+        return { error: `[${response.status}] ${errorData?.message || errorData?.title || "Failed to fetch flashcard stats."}` };
     }
 
     return await response.json();
@@ -438,9 +438,9 @@ export const getCreatedQuizzes = async (params?: {
     searchTerm?: string;
     sortBy?: string;
     isDescending?: boolean;
-}): Promise<QuizRecord[]> => {
+}): Promise<QuizRecord[] | { error: string }> => {
     const session = await auth();
-    if (!session?.accessToken) throw new Error("Unauthorized. Please log in.");
+    if (!session?.accessToken) return { error: "Unauthorized. Please log in." };
 
     const searchParams = new URLSearchParams();
     searchParams.set("limit", (params?.limit ?? 100).toString());
@@ -459,16 +459,16 @@ export const getCreatedQuizzes = async (params?: {
 
     if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(`[${response.status}] ${errorData?.message || errorData?.title || "Failed to fetch quizzes."}`);
+        return { error: `[${response.status}] ${errorData?.message || errorData?.title || "Failed to fetch quizzes."}` };
     }
 
     const data = await response.json();
     return data?.items || [];
 };
 
-export const getFlashcardById = async (flashcardId: string): Promise<Flashcard> => {
+export const getFlashcardById = async (flashcardId: string): Promise<Flashcard | { error: string }> => {
     const session = await auth();
-    if (!session?.accessToken) throw new Error("Unauthorized. Please log in.");
+    if (!session?.accessToken) return { error: "Unauthorized. Please log in." };
 
     const response = await fetch(`${connection_url}/api/Flashcard/${flashcardId}`, {
         method: 'GET',
@@ -480,15 +480,15 @@ export const getFlashcardById = async (flashcardId: string): Promise<Flashcard> 
 
     if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(`[${response.status}] ${errorData?.message || "Failed to fetch flashcard."}`);
+        return { error: `[${response.status}] ${errorData?.message || "Failed to fetch flashcard."}` };
     }
 
     return await response.json();
 };
 
-export const getQuizById = async (quizId: string): Promise<QuizResponse> => {
+export const getQuizById = async (quizId: string): Promise<QuizResponse | { error: string }> => {
     const session = await auth();
-    if (!session?.accessToken) throw new Error("Unauthorized. Please log in.");
+    if (!session?.accessToken) return { error: "Unauthorized. Please log in." };
 
     const response = await fetch(`${connection_url}/api/Quiz/${quizId}`, {
         method: 'GET',
@@ -500,7 +500,7 @@ export const getQuizById = async (quizId: string): Promise<QuizResponse> => {
 
     if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(`[${response.status}] ${errorData?.message || "Failed to fetch quiz."}`);
+        return { error: `[${response.status}] ${errorData?.message || "Failed to fetch quiz."}` };
     }
 
     const data = await response.json();
@@ -525,10 +525,10 @@ export const submitQuiz = async (
     quizId: string,
     answers: Record<string, string>,
     durationSeconds?: number
-): Promise<unknown> => {
+): Promise<unknown | { error: string }> => {
     const session = await auth();
     if (!session?.accessToken || !session?.user?.id) {
-        throw new Error("Unauthorized. Please log in.");
+        return { error: "Unauthorized. Please log in." };
     }
 
     const response = await fetch(`${connection_url}/api/Quiz/${quizId}/submit`, {
@@ -547,15 +547,15 @@ export const submitQuiz = async (
 
     if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(`[${response.status}] ${errorData?.message || "Failed to submit quiz."}`);
+        return { error: `[${response.status}] ${errorData?.message || "Failed to submit quiz."}` };
     }
 
     return await response.json();
 };
 
-export const getQuizHistory = async (quizId: string): Promise<QuizSubmissionResponse[]> => {
+export const getQuizHistory = async (quizId: string): Promise<QuizSubmissionResponse[] | { error: string }> => {
     const session = await auth();
-    if (!session?.accessToken) throw new Error("Unauthorized. Please log in.");
+    if (!session?.accessToken) return { error: "Unauthorized. Please log in." };
 
     const response = await fetch(`${connection_url}/api/Quiz/${quizId}/history`, {
         method: 'GET',
@@ -573,9 +573,9 @@ export const getQuizHistory = async (quizId: string): Promise<QuizSubmissionResp
     return Array.isArray(data) ? data : (data?.items || []);
 };
 
-export const getQuizSubmissionDetail = async (submissionId: string): Promise<QuizSubmissionDetailResponse> => {
+export const getQuizSubmissionDetail = async (submissionId: string): Promise<QuizSubmissionDetailResponse | { error: string }> => {
     const session = await auth();
-    if (!session?.accessToken) throw new Error("Unauthorized. Please log in.");
+    if (!session?.accessToken) return { error: "Unauthorized. Please log in." };
 
     const response = await fetch(`${connection_url}/api/QuizSubmission/${submissionId}`, {
         method: 'GET',
@@ -586,15 +586,15 @@ export const getQuizSubmissionDetail = async (submissionId: string): Promise<Qui
     });
 
     if (!response.ok) {
-        throw new Error("Failed to fetch quiz submission detail.");
+        return { error: "Failed to fetch quiz submission detail." };
     }
 
     return await response.json();
 };
 
-export const getSessionMessages = async (sessionId: string): Promise<ChatMessage[]> => {
+export const getSessionMessages = async (sessionId: string): Promise<ChatMessage[] | { error: string }> => {
     const session = await auth();
-    if (!session?.accessToken) throw new Error("Unauthorized. Please log in.");
+    if (!session?.accessToken) return { error: "Unauthorized. Please log in." };
 
     const response = await fetch(`${connection_url}/api/Chat/sessions/${sessionId}/messages`, {
         method: 'GET',
@@ -606,7 +606,7 @@ export const getSessionMessages = async (sessionId: string): Promise<ChatMessage
 
     if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(`[${response.status}] ${errorData?.message || errorData?.title || "Failed to fetch chat messages."}`);
+        return { error: `[${response.status}] ${errorData?.message || errorData?.title || "Failed to fetch chat messages."}` };
     }
 
     const data: ChatMessage[] = await response.json();
@@ -617,9 +617,9 @@ export const getSessionMessages = async (sessionId: string): Promise<ChatMessage
     }));
 };
 
-export const getUserSessions = async (): Promise<ChatSession[]> => {
+export const getUserSessions = async (): Promise<ChatSession[] | { error: string }> => {
     const session = await auth();
-    if (!session?.accessToken) throw new Error("Unauthorized. Please log in.");
+    if (!session?.accessToken) return { error: "Unauthorized. Please log in." };
 
     const response = await fetch(`${connection_url}/api/Chat/sessions`, {
         method: 'GET',
@@ -631,7 +631,7 @@ export const getUserSessions = async (): Promise<ChatSession[]> => {
 
     if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(`[${response.status}] ${errorData?.message || errorData?.title || "Failed to fetch chat sessions."}`);
+        return { error: `[${response.status}] ${errorData?.message || errorData?.title || "Failed to fetch chat sessions."}` };
     }
 
     const data: ChatSession[] = await response.json();
@@ -646,9 +646,9 @@ export const getUserSessions = async (): Promise<ChatSession[]> => {
 
 export const semanticSearch = async (
     question: string
-): Promise<SemanticSearchResponse> => {
+): Promise<SemanticSearchResponse | { error: string }> => {
     const session = await auth();
-    if (!session?.accessToken) throw new Error("Unauthorized. Please log in.");
+    if (!session?.accessToken) return { error: "Unauthorized. Please log in." };
 
     const response = await fetch(`${connection_url}/api/AI/rag/ask`, {
         method: 'POST',
@@ -663,15 +663,15 @@ export const semanticSearch = async (
 
     if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(`[${response.status}] ${errorData?.message || errorData?.title || "Semantic search failed."}`);
+        return { error: `[${response.status}] ${errorData?.message || errorData?.title || "Semantic search failed."}` };
     }
 
     return await response.json();
 };
 
-export const summarizeRagDocument = async (documentId: string): Promise<SummaryResponse> => {
+export const summarizeRagDocument = async (documentId: string): Promise<SummaryResponse | { error: string }> => {
     const session = await auth();
-    if (!session?.accessToken) throw new Error("Unauthorized. Please log in.");
+    if (!session?.accessToken) return { error: "Unauthorized. Please log in." };
 
     const response = await fetch(`${connection_url}/api/AI/rag/summarize`, {
         method: 'POST',
@@ -686,7 +686,7 @@ export const summarizeRagDocument = async (documentId: string): Promise<SummaryR
 
     if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(`[${response.status}] ${errorData?.message || errorData?.title || "Failed to generate RAG summary."}`);
+        return { error: `[${response.status}] ${errorData?.message || errorData?.title || "Failed to generate RAG summary."}` };
     }
 
     return await response.json();
@@ -701,9 +701,9 @@ export interface ChatSessionDocument {
     addedAt: string;
 }
 
-export const getSessionDocuments = async (sessionId: string): Promise<ChatSessionDocument[]> => {
+export const getSessionDocuments = async (sessionId: string): Promise<ChatSessionDocument[] | { error: string }> => {
     const session = await auth();
-    if (!session?.accessToken) throw new Error("Unauthorized. Please log in.");
+    if (!session?.accessToken) return { error: "Unauthorized. Please log in." };
 
     const response = await fetch(`${connection_url}/api/Chat/sessions/${sessionId}/documents`, {
         method: 'GET',
@@ -715,15 +715,15 @@ export const getSessionDocuments = async (sessionId: string): Promise<ChatSessio
 
     if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(`[${response.status}] ${errorData?.message || errorData?.title || "Failed to fetch session documents."}`);
+        return { error: `[${response.status}] ${errorData?.message || errorData?.title || "Failed to fetch session documents."}` };
     }
 
     return await response.json();
 };
 
-export const addDocumentToSession = async (sessionId: string, documentId: string): Promise<ChatSessionDocument> => {
+export const addDocumentToSession = async (sessionId: string, documentId: string): Promise<ChatSessionDocument | { error: string }> => {
     const session = await auth();
-    if (!session?.accessToken) throw new Error("Unauthorized. Please log in.");
+    if (!session?.accessToken) return { error: "Unauthorized. Please log in." };
 
     const response = await fetch(`${connection_url}/api/Chat/sessions/${sessionId}/documents`, {
         method: 'POST',
@@ -736,15 +736,15 @@ export const addDocumentToSession = async (sessionId: string, documentId: string
 
     if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(`[${response.status}] ${errorData?.message || errorData?.title || "Failed to add document to session."}`);
+        return { error: `[${response.status}] ${errorData?.message || errorData?.title || "Failed to add document to session."}` };
     }
 
     return await response.json();
 };
 
-export const removeDocumentFromSession = async (sessionId: string, documentId: string): Promise<void> => {
+export const removeDocumentFromSession = async (sessionId: string, documentId: string): Promise<void | { error: string }> => {
     const session = await auth();
-    if (!session?.accessToken) throw new Error("Unauthorized. Please log in.");
+    if (!session?.accessToken) return { error: "Unauthorized. Please log in." };
 
     const response = await fetch(`${connection_url}/api/Chat/sessions/${sessionId}/documents/${documentId}`, {
         method: 'DELETE',
@@ -756,13 +756,13 @@ export const removeDocumentFromSession = async (sessionId: string, documentId: s
 
     if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(`[${response.status}] ${errorData?.message || errorData?.title || "Failed to remove document from session."}`);
+        return { error: `[${response.status}] ${errorData?.message || errorData?.title || "Failed to remove document from session."}` };
     }
 };
 
-export const renameChatSession = async (sessionId: string, sessionTitle: string): Promise<ChatSession> => {
+export const renameChatSession = async (sessionId: string, sessionTitle: string): Promise<ChatSession | { error: string }> => {
     const session = await auth();
-    if (!session?.accessToken) throw new Error("Unauthorized. Please log in.");
+    if (!session?.accessToken) return { error: "Unauthorized. Please log in." };
 
     const response = await fetch(`${connection_url}/api/Chat/sessions/${sessionId}`, {
         method: 'PUT',
@@ -775,15 +775,15 @@ export const renameChatSession = async (sessionId: string, sessionTitle: string)
 
     if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(`[${response.status}] ${errorData?.message || errorData?.title || "Failed to rename session."}`);
+        return { error: `[${response.status}] ${errorData?.message || errorData?.title || "Failed to rename session."}` };
     }
 
     return await response.json();
 };
 
-export const deleteChatSession = async (sessionId: string): Promise<void> => {
+export const deleteChatSession = async (sessionId: string): Promise<void | { error: string }> => {
     const session = await auth();
-    if (!session?.accessToken) throw new Error("Unauthorized. Please log in.");
+    if (!session?.accessToken) return { error: "Unauthorized. Please log in." };
 
     const response = await fetch(`${connection_url}/api/Chat/sessions/${sessionId}`, {
         method: 'DELETE',
@@ -795,13 +795,13 @@ export const deleteChatSession = async (sessionId: string): Promise<void> => {
 
     if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(`[${response.status}] ${errorData?.message || errorData?.title || "Failed to delete session."}`);
+        return { error: `[${response.status}] ${errorData?.message || errorData?.title || "Failed to delete session."}` };
     }
 };
 
-export const getSuggestedPrompts = async (documentId: string): Promise<string[]> => {
+export const getSuggestedPrompts = async (documentId: string): Promise<string[] | { error: string }> => {
     const session = await auth();
-    if (!session?.accessToken) throw new Error("Unauthorized. Please log in.");
+    if (!session?.accessToken) return { error: "Unauthorized. Please log in." };
 
     const response = await fetch(`${connection_url}/api/Document/${documentId}/suggested-prompts`, {
         method: 'GET',

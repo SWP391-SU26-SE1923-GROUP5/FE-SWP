@@ -15,7 +15,9 @@ export default async function QuizPage({ params }: Props) {
     let hasError = false;
 
     try {
-        quizData = await getQuizById(quizId);
+        const res = await getQuizById(quizId);
+        if (res && 'error' in res) throw new Error(res.error);
+        quizData = res as QuizResponse;
     } catch (error) {
         console.error("Failed to load existing quiz:", error);
         hasError = true;

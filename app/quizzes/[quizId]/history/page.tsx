@@ -2,6 +2,7 @@ import React from "react";
 import Link from "next/link";
 import { formatDateGMT7 } from "@/lib/utils";
 import { getQuizById, getQuizHistory } from "@/lib/actions/ai.actions";
+import { QuizResponse, QuizSubmissionResponse } from "@/types";
 import { ArrowLeft, History, Trophy, Award, Clock, CheckCircle2, XCircle, BarChart3, Play, ChevronRight } from "lucide-react";
 
 type Props = {
@@ -13,10 +14,16 @@ type Props = {
 export default async function QuizHistoryPage({ params }: Props) {
     const { quizId } = await params;
 
-    const [quizData, history] = await Promise.all([
+    const [quizDataRes, historyRes] = await Promise.all([
         getQuizById(quizId).catch(() => null),
         getQuizHistory(quizId).catch(() => [])
     ]);
+
+    if (quizDataRes && 'error' in quizDataRes) throw new Error(quizDataRes.error);
+    if (historyRes && !Array.isArray(historyRes) && 'error' in historyRes) throw new Error(historyRes.error);
+
+    const quizData = quizDataRes as QuizResponse | null;
+    const history = (Array.isArray(historyRes) ? historyRes : []) as QuizSubmissionResponse[];
 
     const quizTitle = quizData?.quizTitle || "Quiz Submission History";
     const totalAttempts = history.length;

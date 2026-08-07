@@ -32,7 +32,7 @@ export default async function AIInsightsPage() {
                             <h1 className="h2 text-dark100_light900 font-bold">All AI Recommendations</h1>
                             <span className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-xs font-semibold bg-brand/10 text-brand dark:bg-brand/20 border border-brand/20">
                                 <Rocket className="w-3.5 h-3.5" />
-                                SM-2 Engine
+                                Optimize
                             </span>
                         </div>
                         <p className="body-2 text-dark500_light400 mt-0.5">
