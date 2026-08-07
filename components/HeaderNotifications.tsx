@@ -96,20 +96,6 @@ export default function HeaderNotifications() {
         }
     };
 
-    const handleNotificationClick = async (notification: NotificationResponseDto) => {
-        if (!notification.isRead) {
-            try {
-                await markNotificationAsRead(notification.id);
-                setNotifications(prev => prev.map(n => n.id === notification.id ? { ...n, isRead: true } : n));
-            } catch (error) {
-                console.error(error);
-            }
-        }
-        setIsOpen(false);
-        // We can add smart routing here based on type, e.g.:
-        // if (notification.type === 'quiz') router.push('/quizzes');
-    };
-
     return (
         <div className="relative" ref={dropdownRef}>
             <button 
@@ -171,8 +157,7 @@ export default function HeaderNotifications() {
                                     return (
                                         <div 
                                             key={item.id}
-                                            onClick={() => handleNotificationClick(item)}
-                                            className={`p-3.5 flex gap-3 items-start border-b border-light-400/30 last:border-0 cursor-pointer transition-colors ${!item.isRead ? 'bg-brand/5 hover:bg-brand/10' : 'bg-transparent hover:bg-light-800 dark:hover:bg-dark-400'}`}
+                                            className={`p-3.5 flex gap-3 items-start border-b border-light-400/30 last:border-0 transition-colors ${!item.isRead ? 'bg-brand/5' : 'bg-transparent'}`}
                                         >
                                             <div className={`p-2.5 rounded-full shrink-0 ${style.iconBg}`}>
                                                 {style.icon}
@@ -186,9 +171,24 @@ export default function HeaderNotifications() {
                                                         <span className="w-2 h-2 rounded-full bg-brand shrink-0 mt-1" />
                                                     )}
                                                 </div>
-                                                <span className={`text-[11px] ${!item.isRead ? 'text-brand font-semibold' : 'text-light-500'}`}>
-                                                    {dateStr}
-                                                </span>
+                                                <div className="flex items-center justify-between mt-2">
+                                                    <span className={`text-[11px] ${!item.isRead ? 'text-brand font-semibold' : 'text-light-500'}`}>
+                                                        {dateStr}
+                                                    </span>
+                                                    {!item.isRead && (
+                                                        <button 
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                markNotificationAsRead(item.id).then(() => {
+                                                                    setNotifications(prev => prev.map(n => n.id === item.id ? { ...n, isRead: true } : n));
+                                                                }).catch(console.error);
+                                                            }}
+                                                            className="text-[11px] font-semibold text-brand cursor-pointer hover:underline transition-all px-1"
+                                                        >
+                                                            Mark as read
+                                                        </button>
+                                                    )}
+                                                </div>
                                             </div>
                                         </div>
                                     );
