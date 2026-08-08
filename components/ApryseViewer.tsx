@@ -12,7 +12,6 @@ interface ApryseDocument {
 }
 
 interface ApryseUI {
-    setCurrentPageNumber: (pageNum: number) => void;
     searchTextFull: (snippet: string) => void;
     disableElements: (elements: string[]) => void;
     dispose: () => void;
@@ -49,12 +48,13 @@ export default function ApryseViewer({ file, path, closeModals, readOnly = false
                 let pageNum = parseInt(targetPage.toString(), 10);
                 if (pageNum === 0) pageNum = 1; // Backend might return 0-based indexing
                 if (!isNaN(pageNum) && pageNum > 0) {
-                    instance.UI.setCurrentPageNumber(pageNum);
+                    instance.Core.documentViewer.setCurrentPage(pageNum, true);
                 }
             }
-            if (searchSnippet) {
-                instance.UI.searchTextFull(searchSnippet);
-            }
+            // Temporarily disable searchTextFull to prevent it from overriding the targetPage navigation
+            // if (searchSnippet) {
+            //     instance.UI.searchTextFull(searchSnippet);
+            // }
         } catch (error) {
             console.error("Error jumping to citation:", error);
         }
@@ -105,12 +105,15 @@ export default function ApryseViewer({ file, path, closeModals, readOnly = false
                                 let pageNum = parseInt(targetPage.toString(), 10);
                                 if (pageNum === 0) pageNum = 1;
                                 if (!isNaN(pageNum) && pageNum > 0) {
-                                    instance.Core.documentViewer.setCurrentPage(pageNum, true);
+                                    setTimeout(() => {
+                                        instance.Core.documentViewer.setCurrentPage(pageNum, true);
+                                    }, 100);
                                 }
                             }
-                            if (searchSnippet) {
-                                instance.UI.searchTextFull(searchSnippet);
-                            }
+                            // Temporarily disable searchTextFull
+                            // if (searchSnippet) {
+                            //     instance.UI.searchTextFull(searchSnippet);
+                            // }
                         });
                     });
                 }

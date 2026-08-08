@@ -309,7 +309,7 @@ const Search = () => {
             </form>
 
             <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-                <DialogContent className="sm:max-w-[700px] p-6 shad-dialog outline-none border-none">
+                <DialogContent className="sm:max-w-[700px] p-6 bg-white rounded-[26px] outline-none border-none overflow-hidden">
                     <DialogHeader className="mb-4 pb-4 border-b border-light-200 flex flex-row items-center gap-2">
                         <Sparkles className="h-5 w-5 text-brand" />
                         <DialogTitle className="h2-bold text-dark-100">
@@ -317,7 +317,7 @@ const Search = () => {
                         </DialogTitle>
                     </DialogHeader>
 
-                    <div className="min-h-[200px] flex flex-col">
+                    <div className="min-h-[200px] flex flex-col min-w-0 w-full">
                         {isLoadingAI ? (
                             <div className="flex flex-col items-center justify-center gap-3 py-12 text-light-200 flex-1">
                                 <Loader2 className="h-10 w-10 animate-spin text-brand" />
@@ -332,7 +332,7 @@ const Search = () => {
 
                                 <div className="max-h-[55vh] overflow-y-auto custom-scrollbar pr-2 space-y-6">
                                     {typeof aiResult === 'string' ? (
-                                        <div className="text-dark-100 body-2 leading-relaxed whitespace-pre-wrap px-1">
+                                        <div className="text-dark-100 body-2 leading-relaxed whitespace-pre-wrap break-words px-1">
                                             {aiResult}
                                         </div>
                                     ) : (
@@ -360,8 +360,8 @@ const Search = () => {
                                                                         : "bg-purple-50/50 border-purple-100 hover:border-purple-300 hover:shadow-drop-2"
                                                                 }`}
                                                             >
-                                                                <div className="flex justify-between items-start mb-3">
-                                                                    <div className="flex items-center gap-2">
+                                                                <div className="flex justify-between items-start mb-3 gap-3">
+                                                                    <div className="flex items-center gap-2 min-w-0">
                                                                         <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 transition-colors ${
                                                                             res.isHighlightable !== false ? "bg-brand/10 group-hover:bg-brand/20" : "bg-purple-100 group-hover:bg-purple-200"
                                                                         }`}>
@@ -371,25 +371,27 @@ const Search = () => {
                                                                                 <Sparkles className="h-4 w-4 text-purple-600" />
                                                                             )}
                                                                         </div>
-                                                                        <div>
-                                                                            <p className="text-sm font-bold text-dark-100 line-clamp-1 flex items-center gap-2" title={res.fileName}>
-                                                                                {res.fileName}
+                                                                        <div className="min-w-0">
+                                                                            <div className="flex items-center gap-2">
+                                                                                <p className="text-sm font-bold text-dark-100 truncate" title={res.fileName}>
+                                                                                    {res.fileName}
+                                                                                </p>
                                                                                 {res.isHighlightable === false && (
-                                                                                    <span className="px-2 py-0.5 text-[10px] font-bold bg-purple-100 text-purple-700 rounded-full uppercase tracking-wider">
+                                                                                    <span className="px-2 py-0.5 shrink-0 text-[10px] font-bold bg-purple-100 text-purple-700 rounded-full uppercase tracking-wider">
                                                                                         AI SUMMARY
                                                                                     </span>
                                                                                 )}
-                                                                            </p>
+                                                                            </div>
                                                                             {res.pageNumber ? (
-                                                                                <p className={`text-xs ${res.isHighlightable !== false ? "text-light-200" : "text-purple-400"}`}>Page {res.pageNumber}</p>
+                                                                                <p className={`text-xs truncate ${res.isHighlightable !== false ? "text-light-200" : "text-purple-400"}`}>Page {res.pageNumber}</p>
                                                                             ) : res.isHighlightable !== false ? (
-                                                                                <p className="text-xs text-light-200">Document Snippet</p>
+                                                                                <p className="text-xs text-light-200 truncate">Document Snippet</p>
                                                                             ) : (
-                                                                                <p className="text-xs text-purple-400">Document Overview</p>
+                                                                                <p className="text-xs text-purple-400 truncate">Document Overview</p>
                                                                             )}
                                                                         </div>
                                                                     </div>
-                                                                    <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md ${
+                                                                    <div className={`flex items-center gap-1.5 px-2.5 py-1 shrink-0 rounded-md ${
                                                                         res.isHighlightable !== false ? "bg-slate-100 dark:bg-dark-300" : "bg-purple-100/50"
                                                                     }`}>
                                                                         <span className={`w-1.5 h-1.5 rounded-full ${
@@ -402,7 +404,7 @@ const Search = () => {
                                                                         </span>
                                                                     </div>
                                                                 </div>
-                                                                <p className={`text-sm mt-2 line-clamp-4 leading-relaxed p-3 rounded-lg border whitespace-pre-line ${
+                                                                <p className={`text-sm mt-2 line-clamp-4 break-words leading-relaxed p-3 rounded-lg border whitespace-pre-line ${
                                                                     res.isHighlightable !== false 
                                                                         ? "text-dark-200 bg-slate-50 border-slate-100" 
                                                                         : "text-purple-900 bg-white/60 border-purple-100/50"
@@ -447,7 +449,7 @@ const Search = () => {
                     <div className="flex-1 w-full relative bg-slate-50">
                         {activeCitation && (
                             <ApryseViewer 
-                                key={`${activeCitation.documentId || activeCitation.DocumentId}-${activeCitation.pageNumber || activeCitation.PageNumber}`}
+                                key={activeCitation.documentId || activeCitation.DocumentId || "search-viewer"}
                                 file={{
                                     id: activeCitation.documentId || activeCitation.DocumentId || "",
                                     fileName: activeCitation.source,

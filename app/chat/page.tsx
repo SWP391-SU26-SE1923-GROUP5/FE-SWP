@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
     Sparkles, Plus, Trash2, Send, Loader2, BookOpen,
     FileText, X, RefreshCw, FolderPlus, Pencil
@@ -106,6 +106,13 @@ export default function AIChatPage() {
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [chatInput, setChatInput] = useState<string>('');
     const [libraryDocs, setLibraryDocs] = useState<LibraryFile[]>([]);
+    
+    // Resizable panel states
+    const [chatWidth, setChatWidth] = useState(450);
+    const isDragging = useRef(false);
+    const chatContainerRef = useRef<HTMLElement>(null);
+    const viewerContainerRef = useRef<HTMLElement>(null);
+    const textareaRef = useRef<HTMLTextAreaElement>(null);
 
     const [isLoading, setIsLoading] = useState({
         sessions: true,
@@ -133,6 +140,79 @@ export default function AIChatPage() {
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const currentSession = sessions.find(s => s.id === currentSessionId);
+
+    const activeDoc = useMemo(() => {
+        if (!activeCitation) return null;
+        return sessionDocuments.find(s => s.documentId === activeCitation.docId);
+    }, [activeCitation, sessionDocuments]);
+
+    const fakeFile = useMemo(() => {
+        if (!activeDoc) return null;
+        return {
+            id: activeDoc.documentId,
+            fileName: activeDoc.fileName || activeDoc.title,
+            fileExtension: (activeDoc.fileName || "").split('.').pop() || 'pdf',
+            mimeType: "",
+            fileSizeBytes: 0,
+            uploadedAt: activeDoc.addedAt,
+            status: 1,
+            lifecycleStatus: 1,
+            isEncrypted: false,
+            isPublic: false,
+            encryptionKeyId: "",
+            ownerId: ""
+        } as unknown as File_;
+    }, [activeDoc]);
+
+    const handleMouseDown = (e: React.MouseEvent) => {
+        e.preventDefault();
+        isDragging.current = true;
+        const startX = e.clientX;
+        const startWidth = chatWidth;
+        
+        // Create an overlay to capture all mouse events and prevent iframe interference
+        const overlay = document.createElement('div');
+        overlay.id = 'resize-overlay';
+        overlay.style.position = 'fixed';
+        overlay.style.top = '0';
+        overlay.style.left = '0';
+        overlay.style.right = '0';
+        overlay.style.bottom = '0';
+        overlay.style.zIndex = '9999';
+        overlay.style.cursor = 'col-resize';
+        document.body.appendChild(overlay);
+
+        const handleMouseMove = (e: MouseEvent) => {
+            if (!isDragging.current) return;
+            const newWidth = startWidth + (e.clientX - startX);
+            const clampedWidth = Math.max(300, Math.min(newWidth, window.innerWidth - 300));
+            if (chatContainerRef.current) {
+                chatContainerRef.current.style.width = `${clampedWidth}px`;
+            }
+        };
+
+        const handleMouseUp = (e: MouseEvent) => {
+            isDragging.current = false;
+            document.removeEventListener('mousemove', handleMouseMove);
+            document.removeEventListener('mouseup', handleMouseUp);
+            document.body.style.cursor = 'default';
+            document.getElementById('resize-overlay')?.remove();
+            
+            const finalWidth = startWidth + (e.clientX - startX);
+            setChatWidth(Math.max(300, Math.min(finalWidth, window.innerWidth - 300)));
+        };
+
+        document.addEventListener('mousemove', handleMouseMove);
+        document.addEventListener('mouseup', handleMouseUp);
+        document.body.style.cursor = 'col-resize';
+    };
+
+    useEffect(() => {
+        if (textareaRef.current) {
+            textareaRef.current.style.height = 'auto';
+            textareaRef.current.style.height = textareaRef.current.scrollHeight + 'px';
+        }
+    }, [chatInput]);
 
     useEffect(() => {
         const initSessions = async () => {
@@ -595,6 +675,7 @@ export default function AIChatPage() {
         <div className="p-4 border-t border-light-700 dark:border-dark-400 bg-white dark:bg-dark-200 shrink-0">
             <div className="max-w-3xl mx-auto flex items-end gap-2 bg-light-800 dark:bg-dark-300 border border-light-700 dark:border-dark-400 rounded-2xl p-2 focus-within:border-brand/60 focus-within:ring-2 focus-within:ring-brand/10 transition-all shadow-xs">
                 <textarea
+                    ref={textareaRef}
                     rows={1}
                     placeholder={
                         !currentSessionId
@@ -638,32 +719,14 @@ export default function AIChatPage() {
     );
 
     const renderPdfViewerPanel = () => {
-        if (!activeCitation) return null;
-
-        const doc = sessionDocuments.find(s => s.documentId === activeCitation.docId);
-        if (!doc) return null;
-
-        const fakeFile = {
-            id: doc.documentId,
-            fileName: doc.fileName || doc.title,
-            fileExtension: (doc.fileName || "").split('.').pop() || 'pdf',
-            mimeType: "",
-            fileSizeBytes: 0,
-            uploadedAt: doc.addedAt,
-            status: 1,
-            lifecycleStatus: 1,
-            isEncrypted: false,
-            isPublic: false,
-            encryptionKeyId: "",
-            ownerId: ""
-        } as unknown as File_;
+        if (!activeCitation || !fakeFile || !activeDoc) return null;
 
         return (
-            <aside className="hidden lg:flex flex-1 flex-col h-full bg-white dark:bg-dark-200 border-l border-light-700 dark:border-dark-400 z-10 transition-all shadow-[-4px_0_24px_rgba(0,0,0,0.02)]">
+            <aside ref={viewerContainerRef} className="hidden lg:flex flex-1 flex-col h-full bg-white dark:bg-dark-200 border-l border-light-700 dark:border-dark-400 z-10 transition-all shadow-[-4px_0_24px_rgba(0,0,0,0.02)]">
                 <div className="h-16 px-4 border-b border-light-700 dark:border-dark-400 flex items-center justify-between shrink-0 bg-white dark:bg-dark-200">
                     <div className="flex items-center gap-2 min-w-0">
                         <BookOpen className="w-5 h-5 text-brand" />
-                        <h2 className="text-sm font-bold text-slate-800 dark:text-light-100 truncate">{doc.fileName || doc.title}</h2>
+                        <h2 className="text-sm font-bold text-slate-800 dark:text-light-100 truncate">{activeDoc.fileName || activeDoc.title}</h2>
                     </div>
                     <button
                         onClick={() => setActiveCitation(null)}
@@ -847,11 +910,24 @@ export default function AIChatPage() {
         <div className="flex-1 flex flex-col lg:flex-row h-full w-full overflow-hidden bg-white dark:bg-dark-100 border-t border-light-700 dark:border-dark-400">
             {renderSidebar()}
 
-            <main className={cn("flex flex-col h-2/3 lg:h-full bg-light-800 dark:bg-dark-100 relative overflow-hidden transition-all duration-300 border-r border-light-700 dark:border-dark-400", activeCitation ? "lg:w-[400px] xl:w-[450px] shrink-0" : "flex-1")}>
+            <main 
+                ref={chatContainerRef}
+                style={{ width: activeCitation ? chatWidth : undefined }}
+                className={cn("flex flex-col h-2/3 lg:h-full bg-light-800 dark:bg-dark-100 relative overflow-hidden border-r border-light-700 dark:border-dark-400", activeCitation ? "shrink-0" : "flex-1 transition-all duration-300")}
+            >
                 {renderChatHeader()}
                 {renderMessageList()}
                 {renderChatInput()}
             </main>
+
+            {activeCitation && (
+                <div 
+                    className="hidden lg:flex w-2 hover:w-3 -ml-1 bg-transparent hover:bg-brand cursor-col-resize z-20 shrink-0 items-center justify-center transition-colors"
+                    onMouseDown={handleMouseDown}
+                >
+                    <div className="w-1 h-8 bg-slate-300 dark:bg-dark-400 rounded-full pointer-events-none" />
+                </div>
+            )}
 
             {renderPdfViewerPanel()}
             {renderAddDocsModal()}
